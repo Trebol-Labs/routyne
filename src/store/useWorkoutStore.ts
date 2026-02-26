@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { RoutineData, WorkoutState, WorkoutView, HistoryEntry, SetStatus } from '@/types/workout';
+import { RoutineData, WorkoutState, WorkoutView, HistoryEntry, SetStatus, ExerciseVolume } from '@/types/workout';
 import { v4 as uuidv4 } from 'uuid';
 
 export const useWorkoutStore = create<WorkoutState>()(
@@ -29,37 +29,57 @@ export const useWorkoutStore = create<WorkoutState>()(
         activeSessionIdx: sessionIdx
       }),
 
-      toggleSetCompletion: (sessionIdx: number, exerciseId: string, setIdx: number) => set((state) => {
-        const key = `${sessionIdx}-${exerciseId}-${setIdx}`;
-        const currentStatus = state.setCompletion[key];
-
-        return {
-          setCompletion: {
-            ...state.setCompletion,
-            [key]: {
-              completed: !currentStatus?.completed,
-              timestamp: new Date()
-            }
-          }
-        };
-      }),
+      toggleSetCompletion: (sessionIdx, exerciseId, setIdx, repsDone?, weight?) =>
+        set((state) => {
+          const key = `${sessionIdx}-${exerciseId}-${setIdx}`;
+          const currentStatus = state.setCompletion[key];
+          return {
+            setCompletion: {
+              ...state.setCompletion,
+              [key]: {
+                completed: !currentStatus?.completed,
+                repsDone: repsDone ?? currentStatus?.repsDone,
+                weight: weight ?? currentStatus?.weight,
+                timestamp: new Date(),
+              },
+            },
+          };
+        }),
 
       finishSession: () => set((state) => {
         if (!state.currentRoutine || state.activeSessionIdx === null) return state;
 
         const activeSession = state.currentRoutine.sessions[state.activeSessionIdx];
-        const completedExerciseIds = activeSession.exercises
-          .map(ex => ex.id)
-          .filter(id => {
-            return Object.keys(state.setCompletion).some(key => key.startsWith(`${state.activeSessionIdx}-${id}`));
-          });
+
+        const volumeData: ExerciseVolume[] = activeSession.exercises
+          .map((ex) => {
+            const completedSets = Object.entries(state.setCompletion).filter(
+              ([key, status]) =>
+                key.startsWith(`${state.activeSessionIdx}-${ex.id}-`) && status.completed
+            );
+            const totalReps = completedSets.reduce((sum, [, s]) => sum + (s.repsDone ?? 0), 0);
+            const totalVolume = completedSets.reduce(
+              (sum, [, s]) => sum + (s.repsDone ?? 0) * (s.weight ?? 0),
+              0
+            );
+            return {
+              exerciseId: ex.id,
+              cleanName: ex.cleanName,
+              setsCompleted: completedSets.length,
+              totalReps,
+              totalVolume,
+            };
+          })
+          .filter((ev) => ev.setsCompleted > 0);
 
         const newEntry: HistoryEntry = {
           id: uuidv4(),
           sessionIdx: state.activeSessionIdx,
           sessionTitle: activeSession.title,
           completedAt: new Date(),
-          completedExercises: completedExerciseIds,
+          completedExercises: volumeData.map((ev) => ev.exerciseId),
+          volumeData,
+          totalVolume: volumeData.reduce((sum, ev) => sum + ev.totalVolume, 0),
         };
 
         return {

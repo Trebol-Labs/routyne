@@ -1,22 +1,7 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-
-let storage: Record<string, string> = {};
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 beforeEach(() => {
-  storage = {};
-  vi.stubGlobal('localStorage', {
-    getItem: (key: string) => storage[key] ?? null,
-    setItem: (key: string, val: string) => { storage[key] = val; },
-    removeItem: (key: string) => { delete storage[key]; },
-    clear: () => { storage = {}; },
-    get length() { return Object.keys(storage).length; },
-    key: (i: number) => Object.keys(storage)[i] ?? null,
-  });
   vi.resetModules();
-});
-
-afterEach(() => {
-  vi.unstubAllGlobals();
 });
 
 describe('persist middleware', () => {

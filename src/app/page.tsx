@@ -64,9 +64,9 @@ export default function Home() {
     setCurrentView(view);
   };
 
-  const handleSetCompletion = (sessionIdx: number, exerciseId: string, setIdx: number, restSeconds: number) => {
+  const handleSetCompletion = (sessionIdx: number, exerciseId: string, setIdx: number, restSeconds: number, repsMax?: number) => {
     const isCompleted = setCompletion[`${sessionIdx}-${exerciseId}-${setIdx}`]?.completed;
-    toggleSetCompletion(sessionIdx, exerciseId, setIdx);
+    toggleSetCompletion(sessionIdx, exerciseId, setIdx, repsMax);
     
     // Auto-trigger rest timer if marking as complete and not already completed
     if (!isCompleted) {
@@ -311,7 +311,7 @@ export default function Home() {
                                   sessionIdx={activeSessionIdx!}
                                   exercise={exercise}
                                   isCompleted={!!setCompletion[`${activeSessionIdx}-${exercise.id}-${setIdx}`]?.completed}
-                                  onComplete={() => handleSetCompletion(activeSessionIdx!, exercise.id, setIdx, exercise.restSeconds)}
+                                  onComplete={() => handleSetCompletion(activeSessionIdx!, exercise.id, setIdx, exercise.restSeconds, exercise.repsMax)}
                                 />
                             ))}
                           </div>
