@@ -15,6 +15,7 @@ interface ExerciseCardProps {
 export function ExerciseCard({ exercise, index }: ExerciseCardProps) {
   const [imageLoaded, setImageLoaded] = React.useState(false);
   const [isPlaying, setIsPlaying] = React.useState(false);
+  const [hasError, setHasError] = React.useState(false);
 
   const x = useMotionValue(0);
   const opacity = useTransform(x, [-100, 0, 100], [0, 1, 0]);
@@ -44,7 +45,7 @@ export function ExerciseCard({ exercise, index }: ExerciseCardProps) {
         >
           {!imageLoaded && <Skeleton className="absolute inset-0 w-full h-full bg-white/5" />}
           
-          {exercise.mediaUrl ? (
+          {exercise.mediaUrl && !hasError ? (
             <video
               src={exercise.mediaUrl}
               autoPlay={isPlaying}
@@ -57,14 +58,15 @@ export function ExerciseCard({ exercise, index }: ExerciseCardProps) {
                 isPlaying ? "brightness-110 scale-110" : "brightness-50"
               )}
               onLoadedData={() => setImageLoaded(true)}
+              onError={() => setHasError(true)}
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-white/5">
+            <div className="w-full h-full flex items-center justify-center text-white/30">
               <Dumbbell className="w-12 h-12" />
             </div>
           )}
           
-          {!isPlaying && exercise.mediaUrl && (
+          {!isPlaying && exercise.mediaUrl && !hasError && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
               <PlayCircle className="w-8 h-8 text-white/40 group-hover:text-white/80 transition-all scale-90 group-hover:scale-100" />
             </div>

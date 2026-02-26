@@ -64,6 +64,8 @@ export function parseRoutine(markdown: string): RoutineData {
         const repsMax = match[4] ? parseInt(match[4], 10) : repsMin;
         const restSeconds = match[5] ? parseInt(match[5], 10) : 90; // Default 90s rest
 
+        if (isNaN(sets) || sets <= 0 || isNaN(repsMin) || repsMin <= 0) continue;
+
         currentSession.exercises.push({
           id: uuidv4(),
           originalName: trimmedLine,
@@ -84,6 +86,8 @@ export function parseRoutine(markdown: string): RoutineData {
         const repsMin = parseInt(match[2], 10);
         const repsMax = match[3] ? parseInt(match[3], 10) : repsMin;
         const cleanName = match[4].trim();
+
+        if (isNaN(sets) || sets <= 0 || isNaN(repsMin) || repsMin <= 0) continue;
 
         currentSession.exercises.push({
           id: uuidv4(),
