@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform, PanInfo } from 'framer-motion';
 import { RoutineUploader } from '@/components/workout/RoutineUploader';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ExerciseCard } from '@/components/workout/ExerciseCard';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
 import { Button } from '@/components/ui/button';
@@ -119,7 +120,15 @@ export default function Home() {
                 transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
                 className="flex-grow h-full flex items-center justify-center"
               >
-                <RoutineUploader />
+                <ErrorBoundary
+                  fallback={
+                    <div className="glass-panel p-6 text-center text-white/50">
+                      Could not parse this file. Check the markdown format and try again.
+                    </div>
+                  }
+                >
+                  <RoutineUploader />
+                </ErrorBoundary>
               </motion.div>
             ) : currentView === 'routine-overview' && currentRoutine ? (
               <motion.div
