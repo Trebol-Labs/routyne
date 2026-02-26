@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform, PanInfo } from 'framer-motion';
 import { RoutineUploader } from '@/components/workout/RoutineUploader';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ExerciseCard } from '@/components/workout/ExerciseCard';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
 import { Button } from '@/components/ui/button';
@@ -63,9 +64,9 @@ export default function Home() {
     setCurrentView(view);
   };
 
-  const handleSetCompletion = (sessionIdx: number, exerciseId: string, setIdx: number, restSeconds: number) => {
+  const handleSetCompletion = (sessionIdx: number, exerciseId: string, setIdx: number, restSeconds: number, repsMax?: number) => {
     const isCompleted = setCompletion[`${sessionIdx}-${exerciseId}-${setIdx}`]?.completed;
-    toggleSetCompletion(sessionIdx, exerciseId, setIdx);
+    toggleSetCompletion(sessionIdx, exerciseId, setIdx, repsMax);
     
     // Auto-trigger rest timer if marking as complete and not already completed
     if (!isCompleted) {
@@ -119,7 +120,15 @@ export default function Home() {
                 transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
                 className="flex-grow h-full flex items-center justify-center"
               >
-                <RoutineUploader />
+                <ErrorBoundary
+                  fallback={
+                    <div className="glass-panel p-6 text-center text-white/50">
+                      Could not parse this file. Check the markdown format and try again.
+                    </div>
+                  }
+                >
+                  <RoutineUploader />
+                </ErrorBoundary>
               </motion.div>
             ) : currentView === 'routine-overview' && currentRoutine ? (
               <motion.div
@@ -302,7 +311,7 @@ export default function Home() {
                                   sessionIdx={activeSessionIdx!}
                                   exercise={exercise}
                                   isCompleted={!!setCompletion[`${activeSessionIdx}-${exercise.id}-${setIdx}`]?.completed}
-                                  onComplete={() => handleSetCompletion(activeSessionIdx!, exercise.id, setIdx, exercise.restSeconds)}
+                                  onComplete={() => handleSetCompletion(activeSessionIdx!, exercise.id, setIdx, exercise.restSeconds, exercise.repsMax)}
                                 />
                             ))}
                           </div>

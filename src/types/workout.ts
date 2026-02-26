@@ -32,12 +32,22 @@ export interface SetStatus {
 
 export type WorkoutView = 'uploader' | 'routine-overview' | 'active-session' | 'history' | 'stats';
 
+export interface ExerciseVolume {
+  exerciseId: string;
+  cleanName: string;
+  setsCompleted: number;
+  totalReps: number;
+  totalVolume: number; // reps × weight (0 for bodyweight)
+}
+
 export interface HistoryEntry {
   id: string;
   sessionIdx: number;
   sessionTitle: string;
   completedAt: Date;
-  completedExercises: string[]; // List of exercise IDs
+  completedExercises: string[];   // kept for backward compat
+  volumeData: ExerciseVolume[];   // per-exercise volume breakdown
+  totalVolume: number;            // session aggregate
 }
 
 // Store state interface
@@ -57,7 +67,13 @@ export interface WorkoutState {
   setCurrentView: (view: WorkoutView) => void;
   setIsLoading: (isLoading: boolean) => void;
   startSession: (sessionIdx: number) => void;
-  toggleSetCompletion: (sessionIdx: number, exerciseId: string, setIdx: number) => void;
+  toggleSetCompletion: (
+    sessionIdx: number,
+    exerciseId: string,
+    setIdx: number,
+    repsDone?: number,
+    weight?: number
+  ) => void;
   finishSession: () => void;
   resetProgress: () => void;
   resetAll: () => void;
