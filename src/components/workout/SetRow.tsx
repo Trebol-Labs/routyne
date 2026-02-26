@@ -23,7 +23,10 @@ export function SetRow({ setIdx, exercise, isCompleted, onComplete }: SetRowProp
   const color = useTransform(x, [0, swipeThreshold], ["rgba(16, 185, 129, 0)", "rgba(16, 185, 129, 0.3)"]);
 
   const handleDragEnd = (_: unknown, info: PanInfo) => {
-    if (info.offset.x > swipeThreshold && !isCompleted) {
+    const pastPositionThreshold = info.offset.x > swipeThreshold;
+    const fastFlick = info.velocity.x > 500; // px/s — completes even on short fast flick
+    if ((pastPositionThreshold || fastFlick) && !isCompleted) {
+      if ('vibrate' in navigator) navigator.vibrate(50);
       onComplete();
     }
   };
