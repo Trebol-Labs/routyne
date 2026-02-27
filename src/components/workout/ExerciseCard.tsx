@@ -4,8 +4,9 @@ import React from 'react';
 import { motion, useMotionValue, useTransform } from 'framer-motion';
 import { ParsedExercise } from '@/types/workout';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Dumbbell, Clock, PlayCircle, Info } from 'lucide-react';
+import { Dumbbell, PlayCircle, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import type { MediaResult } from '@/lib/media/providers';
 
 interface ExerciseCardProps {
   exercise: ParsedExercise;
@@ -13,13 +14,26 @@ interface ExerciseCardProps {
 }
 
 export function ExerciseCard({ exercise, index }: ExerciseCardProps) {
-  const [imageLoaded, setImageLoaded] = React.useState(false);
+  const [media, setMedia] = React.useState<MediaResult | null>(null);
+  const [mediaLoaded, setMediaLoaded] = React.useState(false);
+  const [mediaError, setMediaError] = React.useState(false);
   const [isPlaying, setIsPlaying] = React.useState(false);
-  const [hasError, setHasError] = React.useState(false);
 
   const x = useMotionValue(0);
   const opacity = useTransform(x, [-100, 0, 100], [0, 1, 0]);
   const scale = useTransform(x, [-100, 0, 100], [0.95, 1, 0.95]);
+
+  React.useEffect(() => {
+    if (!exercise.mediaUrl) return;
+    fetch(exercise.mediaUrl)
+      .then(r => r.ok ? r.json() : null)
+      .then((data: MediaResult | null) => setMedia(data))
+      .catch(() => setMediaError(true));
+  }, [exercise.mediaUrl]);
+
+  const showFallback = mediaError || (!media && !exercise.mediaUrl);
+  const isVideo = media?.type === 'video';
+  const isGif = media?.type === 'gif' || media?.type === 'image';
 
   return (
     <motion.div
@@ -34,39 +48,62 @@ export function ExerciseCard({ exercise, index }: ExerciseCardProps) {
       className="group relative h-full"
     >
       <div className="absolute inset-0 bg-blue-500/10 blur-[60px] opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
-      
+
       <div className="relative glass-panel rounded-[2.5rem] overflow-hidden p-5 sm:p-6 transition-all duration-500 hover:border-white/20 hover:bg-white/[0.05] shadow-2xl flex flex-col sm:flex-row items-start sm:items-center gap-6">
-        
-        {/* Media Section - Liquid Glass Version */}
-        <div 
+
+        {/* Media Section */}
+        <div
           className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-3xl bg-black/40 overflow-hidden shrink-0 border border-white/10 shadow-inner group-hover:scale-[1.03] transition-transform duration-700 mx-auto sm:mx-0"
           onMouseEnter={() => setIsPlaying(true)}
           onMouseLeave={() => setIsPlaying(false)}
         >
-          {!imageLoaded && <Skeleton className="absolute inset-0 w-full h-full bg-white/5" />}
-          
-          {exercise.mediaUrl && !hasError ? (
+          {!mediaLoaded && !showFallback && (
+            <Skeleton className="absolute inset-0 w-full h-full bg-white/5" />
+          )}
+
+          {showFallback && (
+            <div className="w-full h-full flex items-center justify-center text-white/30">
+              <Dumbbell className="w-12 h-12" />
+            </div>
+          )}
+
+          {isVideo && media && (
             <video
-              src={exercise.mediaUrl}
+              src={media.url}
               autoPlay={isPlaying}
               muted
               loop
               playsInline
               className={cn(
                 "w-full h-full object-cover transition-all duration-1000",
-                imageLoaded ? "opacity-100 scale-100" : "opacity-0 scale-110",
+                mediaLoaded ? "opacity-100 scale-100" : "opacity-0 scale-110",
                 isPlaying ? "brightness-110 scale-110" : "brightness-50"
               )}
-              onLoadedData={() => setImageLoaded(true)}
-              onError={() => setHasError(true)}
+              onLoadedData={() => setMediaLoaded(true)}
+              onError={() => setMediaError(true)}
             />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-white/30">
-              <Dumbbell className="w-12 h-12" />
-            </div>
           )}
-          
-          {!isPlaying && exercise.mediaUrl && !hasError && (
+
+          {isGif && media && (
+            <img
+              src={media.url}
+              alt={`${exercise.cleanName} form demonstration`}
+              className={cn(
+                "w-full h-full object-cover transition-all duration-1000",
+                mediaLoaded ? "opacity-100" : "opacity-0"
+              )}
+              onLoad={() => setMediaLoaded(true)}
+              onError={() => {
+                if (media.fallbackUrl) {
+                  setMedia({ ...media, url: media.fallbackUrl, type: 'image', fallbackUrl: undefined });
+                } else {
+                  setMediaError(true);
+                }
+              }}
+            />
+          )}
+
+          {isVideo && !isPlaying && media && !mediaError && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
               <PlayCircle className="w-8 h-8 text-white/40 group-hover:text-white/80 transition-all scale-90 group-hover:scale-100" />
             </div>
@@ -86,13 +123,13 @@ export function ExerciseCard({ exercise, index }: ExerciseCardProps) {
               <Info className="w-5 h-5" />
             </button>
           </div>
-          
+
           <div className="flex flex-wrap items-center gap-3 sm:gap-4">
             <div className="flex items-center gap-2.5 px-4 py-2 bg-black/30 backdrop-blur-xl rounded-2xl border border-white/[0.03] shadow-inner">
               <span className="text-[10px] font-black text-blue-400 uppercase tracking-[0.25em]">Sets</span>
               <span className="text-base font-black text-white/90">{exercise.sets}</span>
             </div>
-            
+
             <div className="flex items-center gap-2.5 px-4 py-2 bg-black/30 backdrop-blur-xl rounded-2xl border border-white/[0.03] shadow-inner">
               <span className="text-[10px] font-black text-indigo-300 uppercase tracking-[0.25em]">Reps</span>
               <span className="text-base font-black text-white/90">
