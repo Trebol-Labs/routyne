@@ -98,7 +98,7 @@ export function ActiveSessionView() {
       <div className="grid gap-12">
          {activeSession.exercises.map((exercise) => (
               <div key={exercise.id} className="space-y-6">
-                <div className="flex items-center justify-between px-4 sm:px-2">
+                <div className="flex items-center justify-between px-2 sm:px-0">
                   <h3 className="text-xl font-black text-white tracking-tighter uppercase">{exercise.cleanName}</h3>
                   <span className="text-xs font-black text-white/30 uppercase tracking-[0.25em]">
                      {exercise.sets} Sets / {exercise.repsMin}{exercise.repsMin !== exercise.repsMax ? `-${exercise.repsMax}` : ''} Reps

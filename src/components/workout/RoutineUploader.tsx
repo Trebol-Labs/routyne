@@ -61,8 +61,8 @@ export function RoutineUploader() {
           <span className="text-[12px] font-black text-white/90 uppercase tracking-[0.25em]">Markdown Parser</span>
         </motion.div>
         
-        <h1 className="text-5xl sm:text-7xl font-black tracking-tighter text-liquid leading-tight text-center">
-          IMPORT <span className="text-blue-500 brightness-125">ROUTINE</span>
+        <h1 className="text-4xl sm:text-7xl font-black tracking-tighter text-liquid leading-tight text-center">
+          IMPORT <span className="brightness-125 [-webkit-text-fill-color:#3b82f6]">ROUTINE</span>
         </h1>
         <p className="text-white/40 font-medium text-sm tracking-tight max-w-xs mx-auto">Paste your raw markdown. We handle the rest.</p>
       </motion.div>
@@ -108,7 +108,7 @@ export function RoutineUploader() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="space-y-10"
+                className="space-y-6"
               >
                 <div className="relative group/input">
                   <div className="absolute -inset-px bg-white/5 rounded-3xl opacity-0 group-hover/input:opacity-100 transition-opacity" />
@@ -116,7 +116,7 @@ export function RoutineUploader() {
                     value={text}
                     onChange={(e) => setText(e.target.value)}
                     placeholder="# Push Day&#10;## Bench Press&#10;- 3x12&#10;- Rest: 90s"
-                    className="w-full h-48 sm:h-64 bg-black/30 backdrop-blur-md rounded-3xl p-6 border border-white/5 focus:ring-0 text-white placeholder:text-white/10 resize-none font-mono text-lg leading-relaxed selection:bg-blue-500/40 sunken-glass"
+                    className="w-full h-40 sm:h-64 bg-black/30 backdrop-blur-md rounded-3xl p-6 border border-white/5 focus:ring-0 text-white placeholder:text-white/10 resize-none font-mono text-lg leading-relaxed selection:bg-blue-500/40 sunken-glass"
                   />
                 </div>
                 
@@ -174,17 +174,17 @@ export function RoutineUploader() {
         )}
       </motion.div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+      <div className="grid grid-cols-3 gap-3 sm:gap-6">
         {[
           { icon: Check, color: "text-emerald-400", label: "AUTO-PARSE" },
           { icon: Sparkles, color: "text-blue-400", label: "DYNAMIC MEDIA" },
           { icon: Info, color: "text-indigo-400", label: "LIQUID FLOW" }
         ].map((item, i) => (
-          <div key={i} className="group p-6 rounded-[2.5rem] glass-panel border border-white/5 hover:border-white/20 transition-all duration-500 flex flex-col items-center gap-4 text-center hover:-translate-y-2">
-            <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center shadow-inner group-hover:scale-110 group-hover:bg-white/10 transition-all">
-              <item.icon className={cn("w-7 h-7", item.color)} />
+          <div key={i} className="group p-4 sm:p-6 rounded-[2rem] sm:rounded-[2.5rem] glass-panel border border-white/5 hover:border-white/20 transition-all duration-500 flex flex-col items-center gap-3 text-center hover:-translate-y-2">
+            <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-white/5 flex items-center justify-center shadow-inner group-hover:scale-110 group-hover:bg-white/10 transition-all">
+              <item.icon className={cn("w-5 h-5 sm:w-7 sm:h-7", item.color)} />
             </div>
-            <span className="text-[10px] font-black text-white/50 uppercase tracking-[0.3em]">{item.label}</span>
+            <span className="text-[9px] sm:text-[10px] font-black text-white/50 uppercase tracking-[0.2em] sm:tracking-[0.3em] leading-tight text-center">{item.label}</span>
           </div>
         ))}
       </div>
