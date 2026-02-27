@@ -20,7 +20,10 @@ const fuse = new Fuse(exercisesData as ExerciseEntry[], {
 });
 
 function resolveSearchName(slug: string): string {
-  const name = slug.replace(/-/g, ' ');
+  const name = slug
+    .replace(/-/g, ' ')
+    .replace(/\s*\([^)]*\)/g, '')
+    .trim();
   const matches = fuse.search(name);
   if (matches.length) {
     return matches[0].item.exercisedb_name;

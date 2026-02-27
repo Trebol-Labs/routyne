@@ -56,4 +56,19 @@ describe('GET /api/media/[slug]', () => {
     // Provider called with exercisedb_name from exercises.json, not raw slug
     expect(mediaProvider.resolve).toHaveBeenCalledWith('barbell curl');
   });
+
+  it('strips parenthetical qualifiers before provider lookup', async () => {
+    const { mediaProvider } = await import('@/lib/media/providers');
+    (mediaProvider.resolve as ReturnType<typeof vi.fn>).mockResolvedValue({
+      url: 'https://v2.exercisedb.io/image/triceps',
+      type: 'gif',
+    });
+
+    const { GET } = await import('./route');
+    const req = new Request('http://localhost/api/media/triceps-pushdown-(rope-or-v-bar)');
+    await GET(req, { params: Promise.resolve({ slug: 'triceps-pushdown-(rope-or-v-bar)' }) });
+
+    // Parens and their contents stripped — provider receives clean base name
+    expect(mediaProvider.resolve).toHaveBeenCalledWith('triceps pushdown');
+  });
 });
