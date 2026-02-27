@@ -48,3 +48,9 @@ claude.md
 
 # Git worktrees
 .worktrees/
+
+# Claude plans & sessions
+.claude/
+
+# Playwright MCP logs & screenshots
+.playwright-mcp/
