@@ -52,5 +52,17 @@
     "aliases": ["bicep curls", "curls de biceps", "curl", "biceps"],
     "exercisedb_name": "barbell curl",
     "media_id": "bicep_curls_demo"
+  },
+  {
+    "id": "pec_deck",
+    "aliases": ["pec deck", "machine fly", "chest fly machine", "pec deck machine fly", "pec-deck", "butterfly machine"],
+    "exercisedb_name": "lever seated fly",
+    "media_id": "pec_deck_demo"
+  },
+  {
+    "id": "convergent_chest_press",
+    "aliases": ["convergent machine chest press", "convergent chest press", "machine chest press", "lever chest press", "chest press machine"],
+    "exercisedb_name": "lever chest press",
+    "media_id": "convergent_chest_press_demo"
   }
 ]
