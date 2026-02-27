@@ -62,7 +62,7 @@ export default function Home() {
               <h2 className="text-2xl font-black tracking-tighter leading-none text-white tracking-[-0.05em]">ROUTYNE</h2>
               <div className="flex items-center gap-2 mt-1.5 pl-0.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                <p className="text-[11px] text-white/20 font-black uppercase tracking-[0.3em]">OFFLINE READY</p>
+                <p className="text-[11px] text-white/20 font-black uppercase tracking-[0.3em] whitespace-nowrap">OFFLINE READY</p>
               </div>
             </div>
           </div>
@@ -77,7 +77,7 @@ export default function Home() {
           </div>
         </header>
 
-        <div className="flex-grow pt-10 pb-16">
+        <div className="flex-grow pt-10 pb-32">
           <AnimatePresence mode="wait">
             {currentView === 'uploader' ? (
               <motion.div
@@ -124,10 +124,10 @@ export default function Home() {
                       <p className="text-white/40 font-black text-lg uppercase tracking-tighter">Your stats will appear here</p>
                       <p className="text-zinc-600 text-[11px] font-black uppercase tracking-[0.3em]">Complete a session to start tracking</p>
                     </div>
-                    <div className="flex items-center justify-center gap-3 pt-2 flex-wrap">
+                    <div className="grid grid-cols-3 gap-3 pt-2 w-full">
                       {['Total Volume', 'Sessions', 'Exercises'].map((label) => (
-                        <div key={label} className="px-4 py-2 bg-white/[0.03] border border-white/5 rounded-2xl">
-                          <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">{label}</span>
+                        <div key={label} className="px-3 py-2 bg-white/[0.03] border border-white/5 rounded-2xl text-center">
+                          <span className="text-[9px] sm:text-[10px] font-black text-white/20 uppercase tracking-widest">{label}</span>
                         </div>
                       ))}
                     </div>
