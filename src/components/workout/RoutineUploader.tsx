@@ -46,16 +46,16 @@ export function RoutineUploader() {
   }, [handleParse]);
 
   return (
-    <div className="w-full max-w-2xl mx-auto space-y-12 p-4 flex flex-col items-center">
+    <div className="w-full max-w-2xl mx-auto space-y-8 p-4 flex flex-col items-center">
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center space-y-4 w-full flex flex-col items-center"
+        className="text-center space-y-2 w-full flex flex-col items-center"
       >
         <motion.div 
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="inline-flex items-center gap-3 px-5 py-2.5 bg-white/5 backdrop-blur-3xl border border-white/10 rounded-full mb-2 glass-border-light shadow-2xl"
+          className="inline-flex items-center gap-3 px-5 py-2.5 bg-white/5 backdrop-blur-3xl border border-white/10 rounded-full glass-border-light shadow-2xl"
         >
           <Code className="w-4 h-4 text-blue-400" />
           <span className="text-[12px] font-black text-white/90 uppercase tracking-[0.25em]">Markdown Parser</span>
@@ -64,7 +64,7 @@ export function RoutineUploader() {
         <h1 className="text-5xl sm:text-7xl font-black tracking-tighter text-liquid leading-tight text-center">
           IMPORT <span className="text-blue-500 brightness-125">ROUTINE</span>
         </h1>
-        <p className="text-white/40 font-medium text-base tracking-tight max-w-sm mx-auto">Paste your raw markdown. We handle the rest.</p>
+        <p className="text-white/40 font-medium text-sm tracking-tight max-w-xs mx-auto">Paste your raw markdown. We handle the rest.</p>
       </motion.div>
 
       <motion.div
@@ -80,7 +80,7 @@ export function RoutineUploader() {
         )}
       >
         {/* Main Glass Hero Panel */}
-        <div className="relative glass-panel rounded-[2.8rem] p-8 sm:p-12 overflow-hidden">
+        <div className="relative glass-panel rounded-[2.8rem] p-6 sm:p-10 overflow-hidden">
           <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-600/10 blur-[100px] rounded-full" />
           <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-indigo-600/10 blur-[100px] rounded-full" />
           
@@ -116,11 +116,11 @@ export function RoutineUploader() {
                     value={text}
                     onChange={(e) => setText(e.target.value)}
                     placeholder="# Push Day&#10;## Bench Press&#10;- 3x12&#10;- Rest: 90s"
-                    className="w-full h-64 bg-black/30 backdrop-blur-md rounded-3xl p-6 border border-white/5 focus:ring-0 text-white placeholder:text-white/10 resize-none font-mono text-lg leading-relaxed selection:bg-blue-500/40 sunken-glass"
+                    className="w-full h-48 sm:h-64 bg-black/30 backdrop-blur-md rounded-3xl p-6 border border-white/5 focus:ring-0 text-white placeholder:text-white/10 resize-none font-mono text-lg leading-relaxed selection:bg-blue-500/40 sunken-glass"
                   />
                 </div>
                 
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-8 w-full">
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-4 w-full">
                   <label className="flex items-center gap-4 px-8 py-5 bg-white/5 backdrop-blur-xl rounded-[2rem] border border-white/[0.05] shadow-inner cursor-pointer hover:bg-white/10 transition-colors w-full sm:w-auto justify-center">
                     <Upload className="w-5 h-5 text-blue-400" />
                     <span className="text-[11px] font-black text-white/40 uppercase tracking-[0.2em] leading-none whitespace-nowrap">Drop or Select .md</span>
