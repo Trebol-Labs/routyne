@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { motion, useMotionValue, useTransform } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { ParsedExercise } from '@/types/workout';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dumbbell, PlayCircle, Info } from 'lucide-react';
@@ -18,10 +18,6 @@ export function ExerciseCard({ exercise, index }: ExerciseCardProps) {
   const [mediaLoaded, setMediaLoaded] = React.useState(false);
   const [mediaError, setMediaError] = React.useState(false);
   const [isPlaying, setIsPlaying] = React.useState(false);
-
-  const x = useMotionValue(0);
-  const opacity = useTransform(x, [-100, 0, 100], [0, 1, 0]);
-  const scale = useTransform(x, [-100, 0, 100], [0.95, 1, 0.95]);
 
   React.useEffect(() => {
     if (!exercise.mediaUrl) return;
@@ -41,10 +37,6 @@ export function ExerciseCard({ exercise, index }: ExerciseCardProps) {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ delay: index * 0.08, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-      style={{ x, opacity, scale }}
-      drag="x"
-      dragConstraints={{ left: 0, right: 0 }}
-      dragElastic={0.2}
       className="group relative h-full"
     >
       <div className="absolute inset-0 bg-blue-500/10 blur-[60px] opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
@@ -139,12 +131,6 @@ export function ExerciseCard({ exercise, index }: ExerciseCardProps) {
           </div>
         </div>
 
-        {/* Liquid Indicator */}
-        <div className="hidden sm:flex flex-col justify-center gap-2 pr-2 shrink-0">
-           <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.8)] animate-pulse" />
-           <div className="w-2 h-2 rounded-full bg-white/5" />
-           <div className="w-2 h-2 rounded-full bg-white/5" />
-        </div>
       </div>
     </motion.div>
   );
