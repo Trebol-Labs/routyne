@@ -13,21 +13,46 @@ interface ExerciseCardProps {
   index: number;
 }
 
+const DEV = process.env.NODE_ENV === 'development';
+
 export function ExerciseCard({ exercise, index }: ExerciseCardProps) {
   const [media, setMedia] = React.useState<MediaResult | null>(null);
   const [mediaLoaded, setMediaLoaded] = React.useState(false);
   const [mediaError, setMediaError] = React.useState(false);
+  const [fetchDone, setFetchDone] = React.useState(false);
   const [isPlaying, setIsPlaying] = React.useState(false);
 
   React.useEffect(() => {
-    if (!exercise.mediaUrl) return;
+    if (!exercise.mediaUrl) {
+      if (DEV) console.log(`[ExerciseCard] ${exercise.cleanName}: no mediaUrl`);
+      return;
+    }
+    if (DEV) console.log(`[ExerciseCard] ${exercise.cleanName}: fetching ${exercise.mediaUrl}`);
     fetch(exercise.mediaUrl)
-      .then(r => r.ok ? r.json() : null)
-      .then((data: MediaResult | null) => setMedia(data))
-      .catch(() => setMediaError(true));
+      .then(r => {
+        if (DEV) console.log(`[ExerciseCard] ${exercise.cleanName}: response ${r.status}`);
+        return r.ok ? r.json() : null;
+      })
+      .then((data: MediaResult | null) => {
+        if (DEV) console.log(`[ExerciseCard] ${exercise.cleanName}: media =`, data ?? 'null (404)');
+        setMedia(data);
+        setFetchDone(true);
+      })
+      .catch(err => {
+        if (DEV) console.error(`[ExerciseCard] ${exercise.cleanName}: fetch error`, err);
+        setMediaError(true);
+        setFetchDone(true);
+      });
   }, [exercise.mediaUrl]);
 
-  const showFallback = mediaError || (!media && !exercise.mediaUrl);
+  React.useEffect(() => {
+    if (DEV && fetchDone) {
+      console.log(`[ExerciseCard] ${exercise.cleanName}: state = { fetchDone: ${fetchDone}, media: ${media?.url ?? 'null'}, mediaLoaded: ${mediaLoaded}, mediaError: ${mediaError} }`);
+    }
+  }, [fetchDone, media, mediaLoaded, mediaError]);
+
+  // fetchDone + no media = API returned null/404 → show fallback
+  const showFallback = mediaError || !exercise.mediaUrl || (fetchDone && !media);
   const isVideo = media?.type === 'video';
   const isGif = media?.type === 'gif' || media?.type === 'image';
 
@@ -84,7 +109,10 @@ export function ExerciseCard({ exercise, index }: ExerciseCardProps) {
                 "w-full h-full object-cover transition-all duration-1000",
                 mediaLoaded ? "opacity-100" : "opacity-0"
               )}
-              onLoad={() => setMediaLoaded(true)}
+              onLoad={() => {
+                if (DEV) console.log(`[ExerciseCard] ${exercise.cleanName}: image loaded ✓`);
+                setMediaLoaded(true);
+              }}
               onError={() => {
                 if (media.fallbackUrl) {
                   setMedia({ ...media, url: media.fallbackUrl, type: 'image', fallbackUrl: undefined });
