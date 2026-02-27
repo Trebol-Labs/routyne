@@ -46,7 +46,15 @@ export async function GET(
   }
 
   const searchName = resolveSearchName(slug);
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[media/route] slug="${slug}" → searchName="${searchName}"`);
+  }
+
   const result = await mediaProvider.resolve(searchName);
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[media/route] "${slug}" → ${result ? result.url : '404 (no result)'}`);
+  }
 
   cache.set(slug, result);
 
