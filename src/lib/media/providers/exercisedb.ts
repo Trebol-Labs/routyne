@@ -6,6 +6,50 @@ interface ExerciseDBItem {
   gifUrl: string;
 }
 
+const PREFIX_MAP: Record<string, string> = {
+  'smith machine': 'barbell',
+};
+
+export function generateCandidates(name: string): string[] {
+  const lower = name.toLowerCase().trim();
+  const words = lower.split(/\s+/);
+  const candidates: string[] = [];
+
+  // Strategy 1: prefix substitution (highest priority — most specific)
+  for (const [from, to] of Object.entries(PREFIX_MAP)) {
+    const fromWords = from.split(' ');
+    if (words.slice(0, fromWords.length).join(' ') === from) {
+      candidates.push(to + ' ' + words.slice(fromWords.length).join(' '));
+      break;
+    }
+  }
+
+  // Strategy 2: progressive truncation (drop last word, min 2 words)
+  for (let len = words.length - 1; len >= 2; len--) {
+    candidates.push(words.slice(0, len).join(' '));
+  }
+
+  return candidates;
+}
+
+async function searchExerciseDB(
+  name: string,
+  key: string
+): Promise<ExerciseDBItem[]> {
+  const encoded = encodeURIComponent(name.toLowerCase());
+  const res = await fetch(
+    `https://exercisedb.p.rapidapi.com/exercises/name/${encoded}?limit=5&offset=0`,
+    {
+      headers: {
+        'X-RapidAPI-Key': key,
+        'X-RapidAPI-Host': 'exercisedb.p.rapidapi.com',
+      },
+    }
+  );
+  if (!res.ok) return [];
+  return res.json();
+}
+
 export class ExerciseDBProvider implements MediaProvider {
   async resolve(name: string): Promise<MediaResult | null> {
     const key = process.env.RAPIDAPI_KEY;
@@ -15,30 +59,26 @@ export class ExerciseDBProvider implements MediaProvider {
     }
 
     try {
-      const encoded = encodeURIComponent(name.toLowerCase());
-      const res = await fetch(
-        `https://exercisedb.p.rapidapi.com/exercises/name/${encoded}?limit=5&offset=0`,
-        {
-          headers: {
-            'X-RapidAPI-Key': key,
-            'X-RapidAPI-Host': 'exercisedb.p.rapidapi.com',
-          },
-        }
-      );
+      // Primary search
+      const items = await searchExerciseDB(name, key);
+      if (items.length) return this.bestMatch(items, name);
 
-      if (!res.ok) return null;
+      // Cascade: try generated candidates until one returns results
+      for (const candidate of generateCandidates(name)) {
+        const candidateItems = await searchExerciseDB(candidate, key);
+        if (candidateItems.length) return this.bestMatch(candidateItems, candidate);
+      }
 
-      const items: ExerciseDBItem[] = await res.json();
-      if (!items.length) return null;
-
-      // Fuse.js best match on returned names
-      const fuse = new Fuse(items, { keys: ['name'], threshold: 0.4 });
-      const matches = fuse.search(name);
-      const best = matches.length ? matches[0].item : items[0];
-
-      return { url: best.gifUrl, type: 'gif' };
+      return null;
     } catch {
       return null;
     }
+  }
+
+  private bestMatch(items: ExerciseDBItem[], name: string): MediaResult {
+    const fuse = new Fuse(items, { keys: ['name'], threshold: 0.4 });
+    const matches = fuse.search(name);
+    const best = matches.length ? matches[0].item : items[0];
+    return { url: best.gifUrl, type: 'gif' };
   }
 }
