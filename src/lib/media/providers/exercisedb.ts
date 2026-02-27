@@ -2,8 +2,10 @@ import Fuse from 'fuse.js';
 import type { MediaProvider, MediaResult } from './types';
 
 interface ExerciseDBItem {
+  id: string;
   name: string;
-  gifUrl: string;
+  gifUrl?: string;
+  image?: string;
 }
 
 const PREFIX_MAP: Record<string, string> = {
@@ -61,12 +63,18 @@ export class ExerciseDBProvider implements MediaProvider {
     try {
       // Primary search
       const items = await searchExerciseDB(name, key);
-      if (items.length) return this.bestMatch(items, name);
+      if (items.length) {
+        const r = this.bestMatch(items, name);
+        if (r) return r;
+      }
 
       // Cascade: try generated candidates until one returns results
       for (const candidate of generateCandidates(name)) {
         const candidateItems = await searchExerciseDB(candidate, key);
-        if (candidateItems.length) return this.bestMatch(candidateItems, candidate);
+        if (candidateItems.length) {
+          const r = this.bestMatch(candidateItems, candidate);
+          if (r) return r;
+        }
       }
 
       return null;
@@ -75,10 +83,19 @@ export class ExerciseDBProvider implements MediaProvider {
     }
   }
 
-  private bestMatch(items: ExerciseDBItem[], name: string): MediaResult {
+  private bestMatch(items: ExerciseDBItem[], name: string): MediaResult | null {
     const fuse = new Fuse(items, { keys: ['name'], threshold: 0.4 });
     const matches = fuse.search(name);
     const best = matches.length ? matches[0].item : items[0];
-    return { url: best.gifUrl, type: 'gif' };
+    // API has used gifUrl, image, and now just id (construct URL from id)
+    const url: string | undefined =
+      best.gifUrl ||
+      best.image ||
+      (best.id ? `https://v2.exercisedb.io/image/${best.id}` : undefined);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[ExerciseDB] bestMatch "${name}": item="${best.name}" id="${best.id}" url="${url}"`);
+    }
+    if (!url) return null;
+    return { url, type: 'gif' };
   }
 }
