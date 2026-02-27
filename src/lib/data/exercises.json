@@ -2,55 +2,55 @@
   {
     "id": "bench_press",
     "aliases": ["bench press", "press de banca", "chest press", "benchpress", "banca"],
-    "media_id": "bench_press_demo",
-    "description": "Standard chest exercise."
+    "exercisedb_name": "barbell bench press",
+    "media_id": "bench_press_demo"
   },
   {
     "id": "deadlift",
     "aliases": ["deadlift", "peso muerto", "conventional deadlift"],
-    "media_id": "deadlift_demo",
-    "description": "Posterior chain power."
+    "exercisedb_name": "deadlift",
+    "media_id": "deadlift_demo"
   },
   {
     "id": "overhead_press",
     "aliases": ["overhead press", "ohp", "military press", "press militar", "shoulder press", "press de hombro"],
-    "media_id": "overhead_press_demo",
-    "description": "Shoulder strength."
+    "exercisedb_name": "barbell overhead press",
+    "media_id": "overhead_press_demo"
   },
   {
     "id": "pull_up",
     "aliases": ["pull up", "chin up", "pullups", "dominadas", "pull-ups"],
-    "media_id": "pull_up_demo",
-    "description": "Vertical pull."
+    "exercisedb_name": "pull-up",
+    "media_id": "pull_up_demo"
   },
   {
     "id": "push_up",
     "aliases": ["push up", "pushups", "push-ups", "flexiones", "lagartijas", "floor press"],
-    "media_id": "push_up_demo",
-    "description": "A classic upper body exercise."
+    "exercisedb_name": "push-up",
+    "media_id": "push_up_demo"
   },
   {
     "id": "squat",
     "aliases": ["squat", "squats", "sentadillas", "back squat", "barbell squat"],
-    "media_id": "squat_demo",
-    "description": "Essential lower body movement."
+    "exercisedb_name": "barbell squat",
+    "media_id": "squat_demo"
   },
   {
     "id": "plank",
     "aliases": ["plank", "planks", "plancha", "isometric plank", "core plank"],
-    "media_id": "plank_demo",
-    "description": "Core stability exercise."
+    "exercisedb_name": "plank",
+    "media_id": "plank_demo"
   },
   {
     "id": "lunges",
     "aliases": ["lunges", "estocadas", "walking lunges", "zancadas"],
-    "media_id": "lunges_demo",
-    "description": "Unilateral lower body."
+    "exercisedb_name": "lunge",
+    "media_id": "lunges_demo"
   },
   {
     "id": "bicep_curls",
     "aliases": ["bicep curls", "curls de biceps", "curl", "biceps"],
-    "media_id": "bicep_curls_demo",
-    "description": "Arm isolation."
+    "exercisedb_name": "barbell curl",
+    "media_id": "bicep_curls_demo"
   }
 ]
