@@ -44,8 +44,8 @@ describe('parseRoutine Markdown Parser', () => {
     const exercise = result.sessions[0].exercises[0];
     
     expect(exercise.cleanName).toBe('Sentadillas');
-    // We expect it to resolve to /media/squat_demo.webm based on our exercises.json
-    expect(exercise.mediaUrl).toBe('/media/squat_demo.webm');
+    // Resolver now emits /api/media/{slug} — actual GIF resolved at runtime
+    expect(exercise.mediaUrl).toBe('/api/media/sentadillas');
   });
 
   it('should parse flipped format (sets x reps name)', () => {
