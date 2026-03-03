@@ -24,7 +24,7 @@ export function HistoryView() {
     >
       <div className="flex items-center gap-5">
          <div className="w-2 h-10 bg-indigo-500 rounded-full shadow-[0_0_20px_rgba(99,102,241,0.6)]" />
-         <h3 className="text-white font-black text-3xl tracking-tighter uppercase">
+         <h3 className="text-white font-black text-3xl tracking-tighter uppercase font-display">
            History
          </h3>
       </div>
@@ -32,7 +32,7 @@ export function HistoryView() {
       {history.length === 0 ? (
         <div className="py-20 text-center space-y-4 glass-panel rounded-[2.5rem] border-white/5">
            <Calendar className="w-16 h-16 text-white/5 mx-auto" />
-           <p className="text-zinc-600 font-black uppercase tracking-widest text-sm">No workouts recorded yet</p>
+           <p className="text-white/30 font-black uppercase tracking-widest text-sm">No workouts recorded yet</p>
         </div>
       ) : (
         <div className="grid gap-6">
@@ -41,11 +41,11 @@ export function HistoryView() {
               {/* Header */}
               <div className="flex justify-between items-start">
                 <div className="flex-1 min-w-0 pr-3">
-                  <h4 className="text-xl font-black text-white uppercase tracking-tighter truncate">
+                  <h4 className="text-xl font-black text-white uppercase tracking-tighter truncate font-display">
                     {entry.sessionTitle}
                   </h4>
                   <div className="flex items-center gap-3 mt-1 flex-wrap">
-                    <p className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.2em]">
+                    <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.2em] font-display">
                       {formatRelativeDate(new Date(entry.completedAt))}
                     </p>
                     {entry.totalVolume > 0 && (
@@ -85,7 +85,7 @@ export function HistoryView() {
                   <div className="w-8 h-8 rounded-xl bg-black/40 flex items-center justify-center border border-white/5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                   </div>
-                  <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">
+                  <span className="text-xs font-bold text-white/50 uppercase tracking-widest">
                     {entry.completedExercises.length} Exercises tracked
                   </span>
                 </div>

@@ -87,11 +87,11 @@ export class ExerciseDBProvider implements MediaProvider {
     const fuse = new Fuse(items, { keys: ['name'], threshold: 0.4 });
     const matches = fuse.search(name);
     const best = matches.length ? matches[0].item : items[0];
-    // API has used gifUrl, image, and now just id (construct URL from id)
+    // API has used gifUrl, image, and now just id — proxy through our route to keep key server-side
     const url: string | undefined =
       best.gifUrl ||
       best.image ||
-      (best.id ? `https://v2.exercisedb.io/image/${best.id}` : undefined);
+      (best.id ? `/api/exercise-image?id=${best.id}` : undefined);
     if (process.env.NODE_ENV === 'development') {
       console.log(`[ExerciseDB] bestMatch "${name}": item="${best.name}" id="${best.id}" url="${url}"`);
     }

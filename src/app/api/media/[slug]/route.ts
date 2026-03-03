@@ -41,7 +41,7 @@ export async function GET(
     const cached = cache.get(slug)!;
     if (!cached) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     return NextResponse.json(cached, {
-      headers: { 'Cache-Control': 'public, max-age=2592000' },
+      headers: { 'Cache-Control': process.env.NODE_ENV === 'development' ? 'no-store' : 'public, max-age=2592000' },
     });
   }
 
@@ -63,6 +63,6 @@ export async function GET(
   }
 
   return NextResponse.json(result, {
-    headers: { 'Cache-Control': 'public, max-age=2592000' },
+    headers: { 'Cache-Control': process.env.NODE_ENV === 'development' ? 'no-store' : 'public, max-age=2592000' },
   });
 }

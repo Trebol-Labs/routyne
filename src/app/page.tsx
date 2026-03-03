@@ -1,6 +1,8 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRef, useEffect } from 'react';
+import { animateNumber } from '@/lib/animations';
 import { RoutineUploader } from '@/components/workout/RoutineUploader';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
@@ -20,6 +22,16 @@ import {
 import { cn } from '@/lib/utils';
 import { WorkoutView } from '@/types/workout';
 import { useWakeLock } from '@/hooks/useWakeLock';
+
+function StatValue({ value }: { value: number }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (ref.current) {
+      animateNumber(ref.current, value);
+    }
+  }, [value]);
+  return <span ref={ref}>0</span>;
+}
 
 export default function Home() {
   const {
@@ -48,34 +60,37 @@ export default function Home() {
       <div className="max-w-screen-md mx-auto min-h-screen flex flex-col relative px-4 sm:px-0">
 
         {/* Apple Liquid Glass Header */}
-        <header className="sticky top-4 z-50 mt-4 px-6 py-4 flex items-center justify-between glass-panel rounded-[2.5rem] border-white/10 shadow-2xl">
-          <div className="flex items-center gap-5">
-            <div className="relative group">
-               <div className="absolute inset-0 bg-blue-600 blur-[30px] opacity-40 group-hover:opacity-80 transition-opacity" />
-               <div className="relative w-12 h-12 rounded-[1.2rem] bg-gradient-to-tr from-white/20 to-white/5 p-px backdrop-blur-3xl shadow-2xl">
-                  <div className="w-full h-full rounded-[1.1rem] bg-black/40 flex items-center justify-center border border-white/5">
-                    <Activity className="text-white w-7 h-7 animate-pulse" />
-                  </div>
-               </div>
-            </div>
-            <div className="flex flex-col">
-              <h2 className="text-2xl font-black tracking-tighter leading-none text-white tracking-[-0.05em]">ROUTYNE</h2>
-              <div className="flex items-center gap-2 mt-1.5 pl-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                <p className="text-[11px] text-white/20 font-black uppercase tracking-[0.3em] whitespace-nowrap">OFFLINE READY</p>
+        <div className="sticky top-4 z-50 w-full flex justify-center pointer-events-none mb-4">
+          <header className="pointer-events-auto w-full px-6 py-4 flex items-center justify-between glass-panel rounded-[2.5rem] border-white/10 shadow-2xl">
+            <div className="absolute inset-0 -z-10 bg-blue-600/10 blur-[100px] rounded-[2.5rem] pointer-events-none" />
+            <div className="flex items-center gap-5">
+              <div className="relative group">
+                 <div className="absolute inset-0 bg-blue-600 blur-[30px] opacity-40 group-hover:opacity-80 transition-opacity" />
+                 <div className="relative w-12 h-12 rounded-[1.2rem] bg-gradient-to-tr from-white/20 to-white/5 p-px backdrop-blur-3xl shadow-2xl">
+                    <div className="w-full h-full rounded-[1.1rem] bg-black/40 flex items-center justify-center border border-white/5">
+                      <Dumbbell className="text-white w-7 h-7" />
+                    </div>
+                 </div>
+              </div>
+              <div className="flex flex-col">
+                <h2 className="text-2xl font-black tracking-tighter leading-none text-white font-display">ROUTYNE</h2>
+                <div className="flex items-center gap-2 mt-1.5 pl-0.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                  <p className="text-[11px] text-white/20 font-black uppercase tracking-[0.3em] whitespace-nowrap">OFFLINE READY</p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" className="w-11 h-11 rounded-[1.2rem] bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/5 transition-all">
-              <Search className="w-5.5 h-5.5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="w-11 h-11 rounded-[1.2rem] bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/5 transition-all">
-              <User className="w-5.5 h-5.5" />
-            </Button>
-          </div>
-        </header>
+            <nav className="flex items-center gap-3">
+              <Button variant="glass-icon" size="icon-lg" aria-label="Search">
+                <Search className="w-5 h-5" />
+              </Button>
+              <Button variant="glass-icon" size="icon-lg" aria-label="Profile">
+                <User className="w-5 h-5" />
+              </Button>
+            </nav>
+          </header>
+        </div>
 
         <div className="flex-grow pt-10 pb-32">
           <AnimatePresence mode="wait">
@@ -114,7 +129,7 @@ export default function Home() {
               >
                 <div className="flex items-center gap-5">
                   <div className="w-2 h-10 bg-blue-500 rounded-full shadow-[0_0_20px_rgba(59,130,246,0.6)]" />
-                  <h3 className="text-white font-black text-3xl tracking-tighter uppercase">Stats</h3>
+                  <h3 className="text-white font-black text-3xl tracking-tighter uppercase font-display">Stats</h3>
                 </div>
 
                 {history.length === 0 ? (
@@ -122,7 +137,7 @@ export default function Home() {
                     <TrendingUp className="w-16 h-16 text-white/5 mx-auto" />
                     <div className="space-y-2">
                       <p className="text-white/40 font-black text-lg uppercase tracking-tighter">Your stats will appear here</p>
-                      <p className="text-zinc-600 text-[11px] font-black uppercase tracking-[0.3em]">Complete a session to start tracking</p>
+                      <p className="text-white/25 text-[11px] font-black uppercase tracking-[0.3em]">Complete a session to start tracking</p>
                     </div>
                     <div className="grid grid-cols-3 gap-3 pt-2 w-full">
                       {['Total Volume', 'Sessions', 'Exercises'].map((label) => (
@@ -139,16 +154,24 @@ export default function Home() {
                   return (
                     <div className="space-y-6">
                       <div className="grid grid-cols-3 gap-4">
-                        {[
-                          { label: 'Sessions', value: String(totalSessions), color: 'text-blue-400' },
-                          { label: 'Volume', value: totalVolume > 0 ? `${totalVolume.toLocaleString()}kg` : '—', color: 'text-indigo-400' },
-                          { label: 'Exercises', value: String(totalExercises), color: 'text-emerald-400' },
-                        ].map(({ label, value, color }) => (
-                          <div key={label} className="glass-panel rounded-[2rem] p-4 border-white/5 text-center space-y-2">
-                            <p className={`text-2xl font-black tracking-tighter ${color}`}>{value}</p>
-                            <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">{label}</p>
-                          </div>
-                        ))}
+                        <div className="glass-panel rounded-[2rem] p-4 border-white/5 text-center space-y-2">
+                          <p className="text-2xl font-black tracking-tighter font-display text-blue-400">
+                             <StatValue value={totalSessions} />
+                          </p>
+                          <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Sessions</p>
+                        </div>
+                        <div className="glass-panel rounded-[2rem] p-4 border-white/5 text-center space-y-2">
+                          <p className="text-2xl font-black tracking-tighter font-display text-indigo-400">
+                             {totalVolume > 0 ? <><StatValue value={totalVolume} />kg</> : '—'}
+                          </p>
+                          <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Volume</p>
+                        </div>
+                        <div className="glass-panel rounded-[2rem] p-4 border-white/5 text-center space-y-2">
+                          <p className="text-2xl font-black tracking-tighter font-display text-emerald-400">
+                             <StatValue value={totalExercises} />
+                          </p>
+                          <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Exercises</p>
+                        </div>
                       </div>
                       <div className="space-y-3">
                         <h4 className="text-[11px] font-black text-white/20 uppercase tracking-[0.4em] px-1">Recent</h4>
@@ -156,7 +179,7 @@ export default function Home() {
                           <div key={entry.id} className="glass-panel rounded-[2rem] p-4 border-white/5 flex items-center justify-between gap-4">
                             <div className="min-w-0">
                               <p className="text-sm font-black text-white/70 uppercase tracking-tighter truncate">{entry.sessionTitle}</p>
-                              <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em] mt-0.5">{entry.volumeData.length} exercises</p>
+                              <p className="text-[10px] font-black text-white/25 uppercase tracking-[0.2em] mt-0.5">{entry.volumeData.length} exercises</p>
                             </div>
                             {entry.totalVolume > 0 && (
                               <span className="text-[10px] font-black text-blue-400/60 uppercase tracking-widest shrink-0">
@@ -187,46 +210,65 @@ export default function Home() {
         </div>
 
         {/* Global Floating Glass Control Center */}
+        <div className="fixed bottom-0 left-0 right-0 h-44 bg-gradient-to-t from-black/90 via-black/40 to-transparent backdrop-blur-xl z-40 pointer-events-none" />
         <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[60] w-[calc(100%-48px)] max-w-[420px]">
-          <nav className="relative group p-1.5 glass-panel rounded-[3rem] border-white/10 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.8)]">
-             <div className="absolute inset-0 bg-blue-600/20 blur-3xl rounded-[3rem] opacity-0 group-hover:opacity-100 transition-opacity" />
+          <nav role="navigation" className="relative group p-1.5 glass-panel rounded-[3rem] border-white/20 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.9)] overflow-hidden">
+             <div className="absolute inset-0 bg-blue-600/10 backdrop-blur-3xl rounded-[3rem] pointer-events-none" />
+             <div className="absolute inset-0 bg-blue-600/20 blur-[100px] rounded-[3rem] opacity-60 group-hover:opacity-100 transition-opacity" />
+             <div className="absolute inset-0 -z-10 bg-indigo-500/10 blur-[60px] rounded-[3rem] group-hover:bg-indigo-500/20 transition-all" />
              <div className="relative flex justify-between p-2">
-                <div
+                <button
                   onClick={() => handleNavClick('uploader')}
+                  aria-label="Import routine"
+                  aria-current={currentView === 'uploader' ? 'page' : undefined}
                   className={cn(
-                    "w-16 h-16 rounded-[2rem] flex items-center justify-center transition-all hover:scale-105 active:scale-90 cursor-pointer",
-                    currentView === 'uploader' ? "bg-white text-black shadow-2xl" : "text-white/30 hover:bg-white/5"
+                    "w-14 h-14 rounded-[1.5rem] flex items-center justify-center transition-all cursor-pointer relative",
+                    currentView === 'uploader'
+                      ? "bg-white text-black shadow-lg"
+                      : "text-white/30 hover:text-white/50 hover:bg-white/5"
                   )}
                 >
-                  <Plus className="w-7 h-7" />
-                </div>
-                <div
+                  <Plus className="w-6 h-6" />
+                </button>
+                <button
                    onClick={() => handleNavClick('routine-overview')}
+                   aria-label="Overview"
+                   aria-current={currentView === 'routine-overview' || currentView === 'active-session' ? 'page' : undefined}
                    className={cn(
-                    "w-16 h-16 rounded-[2rem] flex items-center justify-center transition-all hover:scale-105 active:scale-90 cursor-pointer",
-                    currentView === 'routine-overview' || currentView === 'active-session' ? "bg-white text-black shadow-2xl" : "text-white/30 hover:bg-white/5"
+                    "w-14 h-14 rounded-[1.5rem] flex items-center justify-center transition-all cursor-pointer relative",
+                    currentView === 'routine-overview' || currentView === 'active-session'
+                      ? "bg-white text-black shadow-lg"
+                      : "text-white/30 hover:text-white/50 hover:bg-white/5"
                   )}
                 >
-                  <Dumbbell className="w-7 h-7" />
-                </div>
-                <div
+                  <Dumbbell className="w-6 h-6" />
+                </button>
+                <button
                    onClick={() => handleNavClick('history')}
+                   aria-label="History"
+                   aria-current={currentView === 'history' ? 'page' : undefined}
                    className={cn(
-                    "w-16 h-16 rounded-[2rem] flex items-center justify-center transition-all hover:scale-105 active:scale-90 cursor-pointer",
-                    currentView === 'history' ? "bg-white text-black shadow-2xl" : "text-white/30 hover:bg-white/5"
+                    "w-14 h-14 rounded-[1.5rem] flex items-center justify-center transition-all cursor-pointer relative",
+                    currentView === 'history'
+                      ? "bg-white text-black shadow-lg"
+                      : "text-white/30 hover:text-white/50 hover:bg-white/5"
                   )}
                 >
-                  <Calendar className="w-7 h-7" />
-                </div>
-                <div
+                  <Calendar className="w-6 h-6" />
+                </button>
+                <button
                    onClick={() => handleNavClick('stats')}
+                   aria-label="Stats"
+                   aria-current={currentView === 'stats' ? 'page' : undefined}
                    className={cn(
-                    "w-16 h-16 rounded-[2rem] flex items-center justify-center transition-all hover:scale-105 active:scale-90 cursor-pointer",
-                    currentView === 'stats' ? "bg-white text-black shadow-2xl" : "text-white/30 hover:bg-white/5"
+                    "w-14 h-14 rounded-[1.5rem] flex items-center justify-center transition-all cursor-pointer relative",
+                    currentView === 'stats'
+                      ? "bg-white text-black shadow-lg"
+                      : "text-white/30 hover:text-white/50 hover:bg-white/5"
                   )}
                 >
-                  <TrendingUp className="w-7 h-7" />
-                </div>
+                  <TrendingUp className="w-6 h-6" />
+                </button>
              </div>
           </nav>
         </div>

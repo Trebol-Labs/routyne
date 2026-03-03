@@ -4,6 +4,8 @@ import { motion, useMotionValue, useTransform, PanInfo } from 'framer-motion';
 import { CheckCircle2, Circle, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ParsedExercise } from '@/types/workout';
+import { useRef, useEffect } from 'react';
+import { pulseGlow } from '@/lib/animations';
 
 interface SetRowProps {
   setIdx: number;
@@ -16,6 +18,13 @@ interface SetRowProps {
 export function SetRow({ setIdx, exercise, isCompleted, onComplete }: SetRowProps) {
   const x = useMotionValue(0);
   const swipeThreshold = 120;
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isCompleted && cardRef.current) {
+      pulseGlow(cardRef.current);
+    }
+  }, [isCompleted]);
 
   // Transform values for visual feedback during swipe
   const opacity = useTransform(x, [0, swipeThreshold], [0, 0.4]);
@@ -45,6 +54,7 @@ export function SetRow({ setIdx, exercise, isCompleted, onComplete }: SetRowProp
 
       {/* Main draggable set card */}
       <motion.div
+        ref={cardRef}
         drag="x"
         dragConstraints={{ left: 0, right: isCompleted ? 0 : swipeThreshold + 40 }}
         dragElastic={0.1}
@@ -57,17 +67,17 @@ export function SetRow({ setIdx, exercise, isCompleted, onComplete }: SetRowProp
       >
         <div className="flex items-center gap-6">
           <div className={cn(
-            "w-12 h-12 rounded-2xl flex items-center justify-center font-black transition-all duration-700",
+            "w-12 h-12 rounded-2xl flex items-center justify-center font-black transition-all duration-700 font-display",
             isCompleted ? "bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.5)]" : "bg-white/5 text-white/20"
           )}>
             {setIdx + 1}
           </div>
           <div>
             <span className={cn(
-              "text-lg font-black tracking-tight block leading-none transition-all duration-700",
+              "text-lg font-black tracking-tight block leading-none transition-all duration-700 font-display",
               isCompleted ? "text-white/40 line-through" : "text-white"
             )}>SET {setIdx + 1}</span>
-            <span className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mt-2 block">
+            <span className="text-xs font-black text-white/40 uppercase tracking-widest mt-2 block">
                {exercise.repsMin}{exercise.repsMin !== exercise.repsMax ? `-${exercise.repsMax}` : ''} Reps
             </span>
           </div>
@@ -77,7 +87,7 @@ export function SetRow({ setIdx, exercise, isCompleted, onComplete }: SetRowProp
            {!isCompleted && (
               <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/5">
                  <ChevronRight className="w-3 h-3 text-white/20 animate-pulse" />
-                 <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">SWIPE</span>
+                 <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">SWIPE</span>
               </div>
            )}
            <div className={cn(

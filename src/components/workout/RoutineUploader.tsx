@@ -46,7 +46,7 @@ export function RoutineUploader() {
   }, [handleParse]);
 
   return (
-    <div className="w-full max-w-2xl mx-auto space-y-8 p-4 flex flex-col items-center">
+    <div className="w-full max-w-2xl mx-auto space-y-6 p-4 flex flex-col items-center">
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
@@ -58,10 +58,10 @@ export function RoutineUploader() {
           className="inline-flex items-center gap-3 px-5 py-2.5 bg-white/5 backdrop-blur-3xl border border-white/10 rounded-full glass-border-light shadow-2xl"
         >
           <Code className="w-4 h-4 text-blue-400" />
-          <span className="text-[12px] font-black text-white/90 uppercase tracking-[0.25em]">Markdown Parser</span>
+          <span className="text-[12px] font-black text-white/90 uppercase tracking-[0.25em] font-display">Markdown Parser</span>
         </motion.div>
         
-        <h1 className="text-4xl sm:text-7xl font-black tracking-tighter text-liquid leading-tight text-center">
+        <h1 className="text-3xl sm:text-6xl font-black tracking-tighter text-liquid leading-tight text-center font-display">
           IMPORT <span className="brightness-125 [-webkit-text-fill-color:#3b82f6]">ROUTINE</span>
         </h1>
         <p className="text-white/40 font-medium text-sm tracking-tight max-w-xs mx-auto">Paste your raw markdown. We handle the rest.</p>
@@ -79,8 +79,9 @@ export function RoutineUploader() {
             : "hover:scale-[1.01]"
         )}
       >
+        <div className="absolute inset-0 bg-blue-600/10 blur-[120px] rounded-[3rem] opacity-40 group-hover:opacity-60 transition-opacity pointer-events-none" />
         {/* Main Glass Hero Panel */}
-        <div className="relative glass-panel rounded-[2.8rem] p-6 sm:p-10 overflow-hidden">
+        <div className="relative glass-panel rounded-[2.8rem] p-5 sm:p-8 overflow-hidden">
           <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-600/10 blur-[100px] rounded-full" />
           <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-indigo-600/10 blur-[100px] rounded-full" />
           
@@ -116,14 +117,14 @@ export function RoutineUploader() {
                     value={text}
                     onChange={(e) => setText(e.target.value)}
                     placeholder="# Push Day&#10;## Bench Press&#10;- 3x12&#10;- Rest: 90s"
-                    className="w-full h-40 sm:h-64 bg-black/30 backdrop-blur-md rounded-3xl p-6 border border-white/5 focus:ring-0 text-white placeholder:text-white/10 resize-none font-mono text-lg leading-relaxed selection:bg-blue-500/40 sunken-glass"
+                    className="w-full h-36 sm:h-56 bg-black/30 backdrop-blur-md rounded-3xl p-6 border border-white/5 focus:ring-0 text-white placeholder:text-white/10 resize-none font-mono text-lg leading-relaxed selection:bg-blue-500/40 sunken-glass"
                   />
                 </div>
                 
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-4 w-full">
-                  <label className="flex items-center gap-4 px-8 py-5 bg-white/5 backdrop-blur-xl rounded-[2rem] border border-white/[0.05] shadow-inner cursor-pointer hover:bg-white/10 transition-colors w-full sm:w-auto justify-center">
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4 w-full">
+                  <label className="flex items-center gap-4 px-8 py-5 glass-btn rounded-[2rem] cursor-pointer w-full sm:w-auto justify-center">
                     <Upload className="w-5 h-5 text-blue-400" />
-                    <span className="text-[11px] font-black text-white/40 uppercase tracking-[0.2em] leading-none whitespace-nowrap">Drop or Select .md</span>
+                    <span className="text-[11px] font-black text-white/40 uppercase tracking-[0.2em] leading-none whitespace-nowrap font-display">Drop or Select .md</span>
                     <input 
                       type="file" 
                       accept=".md,text/markdown" 
@@ -144,13 +145,13 @@ export function RoutineUploader() {
                   </label>
                   
                   <Button
+                    variant="glass-primary"
+                    size="xl"
                     onClick={() => handleParse(text)}
                     disabled={!text.trim() || isLoading}
-                    className="w-full sm:w-auto rounded-[2rem] active-glass-btn text-white font-black px-12 py-8 h-auto text-xl transition-all active:scale-95 group relative overflow-hidden flex items-center justify-center"
+                    className="w-full sm:w-auto"
                   >
-                    <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <span className="relative z-10 whitespace-nowrap">GENERATE WORKOUT</span>
-                    <Sparkles className="w-6 h-6 ml-4 relative z-10 group-hover:rotate-12 transition-transform shrink-0" />
+                    GENERATE WORKOUT
                   </Button>
                 </div>
               </motion.div>
@@ -174,20 +175,6 @@ export function RoutineUploader() {
         )}
       </motion.div>
 
-      <div className="grid grid-cols-3 gap-3 sm:gap-6">
-        {[
-          { icon: Check, color: "text-emerald-400", label: "AUTO-PARSE" },
-          { icon: Sparkles, color: "text-blue-400", label: "DYNAMIC MEDIA" },
-          { icon: Info, color: "text-indigo-400", label: "LIQUID FLOW" }
-        ].map((item, i) => (
-          <div key={i} className="group p-4 sm:p-6 rounded-[2rem] sm:rounded-[2.5rem] glass-panel border border-white/5 hover:border-white/20 transition-all duration-500 flex flex-col items-center gap-3 text-center hover:-translate-y-2">
-            <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-white/5 flex items-center justify-center shadow-inner group-hover:scale-110 group-hover:bg-white/10 transition-all">
-              <item.icon className={cn("w-5 h-5 sm:w-7 sm:h-7", item.color)} />
-            </div>
-            <span className="text-[9px] sm:text-[10px] font-black text-white/50 uppercase tracking-[0.2em] sm:tracking-[0.3em] leading-tight text-center">{item.label}</span>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
