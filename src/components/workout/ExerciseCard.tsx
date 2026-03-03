@@ -4,7 +4,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { ParsedExercise } from '@/types/workout';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Dumbbell, PlayCircle, Info } from 'lucide-react';
+import { Dumbbell, PlayCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { MediaResult } from '@/lib/media/providers';
 

@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   if (!key) return NextResponse.json({ error: 'API key not configured' }, { status: 500 });
 
   if (cache.has(id)) {
-    return new NextResponse(cache.get(id), {
+    return new NextResponse(new Uint8Array(cache.get(id)!), {
       headers: {
         'Content-Type': 'image/gif',
         'Cache-Control': 'public, max-age=2592000',
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
     console.log(`[exercise-image] id="${id}" → ${buffer.length} bytes`);
   }
 
-  return new NextResponse(buffer, {
+  return new NextResponse(new Uint8Array(buffer), {
     headers: {
       'Content-Type': 'image/gif',
       'Cache-Control': 'public, max-age=2592000',
