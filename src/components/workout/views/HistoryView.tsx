@@ -31,6 +31,7 @@ export function HistoryView() {
       key="history"
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
       className="space-y-10"
     >
       <div className="flex items-center gap-5">
@@ -41,14 +42,14 @@ export function HistoryView() {
       </div>
 
       {history.length === 0 ? (
-        <div className="py-20 text-center space-y-4 glass-panel rounded-[2.5rem] border-white/5">
+        <div className="py-20 text-center space-y-4 glass-panel rounded-[var(--radius-xl)] border-white/5">
            <Calendar className="w-16 h-16 text-white/5 mx-auto" />
            <p className="text-white/30 font-black uppercase tracking-widest text-sm">No workouts recorded yet</p>
         </div>
       ) : (
         <div className="grid gap-6">
           {history.map((entry) => (
-            <div key={entry.id} className="glass-panel rounded-[2.5rem] p-6 border-white/10 space-y-4">
+            <div key={entry.id} className="glass-panel rounded-[var(--radius-xl)] p-5 border-white/10 space-y-4">
               {/* Header */}
               <div className="flex justify-between items-start">
                 <div className="flex-1 min-w-0 pr-3">
@@ -86,7 +87,7 @@ export function HistoryView() {
                     </span>
                   ))}
                   {entry.volumeData.length > 4 && (
-                    <span className="bg-white/5 border border-white/[0.05] text-white/30 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest">
+                    <span className="bg-white/5 border border-white/[0.05] text-white/50 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest">
                       +{entry.volumeData.length - 4}
                     </span>
                   )}
@@ -110,7 +111,7 @@ export function HistoryView() {
               animate={{ opacity: 1 }}
               onClick={handleLoadMore}
               disabled={isLoading}
-              className="w-full flex items-center justify-center gap-2 py-4 glass-panel rounded-[2rem] border-white/10 text-white/30 hover:text-white/60 hover:border-white/20 transition-all text-[11px] font-black uppercase tracking-widest"
+              className="w-full flex items-center justify-center gap-2 py-4 glass-panel rounded-[var(--radius-xl)] border-white/10 text-white/50 hover:text-white/70 hover:border-white/20 transition-colors text-[11px] font-black uppercase tracking-widest"
             >
               {isLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />

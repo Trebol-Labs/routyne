@@ -41,7 +41,7 @@ export function SetRow({ setIdx, exercise, isCompleted, onRequestComplete }: Set
   };
 
   return (
-    <div className="relative overflow-hidden rounded-[2rem]">
+    <div className="relative overflow-hidden rounded-[var(--radius-xl)]">
       {/* Background layer that appears on swipe */}
       <motion.div
         style={{ backgroundColor: color, opacity }}
@@ -55,20 +55,30 @@ export function SetRow({ setIdx, exercise, isCompleted, onRequestComplete }: Set
       {/* Main draggable set card */}
       <motion.div
         ref={cardRef}
+        role="button"
+        tabIndex={0}
+        aria-label={`Set ${setIdx + 1}: ${isCompleted ? 'completed, press Enter to undo' : 'swipe right or press Enter to complete'}`}
+        onKeyDown={(e) => {
+          if ((e.key === 'Enter' || e.key === ' ') && !isCompleted) {
+            e.preventDefault();
+            onRequestComplete();
+          }
+        }}
         drag="x"
         dragConstraints={{ left: 0, right: isCompleted ? 0 : swipeThreshold + 40 }}
         dragElastic={0.1}
         onDragEnd={handleDragEnd}
-        style={{ x }}
+        style={{ x, touchAction: 'pan-y' }}
         className={cn(
-          "relative glass-panel rounded-[1.5rem] p-4 flex items-center justify-between transition-all duration-500 border z-10",
+          "relative glass-panel rounded-[var(--radius-lg)] p-4 flex items-center justify-between transition-colors duration-500 border z-10",
+          "focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:outline-none",
           isCompleted ? "bg-emerald-500/10 border-emerald-500/20 translate-x-2" : "border-white/5 bg-zinc-950/40"
         )}
       >
         <div className="flex items-center gap-4">
           <div className={cn(
             "w-9 h-9 rounded-xl flex items-center justify-center font-black transition-all duration-500 font-display text-sm",
-            isCompleted ? "bg-emerald-500 text-white" : "bg-white/5 text-white/30"
+            isCompleted ? "bg-emerald-500 text-white" : "bg-white/5 text-white/50"
           )}>
             {setIdx + 1}
           </div>
@@ -77,7 +87,7 @@ export function SetRow({ setIdx, exercise, isCompleted, onRequestComplete }: Set
               "text-base font-black tracking-tight block leading-none transition-all duration-500 font-display",
               isCompleted ? "text-white/40 line-through" : "text-white"
             )}>SET {setIdx + 1}</span>
-            <span className="text-[10px] font-black text-white/30 uppercase tracking-widest mt-1 block">
+            <span className="text-[10px] font-black text-white/50 uppercase tracking-widest mt-1 block">
                {exercise.repsMin}{exercise.repsMin !== exercise.repsMax ? `-${exercise.repsMax}` : ''} Reps
             </span>
           </div>
@@ -86,13 +96,13 @@ export function SetRow({ setIdx, exercise, isCompleted, onRequestComplete }: Set
         <div className="flex items-center gap-4">
            {!isCompleted && (
               <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/5">
-                 <ChevronRight className="w-3 h-3 text-white/20 animate-pulse" />
-                 <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">SWIPE</span>
+                 <ChevronRight className="w-3 h-3 text-white/40 animate-pulse" />
+                 <span className="text-[9px] font-black text-white/50 uppercase tracking-widest">SWIPE</span>
               </div>
            )}
            <div className={cn(
              "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-700",
-             isCompleted ? "text-emerald-400" : "text-white/5"
+             isCompleted ? "text-emerald-400" : "text-white/20"
            )}>
              {isCompleted ? <CheckCircle2 className="w-6 h-6" /> : <Circle className="w-6 h-6" />}
            </div>

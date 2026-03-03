@@ -21,12 +21,12 @@ export function RoutineOverviewView() {
       key="routine"
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.6, ease: "easeOut" }}
+      transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
       className="space-y-8"
     >
       {/* Routine Hero Section */}
       <div className="space-y-4 relative group">
-        <div className="relative p-5 sm:p-8 rounded-[2.5rem] glass-panel border border-white/10 overflow-hidden">
+        <div className="relative p-5 sm:p-8 rounded-[var(--radius-xl)] glass-panel border border-white/10 overflow-hidden">
           <div className="absolute top-[-40px] right-[-40px] opacity-[0.04] pointer-events-none">
              <Dumbbell className="w-48 h-48 text-white" />
           </div>
@@ -49,13 +49,13 @@ export function RoutineOverviewView() {
         <div className="space-y-3">
           <h3 className="text-[11px] font-black text-white/25 uppercase tracking-[0.4em] pl-1 font-display">Sessions</h3>
 
-          <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar -mx-4 px-4 sm:-mx-2 sm:px-2">
+          <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar -mx-4 px-4">
             {currentRoutine.sessions.map((session, idx) => (
               <button
                 key={session.id}
                 onClick={() => setSessionPickerIdx(idx)}
                 className={cn(
-                  "shrink-0 relative flex flex-col items-center justify-center min-w-[100px] h-[110px] rounded-[2rem] border transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]",
+                  "shrink-0 relative flex flex-col items-center justify-center min-w-[100px] h-[110px] rounded-[var(--radius-xl)] border transition-colors transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]",
                   sessionPickerIdx === idx
                     ? "active-glass-btn scale-[1.03] -translate-y-1 z-10"
                     : "bg-white/[0.04] border-white/[0.08] hover:bg-white/[0.07] hover:border-white/[0.12]"
@@ -80,7 +80,7 @@ export function RoutineOverviewView() {
 
                 <span className={cn(
                   "text-[9px] font-black uppercase tracking-widest mt-1",
-                  sessionPickerIdx === idx ? "text-white/40" : "text-white/20"
+                  sessionPickerIdx === idx ? "text-white/50" : "text-white/40"
                 )}>
                   {session.exercises.length}ex
                 </span>
@@ -93,7 +93,7 @@ export function RoutineOverviewView() {
           variant="glass-primary"
           size="xl"
           onClick={() => startSession(sessionPickerIdx)}
-          className="w-full rounded-[2rem] gap-3 group"
+          className="w-full rounded-[var(--radius-xl)] gap-3 group"
         >
           <Play className="w-5 h-5 fill-white group-hover:scale-110 transition-transform" />
           START SESSION {sessionPickerIdx + 1}
@@ -102,14 +102,14 @@ export function RoutineOverviewView() {
 
       {/* Exercises Sequence Overview */}
       <div className="space-y-4 pt-2">
-        <div className="flex items-center gap-3 px-1">
+        <div className="flex items-center gap-3">
           <div className="w-1 h-6 bg-blue-500 rounded-full" />
           <h3 className="text-white font-black text-xl tracking-tighter uppercase font-display">
             Sequence
           </h3>
         </div>
 
-        <div className="grid gap-3 px-2 sm:px-0">
+        <div className="grid gap-3">
           {pickerSession?.exercises.map((exercise, index) => (
             <ExerciseCard
               key={exercise.id}
