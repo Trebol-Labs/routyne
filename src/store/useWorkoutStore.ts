@@ -1,7 +1,22 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { RoutineData, WorkoutState, WorkoutView, HistoryEntry, SetStatus, ExerciseVolume, UserProfile } from '@/types/workout';
 import { v4 as uuidv4 } from 'uuid';
+import {
+  RoutineData, WorkoutState, WorkoutView,
+  HistoryEntry, ExerciseVolume, UserProfile, RoutineSummary,
+} from '@/types/workout';
+
+// ── IDB imports (lazy-safe: only used in async actions) ──────────────────────
+import { migrateLegacyData } from '@/lib/db/migrate-legacy';
+import {
+  saveRoutine, loadRoutine, listRoutines, deleteRoutine,
+} from '@/lib/db/routines';
+import { saveHistoryEntry, loadAllHistory } from '@/lib/db/history';
+import {
+  saveActiveSession, loadActiveSession, clearActiveSession,
+} from '@/lib/db/activeSession';
+import { loadProfile, saveProfile } from '@/lib/db/profile';
+
+// ── Default profile ──────────────────────────────────────────────────────────
 
 const DEFAULT_PROFILE: UserProfile = {
   displayName: 'Athlete',
@@ -11,127 +26,289 @@ const DEFAULT_PROFILE: UserProfile = {
   defaultRestSeconds: 90,
 };
 
-export const useWorkoutStore = create<WorkoutState>()(
-  persist(
-    (set) => ({
+// ── Volume helper ─────────────────────────────────────────────────────────────
+
+function buildVolumeData(
+  session: RoutineData['sessions'][number],
+  setCompletion: WorkoutState['setCompletion'],
+  sessionIdx: number
+): ExerciseVolume[] {
+  return session.exercises
+    .map((ex) => {
+      const completedSets = Object.entries(setCompletion).filter(
+        ([key, status]) =>
+          key.startsWith(`${sessionIdx}-${ex.id}-`) && status.completed
+      );
+      const totalReps = completedSets.reduce((sum, [, s]) => sum + (s.repsDone ?? 0), 0);
+      const totalVolume = completedSets.reduce(
+        (sum, [, s]) => sum + (s.repsDone ?? 0) * (s.weight ?? 0),
+        0
+      );
+      return {
+        exerciseId: ex.id,
+        cleanName: ex.cleanName,
+        setsCompleted: completedSets.length,
+        totalReps,
+        totalVolume,
+      };
+    })
+    .filter((ev) => ev.setsCompleted > 0);
+}
+
+// ── Store ─────────────────────────────────────────────────────────────────────
+
+export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
+  // ── Initial state ──────────────────────────────────────────────────────────
+  currentView: 'uploader',
+  isLoading: false,
+  isHydrated: false,
+  currentRoutine: null,
+  activeSessionIdx: null,
+  setCompletion: {},
+  history: [],
+  historyHasMore: false,
+  profile: { ...DEFAULT_PROFILE },
+  routineLibrary: [],
+
+  // ── hydrate ────────────────────────────────────────────────────────────────
+  hydrate: async () => {
+    try {
+      await migrateLegacyData();
+
+      const [profile, library, historyEntries, activeSession] = await Promise.all([
+        loadProfile(),
+        listRoutines(),
+        loadAllHistory(),
+        loadActiveSession(),
+      ]);
+
+      // Base state update
+      set({
+        profile,
+        routineLibrary: library,
+        history: historyEntries,
+        isHydrated: true,
+      });
+
+      // Restore in-progress session if one exists
+      if (activeSession) {
+        const routine = await loadRoutine(activeSession.routineId);
+        if (routine) {
+          const setCompletion: WorkoutState['setCompletion'] = {};
+          for (const [key, val] of Object.entries(activeSession.setCompletion)) {
+            setCompletion[key] = {
+              completed: val.completed,
+              repsDone: val.repsDone,
+              weight: val.weight,
+              timestamp: val.timestamp ? new Date(val.timestamp) : undefined,
+            };
+          }
+          set({
+            currentRoutine: routine,
+            activeSessionIdx: activeSession.sessionIdx,
+            setCompletion,
+            currentView: 'active-session',
+          });
+          return;
+        }
+      }
+
+      // No active session — decide initial view
+      if (library.length > 0) {
+        // Load most-recently-used routine
+        const routine = await loadRoutine(library[0].id);
+        if (routine) {
+          set({ currentRoutine: routine, currentView: 'routine-overview' });
+        }
+      }
+    } catch (err) {
+      console.error('[useWorkoutStore] hydrate failed', err);
+      set({ isHydrated: true });
+    }
+  },
+
+  // ── importRoutine ──────────────────────────────────────────────────────────
+  importRoutine: async (routine: RoutineData, sourceMarkdown: string) => {
+    const summary: RoutineSummary = {
+      id: routine.id,
+      title: routine.title,
+      createdAt: routine.createdAt instanceof Date
+        ? routine.createdAt.toISOString()
+        : String(routine.createdAt),
+      updatedAt: new Date().toISOString(),
+      sessionCount: routine.sessions.length,
+      exerciseCount: routine.sessions.reduce((s, sess) => s + sess.exercises.length, 0),
+    };
+
+    // Sync Zustand update first (instant UI)
+    set((state) => ({
+      currentRoutine: routine,
+      currentView: 'routine-overview',
+      activeSessionIdx: 0,
+      setCompletion: {},
+      routineLibrary: [
+        summary,
+        ...state.routineLibrary.filter((r) => r.id !== routine.id),
+      ],
+    }));
+
+    // IDB write in background
+    saveRoutine(routine, sourceMarkdown).catch((err) =>
+      console.error('[useWorkoutStore] importRoutine IDB write failed', err)
+    );
+  },
+
+  // backward-compat sync alias used by tests
+  setCurrentRoutine: (routine: RoutineData) => {
+    get().importRoutine(routine, '');
+  },
+
+  // ── Routine library ────────────────────────────────────────────────────────
+  loadRoutineFromLibrary: async (routineId: string) => {
+    const routine = await loadRoutine(routineId);
+    if (!routine) return;
+    set({
+      currentRoutine: routine,
+      currentView: 'routine-overview',
+      activeSessionIdx: 0,
+      setCompletion: {},
+    });
+  },
+
+  deleteRoutineFromLibrary: async (routineId: string) => {
+    set((state) => ({
+      routineLibrary: state.routineLibrary.filter((r) => r.id !== routineId),
+      ...(state.currentRoutine?.id === routineId
+        ? { currentRoutine: null, currentView: 'uploader' as WorkoutView }
+        : {}),
+    }));
+    deleteRoutine(routineId).catch(console.error);
+  },
+
+  // ── Session lifecycle ──────────────────────────────────────────────────────
+  startSession: async (sessionIdx: number) => {
+    const { currentRoutine } = get();
+    set({ currentView: 'active-session', activeSessionIdx: sessionIdx });
+
+    if (currentRoutine) {
+      const session = currentRoutine.sessions[sessionIdx];
+      if (session) {
+        saveActiveSession(currentRoutine.id, session.id, sessionIdx, {}).catch(console.error);
+      }
+    }
+  },
+
+  toggleSetCompletion: (sessionIdx, exerciseId, setIdx, repsDone?, weight?) => {
+    set((state) => {
+      const key = `${sessionIdx}-${exerciseId}-${setIdx}`;
+      const current = state.setCompletion[key];
+      const next = {
+        ...state.setCompletion,
+        [key]: {
+          completed: !current?.completed,
+          repsDone: repsDone ?? current?.repsDone,
+          weight: weight ?? current?.weight,
+          timestamp: new Date(),
+        },
+      };
+
+      // Fire-and-forget IDB write
+      const { currentRoutine, activeSessionIdx } = state;
+      if (currentRoutine && activeSessionIdx !== null) {
+        const session = currentRoutine.sessions[activeSessionIdx];
+        if (session) {
+          saveActiveSession(
+            currentRoutine.id,
+            session.id,
+            activeSessionIdx,
+            next
+          ).catch(console.error);
+        }
+      }
+
+      return { setCompletion: next };
+    });
+  },
+
+  finishSession: async () => {
+    const state = get();
+    if (!state.currentRoutine || state.activeSessionIdx === null) return;
+
+    const activeSession = state.currentRoutine.sessions[state.activeSessionIdx];
+    const volumeData = buildVolumeData(activeSession, state.setCompletion, state.activeSessionIdx);
+
+    const newEntry: HistoryEntry = {
+      id: uuidv4(),
+      sessionIdx: state.activeSessionIdx,
+      sessionTitle: activeSession.title,
+      completedAt: new Date(),
+      completedExercises: volumeData.map((ev) => ev.exerciseId),
+      volumeData,
+      totalVolume: volumeData.reduce((sum, ev) => sum + ev.totalVolume, 0),
+    };
+
+    // Sync Zustand update
+    set((s) => ({
+      currentView: 'history',
+      history: [newEntry, ...s.history],
+      setCompletion: {},
+    }));
+
+    // IDB writes
+    try {
+      await saveHistoryEntry(newEntry, state.currentRoutine.id, activeSession.id);
+      await clearActiveSession();
+    } catch (err) {
+      console.error('[useWorkoutStore] finishSession IDB write failed', err);
+    }
+  },
+
+  abandonSession: async () => {
+    set({ currentView: 'routine-overview', setCompletion: {}, activeSessionIdx: 0 });
+    clearActiveSession().catch(console.error);
+  },
+
+  // ── History ────────────────────────────────────────────────────────────────
+  loadMoreHistory: async () => {
+    const { history } = get();
+    const oldest = history[history.length - 1];
+    const beforeDate = oldest?.completedAt instanceof Date
+      ? oldest.completedAt.toISOString()
+      : undefined;
+
+    const { loadHistory } = await import('@/lib/db/history');
+    const { entries, hasMore } = await loadHistory(50, beforeDate);
+    set((s) => ({
+      history: [...s.history, ...entries],
+      historyHasMore: hasMore,
+    }));
+  },
+
+  // ── Profile ────────────────────────────────────────────────────────────────
+  updateProfile: async (patch: Partial<UserProfile>) => {
+    set((s) => ({ profile: { ...s.profile, ...patch } }));
+    saveProfile(get().profile).catch(console.error);
+  },
+
+  // ── Misc sync ──────────────────────────────────────────────────────────────
+  setCurrentView: (view: WorkoutView) => set({ currentView: view }),
+  setIsLoading: (isLoading: boolean) => set({ isLoading }),
+  resetProgress: () => set({ setCompletion: {} }),
+
+  // ── resetAll ───────────────────────────────────────────────────────────────
+  resetAll: async () => {
+    set({
       currentRoutine: null,
       currentView: 'uploader',
       activeSessionIdx: null,
-      isLoading: false,
       setCompletion: {},
       history: [],
-      profile: { ...DEFAULT_PROFILE },
-
-      setCurrentRoutine: (routine: RoutineData) => set({
-        currentRoutine: routine,
-        currentView: 'routine-overview',
-        activeSessionIdx: 0,
-        setCompletion: {}
-      }),
-
-      setCurrentView: (view: WorkoutView) => set({ currentView: view }),
-
-      setIsLoading: (isLoading: boolean) => set({ isLoading }),
-
-      startSession: (sessionIdx: number) => set({
-        currentView: 'active-session',
-        activeSessionIdx: sessionIdx
-      }),
-
-      toggleSetCompletion: (sessionIdx, exerciseId, setIdx, repsDone?, weight?) =>
-        set((state) => {
-          const key = `${sessionIdx}-${exerciseId}-${setIdx}`;
-          const currentStatus = state.setCompletion[key];
-          return {
-            setCompletion: {
-              ...state.setCompletion,
-              [key]: {
-                completed: !currentStatus?.completed,
-                repsDone: repsDone ?? currentStatus?.repsDone,
-                weight: weight ?? currentStatus?.weight,
-                timestamp: new Date(),
-              },
-            },
-          };
-        }),
-
-      finishSession: () => set((state) => {
-        if (!state.currentRoutine || state.activeSessionIdx === null) return state;
-
-        const activeSession = state.currentRoutine.sessions[state.activeSessionIdx];
-
-        const volumeData: ExerciseVolume[] = activeSession.exercises
-          .map((ex) => {
-            const completedSets = Object.entries(state.setCompletion).filter(
-              ([key, status]) =>
-                key.startsWith(`${state.activeSessionIdx}-${ex.id}-`) && status.completed
-            );
-            const totalReps = completedSets.reduce((sum, [, s]) => sum + (s.repsDone ?? 0), 0);
-            const totalVolume = completedSets.reduce(
-              (sum, [, s]) => sum + (s.repsDone ?? 0) * (s.weight ?? 0),
-              0
-            );
-            return {
-              exerciseId: ex.id,
-              cleanName: ex.cleanName,
-              setsCompleted: completedSets.length,
-              totalReps,
-              totalVolume,
-            };
-          })
-          .filter((ev) => ev.setsCompleted > 0);
-
-        const newEntry: HistoryEntry = {
-          id: uuidv4(),
-          sessionIdx: state.activeSessionIdx,
-          sessionTitle: activeSession.title,
-          completedAt: new Date(),
-          completedExercises: volumeData.map((ev) => ev.exerciseId),
-          volumeData,
-          totalVolume: volumeData.reduce((sum, ev) => sum + ev.totalVolume, 0),
-        };
-
-        return {
-          currentView: 'history',
-          history: [newEntry, ...state.history],
-          setCompletion: {},
-        };
-      }),
-
-      updateProfile: (patch) => set((state) => ({
-        profile: { ...state.profile, ...patch }
-      })),
-
-      resetProgress: () => set({ setCompletion: {} }),
-
-      resetAll: () => set({
-        currentRoutine: null,
-        currentView: 'uploader',
-        activeSessionIdx: null,
-        setCompletion: {},
-        history: []
-      }),
-    }),
-    {
-      name: 'routyne-storage',
-      partialize: (state) => ({
-        history: state.history,
-        currentRoutine: state.currentRoutine,
-        profile: state.profile,
-      }),
-      onRehydrateStorage: () => (state) => {
-        if (!state) return;
-        state.history = state.history.map((entry) => ({
-          ...entry,
-          completedAt: new Date(entry.completedAt as unknown as string),
-        }));
-        if (state.currentRoutine) {
-          state.currentRoutine = {
-            ...state.currentRoutine,
-            createdAt: new Date(state.currentRoutine.createdAt as unknown as string),
-          };
-        }
-      },
-    }
-  )
-);
+      routineLibrary: [],
+    });
+    // Clear IDB in background
+    Promise.all([
+      clearActiveSession(),
+      import('@/lib/db/index').then(({ deleteDatabase }) => deleteDatabase()),
+    ]).catch(console.error);
+  },
+}));
