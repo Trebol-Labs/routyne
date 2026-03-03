@@ -69,6 +69,7 @@ export function ActiveSessionView() {
             variant="glass-icon"
             size="icon-lg"
             onClick={() => setCurrentView('routine-overview')}
+            aria-label="Back to overview"
           >
             <ChevronLeft className="w-6 h-6 text-white" />
           </Button>
@@ -89,6 +90,7 @@ export function ActiveSessionView() {
           variant="glass-icon"
           size="icon-lg"
           onClick={() => setShowRestTimer(true)}
+          aria-label="Open rest timer"
         >
            <Clock className="w-6 h-6 text-blue-400" />
         </Button>

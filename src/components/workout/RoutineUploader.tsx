@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, Check, Loader2, Sparkles, Code, Info } from 'lucide-react';
+import { Upload, Loader2, Code } from 'lucide-react';
 import { parseRoutine } from '@/lib/markdown/parser';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
 import { Button } from '@/components/ui/button';
