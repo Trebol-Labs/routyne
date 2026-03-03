@@ -5,8 +5,32 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { SetRow } from '@/components/workout/SetRow';
 import { RestTimer } from '@/components/workout/RestTimer';
+import { SetInputSheet } from '@/components/workout/overlays/SetInputSheet';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
 import { ChevronLeft, Clock, Zap, CheckCircle2 } from 'lucide-react';
+
+interface PendingSet {
+  exerciseId: string;
+  exerciseName: string;
+  setIdx: number;
+  targetRepsMax: number;
+  lastWeight?: number;
+}
+
+function getLastWeight(
+  setCompletion: Record<string, { completed: boolean; weight?: number }>,
+  sessionIdx: number,
+  exerciseId: string
+): number | undefined {
+  const prefix = `${sessionIdx}-${exerciseId}-`;
+  let last: number | undefined;
+  for (const [key, status] of Object.entries(setCompletion)) {
+    if (key.startsWith(prefix) && status.completed && status.weight != null) {
+      last = status.weight;
+    }
+  }
+  return last;
+}
 
 export function ActiveSessionView() {
   const {
@@ -16,25 +40,46 @@ export function ActiveSessionView() {
     setCompletion,
     toggleSetCompletion,
     finishSession,
+    profile,
   } = useWorkoutStore();
 
   const [showRestTimer, setShowRestTimer] = useState(false);
   const [restDuration, setRestDuration] = useState(90);
+  const [pendingSet, setPendingSet] = useState<PendingSet | null>(null);
 
   const activeSession = currentRoutine?.sessions[activeSessionIdx ?? 0];
   if (!activeSession) return null;
 
   const totalSets = activeSession.exercises.reduce((sum, ex) => sum + ex.sets, 0);
-  const completedSets = Object.values(setCompletion).filter(s => s.completed).length;
+  const completedSets = Object.values(setCompletion).filter((s) => s.completed).length;
 
-  const handleSetCompletion = (sessionIdx: number, exerciseId: string, setIdx: number, restSeconds: number, repsMax?: number) => {
-    const isCompleted = setCompletion[`${sessionIdx}-${exerciseId}-${setIdx}`]?.completed;
-    toggleSetCompletion(sessionIdx, exerciseId, setIdx, repsMax);
-
-    if (!isCompleted) {
-      setRestDuration(restSeconds || 90);
-      setShowRestTimer(true);
+  const handleRequestSetCompletion = (
+    exerciseId: string,
+    exerciseName: string,
+    setIdx: number,
+    repsMax: number,
+    restSeconds: number
+  ) => {
+    const isAlreadyCompleted = setCompletion[`${activeSessionIdx}-${exerciseId}-${setIdx}`]?.completed;
+    if (isAlreadyCompleted) {
+      // Toggle off immediately — no input needed
+      toggleSetCompletion(activeSessionIdx!, exerciseId, setIdx);
+      return;
     }
+    setRestDuration(restSeconds || profile.defaultRestSeconds);
+    setPendingSet({
+      exerciseId,
+      exerciseName,
+      setIdx,
+      targetRepsMax: repsMax,
+      lastWeight: getLastWeight(setCompletion, activeSessionIdx!, exerciseId),
+    });
+  };
+
+  const handleConfirmSet = (repsDone: number, weight: number | undefined) => {
+    toggleSetCompletion(activeSessionIdx!, pendingSet!.exerciseId, pendingSet!.setIdx, repsDone, weight);
+    setShowRestTimer(true);
+    setPendingSet(null);
   };
 
   return (
@@ -43,7 +88,7 @@ export function ActiveSessionView() {
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="space-y-12 pb-20 px-2 sm:px-0"
+      className="space-y-8 pb-6 px-2 sm:px-0"
     >
       {/* Session progress */}
       <div className="px-2 sm:px-0 -mt-2">
@@ -92,43 +137,50 @@ export function ActiveSessionView() {
           onClick={() => setShowRestTimer(true)}
           aria-label="Open rest timer"
         >
-           <Clock className="w-6 h-6 text-blue-400" />
+          <Clock className="w-6 h-6 text-blue-400" />
         </Button>
       </div>
 
-      <div className="grid gap-12">
-         {activeSession.exercises.map((exercise) => (
-              <div key={exercise.id} className="space-y-6">
-                <div className="flex items-center justify-between px-2 sm:px-0">
-                  <h3 className="text-xl font-black text-white tracking-tighter uppercase font-display">{exercise.cleanName}</h3>
-                  <span className="text-xs font-black text-white/30 uppercase tracking-[0.25em]">
-                     {exercise.sets} Sets / {exercise.repsMin}{exercise.repsMin !== exercise.repsMax ? `-${exercise.repsMax}` : ''} Reps
-                  </span>
-                </div>
+      <div className="grid gap-8">
+        {activeSession.exercises.map((exercise) => (
+          <div key={exercise.id} className="space-y-3">
+            <div className="flex items-center justify-between px-1 sm:px-0">
+              <h3 className="text-xl font-black text-white tracking-tighter uppercase font-display">{exercise.cleanName}</h3>
+              <span className="text-xs font-black text-white/30 uppercase tracking-[0.25em]">
+                {exercise.sets} Sets / {exercise.repsMin}{exercise.repsMin !== exercise.repsMax ? `-${exercise.repsMax}` : ''} Reps
+              </span>
+            </div>
 
-                <div className="grid grid-cols-1 gap-4">
-                  {Array.from({ length: exercise.sets }).map((_, setIdx) => (
-                      <SetRow
-                        key={setIdx}
-                        setIdx={setIdx}
-                        sessionIdx={activeSessionIdx!}
-                        exercise={exercise}
-                        isCompleted={!!setCompletion[`${activeSessionIdx}-${exercise.id}-${setIdx}`]?.completed}
-                        onComplete={() => handleSetCompletion(activeSessionIdx!, exercise.id, setIdx, exercise.restSeconds, exercise.repsMax)}
-                      />
-                  ))}
-                </div>
-              </div>
-         ))}
+            <div className="grid grid-cols-1 gap-2">
+              {Array.from({ length: exercise.sets }).map((_, setIdx) => (
+                <SetRow
+                  key={setIdx}
+                  setIdx={setIdx}
+                  sessionIdx={activeSessionIdx!}
+                  exercise={exercise}
+                  isCompleted={!!setCompletion[`${activeSessionIdx}-${exercise.id}-${setIdx}`]?.completed}
+                  onRequestComplete={() =>
+                    handleRequestSetCompletion(
+                      exercise.id,
+                      exercise.cleanName,
+                      setIdx,
+                      exercise.repsMax,
+                      exercise.restSeconds
+                    )
+                  }
+                />
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
 
-      <div className="px-2 sm:px-0 relative group/finish">
-        <div className="absolute inset-0 bg-emerald-500/10 blur-[60px] opacity-0 group-hover/finish:opacity-100 transition-opacity pointer-events-none" />
+      <div className="px-2 sm:px-0">
         <Button
           variant="glass-primary"
           size="xl"
           onClick={() => finishSession()}
-          className="w-full relative z-10 rounded-[2rem] gap-6 group mt-10 shadow-2xl !bg-emerald-500/20 hover:!bg-emerald-500/30 border-emerald-500/20"
+          className="w-full rounded-[2rem] gap-4 group mt-4 !bg-emerald-500/25 hover:!bg-emerald-500/35 border-emerald-500/20"
         >
           <CheckCircle2 className="w-7 h-7 text-emerald-400 group-hover:scale-110 transition-transform" />
           FINISH WORKOUT
@@ -143,6 +195,21 @@ export function ActiveSessionView() {
             onFinish={() => {
               if ('vibrate' in navigator) navigator.vibrate([100, 50, 100]);
             }}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {pendingSet && (
+          <SetInputSheet
+            isOpen={true}
+            onClose={() => setPendingSet(null)}
+            onConfirm={handleConfirmSet}
+            exerciseName={pendingSet.exerciseName}
+            setIdx={pendingSet.setIdx}
+            targetRepsMax={pendingSet.targetRepsMax}
+            lastWeight={pendingSet.lastWeight}
+            weightUnit={profile.weightUnit}
           />
         )}
       </AnimatePresence>

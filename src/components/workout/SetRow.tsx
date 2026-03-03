@@ -12,10 +12,10 @@ interface SetRowProps {
   sessionIdx: number;
   exercise: ParsedExercise;
   isCompleted: boolean;
-  onComplete: () => void;
+  onRequestComplete: () => void;
 }
 
-export function SetRow({ setIdx, exercise, isCompleted, onComplete }: SetRowProps) {
+export function SetRow({ setIdx, exercise, isCompleted, onRequestComplete }: SetRowProps) {
   const x = useMotionValue(0);
   const swipeThreshold = 120;
   const cardRef = useRef<HTMLDivElement>(null);
@@ -36,7 +36,7 @@ export function SetRow({ setIdx, exercise, isCompleted, onComplete }: SetRowProp
     const fastFlick = info.velocity.x > 500; // px/s — completes even on short fast flick
     if ((pastPositionThreshold || fastFlick) && !isCompleted) {
       if ('vibrate' in navigator) navigator.vibrate(50);
-      onComplete();
+      onRequestComplete();
     }
   };
 
@@ -61,23 +61,23 @@ export function SetRow({ setIdx, exercise, isCompleted, onComplete }: SetRowProp
         onDragEnd={handleDragEnd}
         style={{ x }}
         className={cn(
-          "relative glass-panel rounded-[2rem] p-6 flex items-center justify-between transition-all duration-700 border z-10",
+          "relative glass-panel rounded-[1.5rem] p-4 flex items-center justify-between transition-all duration-500 border z-10",
           isCompleted ? "bg-emerald-500/10 border-emerald-500/20 translate-x-2" : "border-white/5 bg-zinc-950/40"
         )}
       >
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4">
           <div className={cn(
-            "w-12 h-12 rounded-2xl flex items-center justify-center font-black transition-all duration-700 font-display",
-            isCompleted ? "bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.5)]" : "bg-white/5 text-white/20"
+            "w-9 h-9 rounded-xl flex items-center justify-center font-black transition-all duration-500 font-display text-sm",
+            isCompleted ? "bg-emerald-500 text-white" : "bg-white/5 text-white/30"
           )}>
             {setIdx + 1}
           </div>
           <div>
             <span className={cn(
-              "text-lg font-black tracking-tight block leading-none transition-all duration-700 font-display",
+              "text-base font-black tracking-tight block leading-none transition-all duration-500 font-display",
               isCompleted ? "text-white/40 line-through" : "text-white"
             )}>SET {setIdx + 1}</span>
-            <span className="text-xs font-black text-white/40 uppercase tracking-widest mt-2 block">
+            <span className="text-[10px] font-black text-white/30 uppercase tracking-widest mt-1 block">
                {exercise.repsMin}{exercise.repsMin !== exercise.repsMax ? `-${exercise.repsMax}` : ''} Reps
             </span>
           </div>

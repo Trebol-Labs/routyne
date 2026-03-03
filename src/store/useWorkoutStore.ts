@@ -1,7 +1,15 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { RoutineData, WorkoutState, WorkoutView, HistoryEntry, SetStatus, ExerciseVolume } from '@/types/workout';
+import { RoutineData, WorkoutState, WorkoutView, HistoryEntry, SetStatus, ExerciseVolume, UserProfile } from '@/types/workout';
 import { v4 as uuidv4 } from 'uuid';
+
+const DEFAULT_PROFILE: UserProfile = {
+  displayName: 'Athlete',
+  avatarEmoji: '💪',
+  weightUnit: 'kg',
+  heightCm: null,
+  defaultRestSeconds: 90,
+};
 
 export const useWorkoutStore = create<WorkoutState>()(
   persist(
@@ -12,6 +20,7 @@ export const useWorkoutStore = create<WorkoutState>()(
       isLoading: false,
       setCompletion: {},
       history: [],
+      profile: { ...DEFAULT_PROFILE },
 
       setCurrentRoutine: (routine: RoutineData) => set({
         currentRoutine: routine,
@@ -89,6 +98,10 @@ export const useWorkoutStore = create<WorkoutState>()(
         };
       }),
 
+      updateProfile: (patch) => set((state) => ({
+        profile: { ...state.profile, ...patch }
+      })),
+
       resetProgress: () => set({ setCompletion: {} }),
 
       resetAll: () => set({
@@ -104,6 +117,7 @@ export const useWorkoutStore = create<WorkoutState>()(
       partialize: (state) => ({
         history: state.history,
         currentRoutine: state.currentRoutine,
+        profile: state.profile,
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
