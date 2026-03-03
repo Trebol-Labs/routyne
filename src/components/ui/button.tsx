@@ -17,12 +17,17 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        glass: "glass-btn rounded-2xl text-white/80 hover:text-white font-bold",
+        "glass-primary": "active-glass-btn rounded-[2rem] text-white font-black shadow-[0_8px_30px_-8px_rgba(59,130,246,0.4)]",
+        "glass-icon": "glass-btn rounded-2xl p-0",
       },
       size: {
         default: "h-10 px-4 py-2",
         sm: "h-9 rounded-md px-3",
         lg: "h-11 rounded-md px-8",
         icon: "h-10 w-10",
+        xl: "h-16 px-10 py-4 text-xl",
+        "icon-lg": "h-12 w-12",
       },
     },
     defaultVariants: {

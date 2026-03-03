@@ -28,7 +28,7 @@ export function ExerciseCard({ exercise, index }: ExerciseCardProps) {
       return;
     }
     if (DEV) console.log(`[ExerciseCard] ${exercise.cleanName}: fetching ${exercise.mediaUrl}`);
-    fetch(exercise.mediaUrl)
+    fetch(exercise.mediaUrl, DEV ? { cache: 'no-store' } : {})
       .then(r => {
         if (DEV) console.log(`[ExerciseCard] ${exercise.cleanName}: response ${r.status}`);
         return r.ok ? r.json() : null;
@@ -47,7 +47,7 @@ export function ExerciseCard({ exercise, index }: ExerciseCardProps) {
 
   React.useEffect(() => {
     if (DEV && fetchDone) {
-      console.log(`[ExerciseCard] ${exercise.cleanName}: state = { fetchDone: ${fetchDone}, media: ${media?.url ?? 'null'}, mediaLoaded: ${mediaLoaded}, mediaError: ${mediaError} }`);
+      console.log(`[EC:${exercise.cleanName.slice(0,10)}] FD=${fetchDone} M=${JSON.stringify(media)} ML=${mediaLoaded} ME=${mediaError}`);
     }
   }, [fetchDone, media, mediaLoaded, mediaError]);
 
@@ -133,25 +133,19 @@ export function ExerciseCard({ exercise, index }: ExerciseCardProps) {
         {/* Content Section */}
         <div className="flex-grow min-w-0 flex flex-col justify-center space-y-3 text-left w-full">
           <div className="flex items-start justify-between gap-3 w-full">
-            <h3 className="text-xl sm:text-2xl font-black text-white tracking-tighter leading-tight group-hover:text-blue-400 transition-colors break-words">
+            <h3 className="text-xl sm:text-2xl font-black text-white tracking-tighter leading-tight group-hover:text-blue-400 transition-colors break-words font-display">
               {exercise.cleanName.toUpperCase()}
             </h3>
-            <button
-              className="hidden sm:block text-white/10 hover:text-white transition-all shrink-0 mt-1"
-              title="More info"
-            >
-              <Info className="w-5 h-5" />
-            </button>
           </div>
 
           <div className="flex flex-wrap items-center gap-3 sm:gap-4">
             <div className="flex items-center gap-2.5 px-4 py-2 bg-black/30 backdrop-blur-xl rounded-2xl border border-white/[0.03] shadow-inner">
-              <span className="text-[10px] font-black text-blue-400 uppercase tracking-[0.25em]">Sets</span>
+              <span className="text-[10px] font-black text-blue-400 uppercase tracking-[0.25em] font-display">Sets</span>
               <span className="text-base font-black text-white/90">{exercise.sets}</span>
             </div>
 
             <div className="flex items-center gap-2.5 px-4 py-2 bg-black/30 backdrop-blur-xl rounded-2xl border border-white/[0.03] shadow-inner">
-              <span className="text-[10px] font-black text-indigo-300 uppercase tracking-[0.25em]">Reps</span>
+              <span className="text-[10px] font-black text-indigo-300 uppercase tracking-[0.25em] font-display">Reps</span>
               <span className="text-base font-black text-white/90">
                 {exercise.repsMin}{exercise.repsMin !== exercise.repsMax ? `-${exercise.repsMax}` : ''}
               </span>

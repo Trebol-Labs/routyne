@@ -66,14 +66,14 @@ export function ActiveSessionView() {
       <div className="flex items-center justify-between px-2 sm:px-0">
         <div className="flex items-center gap-4">
           <Button
-            variant="ghost"
+            variant="glass-icon"
+            size="icon-lg"
             onClick={() => setCurrentView('routine-overview')}
-            className="rounded-full w-12 h-12 glass-panel border-white/10 p-0"
           >
             <ChevronLeft className="w-6 h-6 text-white" />
           </Button>
           <div>
-            <h2 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">{activeSession.title}</h2>
+            <h2 className="text-2xl font-black text-white uppercase tracking-tighter leading-none font-display">{activeSession.title}</h2>
             <div className="flex items-center gap-2 mt-2">
               {typeof window !== 'undefined' && 'wakeLock' in navigator && (
                 <div className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-500/10 border border-blue-500/20 rounded-full">
@@ -86,10 +86,9 @@ export function ActiveSessionView() {
         </div>
 
         <Button
-          variant="ghost"
-          size="icon"
+          variant="glass-icon"
+          size="icon-lg"
           onClick={() => setShowRestTimer(true)}
-          className="w-12 h-12 rounded-full glass-panel border-white/10 bg-blue-600/5"
         >
            <Clock className="w-6 h-6 text-blue-400" />
         </Button>
@@ -99,7 +98,7 @@ export function ActiveSessionView() {
          {activeSession.exercises.map((exercise) => (
               <div key={exercise.id} className="space-y-6">
                 <div className="flex items-center justify-between px-2 sm:px-0">
-                  <h3 className="text-xl font-black text-white tracking-tighter uppercase">{exercise.cleanName}</h3>
+                  <h3 className="text-xl font-black text-white tracking-tighter uppercase font-display">{exercise.cleanName}</h3>
                   <span className="text-xs font-black text-white/30 uppercase tracking-[0.25em]">
                      {exercise.sets} Sets / {exercise.repsMin}{exercise.repsMin !== exercise.repsMax ? `-${exercise.repsMax}` : ''} Reps
                   </span>
@@ -121,13 +120,16 @@ export function ActiveSessionView() {
          ))}
       </div>
 
-      <div className="px-2 sm:px-0">
+      <div className="px-2 sm:px-0 relative group/finish">
+        <div className="absolute inset-0 bg-emerald-500/10 blur-[60px] opacity-0 group-hover/finish:opacity-100 transition-opacity pointer-events-none" />
         <Button
+          variant="glass-primary"
+          size="xl"
           onClick={() => finishSession()}
-          className="w-full active-glass-btn hover:brightness-125 text-white rounded-[2.5rem] py-10 h-auto font-black text-2xl transition-all shadow-2xl flex items-center justify-center gap-6 group mt-10"
+          className="w-full relative z-10 rounded-[2rem] gap-6 group mt-10 shadow-2xl !bg-emerald-500/20 hover:!bg-emerald-500/30 border-emerald-500/20"
         >
-          <CheckCircle2 className="w-8 h-8 text-white group-hover:scale-110 transition-transform" />
-          <span>FINISH WORKOUT</span>
+          <CheckCircle2 className="w-7 h-7 text-emerald-400 group-hover:scale-110 transition-transform" />
+          FINISH WORKOUT
         </Button>
       </div>
 

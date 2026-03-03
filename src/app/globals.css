@@ -11,9 +11,13 @@
   
   --color-accent-primary: #3b82f6;
   --color-accent-secondary: #6366f1;
-  
-  --font-sans: "Inter", var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
+  --color-accent-cta: #F97316;
+  --color-surface-raised: rgba(255, 255, 255, 0.06);
+
+  --font-display: var(--font-display), 'Barlow Condensed', sans-serif;
+  --font-body: var(--font-body), 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-body);
+  --font-mono: ui-monospace, SFMono-Regular, monospace;
   
   --radius-glass: 2.5rem;
 }
@@ -64,10 +68,23 @@
 
   .glass-panel {
     background: var(--color-glass-bg);
-    backdrop-filter: blur(40px) saturate(180%);
-    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    backdrop-filter: blur(40px) saturate(230%);
+    -webkit-backdrop-filter: blur(40px) saturate(230%);
     border: 1px solid var(--color-glass-border);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    box-shadow: 
+      0 20px 50px -10px rgba(0, 0, 0, 0.5),
+      0 0 40px -10px rgba(59, 130, 246, 0.3),
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.1);
+    position: relative;
+  }
+
+  .glass-panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 50%, rgba(255,255,255,0.02) 100%);
+    pointer-events: none;
+    border-radius: inherit;
   }
 
   .text-liquid {
@@ -88,6 +105,37 @@
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.2);
     box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+  }
+
+  /* Standard glass button — consistent interactive surface */
+  .glass-btn {
+    background: var(--color-surface-raised);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: all 200ms ease;
+    cursor: pointer;
+  }
+  .glass-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+  }
+  .glass-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+  .glass-btn:active {
+    transform: scale(0.97);
+  }
+
+  /* Reduced motion — critical for a11y */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+    .animate-float, .animate-pulse { animation: none !important; }
   }
 }
 

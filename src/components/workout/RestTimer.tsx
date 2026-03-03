@@ -21,23 +21,35 @@ export function RestTimer({ duration, onFinish, onClose }: RestTimerProps) {
   const [isRunning, setIsRunning] = useState(true);
   const requestRef = useRef<number>(0);
   const tickRef = useRef<() => void>(() => {});
+  const circleRef = useRef<SVGCircleElement>(null);
 
   const tick = useCallback(() => {
     if (!isRunning) return;
 
     const now = Date.now();
-    const remaining = Math.max(0, Math.ceil((targetTime - now) / 1000));
+    const remainingMs = Math.max(0, targetTime - now);
+    const remainingSec = Math.ceil(remainingMs / 1000);
     
-    setTimeLeft(remaining);
+    setTimeLeft(prev => prev !== remainingSec ? remainingSec : prev);
 
-    if (remaining <= 0) {
+    if (circleRef.current) {
+        const totalMs = duration * 1000;
+        // Calculate offset based on remaining time relative to total duration
+        // When remaining == duration (start), progress = 1, offset = 0
+        // When remaining == 0 (end), progress = 0, offset = 552.9
+        const progress = Math.max(0, Math.min(1, remainingMs / totalMs));
+        const offset = 552.9 * (1 - progress);
+        circleRef.current.style.strokeDashoffset = String(offset);
+    }
+
+    if (remainingMs <= 0) {
       if (onFinish) onFinish();
       setIsRunning(false);
       return;
     }
 
     requestRef.current = requestAnimationFrame(tickRef.current);
-  }, [isRunning, targetTime, onFinish]);
+  }, [isRunning, targetTime, onFinish, duration]);
 
   useEffect(() => {
     tickRef.current = tick;
@@ -56,6 +68,16 @@ export function RestTimer({ duration, onFinish, onClose }: RestTimerProps) {
 
   const addTime = (seconds: number) => {
     setTargetTime((prev) => prev + seconds * 1000);
+    // Force update circle immediately to prevent jump
+    if (circleRef.current) {
+        const now = Date.now();
+        const newTarget = targetTime + seconds * 1000; // Use new target
+        const remainingMs = Math.max(0, newTarget - now);
+        const totalMs = duration * 1000;
+        const progress = Math.max(0, Math.min(1, remainingMs / totalMs));
+        const offset = 552.9 * (1 - progress);
+        circleRef.current.style.strokeDashoffset = String(offset);
+    }
   };
 
   const toggleTimer = () => {
@@ -81,7 +103,7 @@ export function RestTimer({ duration, onFinish, onClose }: RestTimerProps) {
         <div className="flex items-center justify-between w-full mb-2">
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-blue-400" />
-            <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">Rest Timer</span>
+            <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] font-display">Rest Timer</span>
           </div>
           <button
             onClick={onClose}
@@ -104,7 +126,8 @@ export function RestTimer({ duration, onFinish, onClose }: RestTimerProps) {
               stroke="rgba(255,255,255,0.03)"
               strokeWidth="8"
             />
-            <motion.circle
+            <circle
+              ref={circleRef}
               cx="96"
               cy="96"
               r="88"
@@ -112,8 +135,7 @@ export function RestTimer({ duration, onFinish, onClose }: RestTimerProps) {
               stroke="url(#timerGradient)"
               strokeWidth="10"
               strokeDasharray="552.9"
-              animate={{ strokeDashoffset: 552.9 * (1 - (timeLeft / duration)) }}
-              transition={{ ease: "linear", duration: 1 }}
+              strokeDashoffset="0"
               strokeLinecap="round"
             />
             <defs>
@@ -125,7 +147,7 @@ export function RestTimer({ duration, onFinish, onClose }: RestTimerProps) {
           </svg>
           
           <div className="flex flex-col items-center">
-            <span className="text-6xl font-black text-white tracking-tighter tabular-nums leading-none">
+            <span className="text-6xl font-black text-white tracking-tighter tabular-nums leading-none font-display">
               {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}
             </span>
           </div>
@@ -133,15 +155,16 @@ export function RestTimer({ duration, onFinish, onClose }: RestTimerProps) {
 
         <div className="flex items-center gap-4 w-full pt-4">
           <Button 
-            variant="ghost" 
+            variant="glass" 
             onClick={() => addTime(-15)}
-            className="flex-1 rounded-[1.5rem] bg-white/5 border border-white/5 h-12 text-white font-black"
+            className="flex-1 rounded-[1.5rem] h-12 text-white font-black"
           >
             -15s
           </Button>
           <Button 
+            variant="glass-primary"
             onClick={toggleTimer}
-            className="w-16 h-16 rounded-full active-glass-btn flex items-center justify-center p-0"
+            className="w-16 h-16 rounded-full flex items-center justify-center p-0"
           >
             {isRunning ? (
               <div className="flex gap-1.5"><div className="w-1.5 h-5 bg-white rounded-full" /><div className="w-1.5 h-5 bg-white rounded-full" /></div>
@@ -150,9 +173,9 @@ export function RestTimer({ duration, onFinish, onClose }: RestTimerProps) {
             )}
           </Button>
           <Button 
-            variant="ghost" 
+            variant="glass" 
             onClick={() => addTime(15)}
-            className="flex-1 rounded-[1.5rem] bg-white/5 border border-white/5 h-12 text-white font-black"
+            className="flex-1 rounded-[1.5rem] h-12 text-white font-black"
           >
             +15s
           </Button>
