@@ -46,14 +46,20 @@ export async function getDB(): Promise<IDBPDatabase<RoutineDB>> {
   return _db;
 }
 
-/** Clear the cached singleton (needed between tests). */
+/** Close connection and clear the cached singleton (needed between tests). */
 export function resetDBSingleton(): void {
-  _db = null;
+  if (_db) {
+    _db.close();
+    _db = null;
+  }
 }
 
-/** Delete the entire database (used in resetAll and tests). */
+/** Close, then delete the entire database (used in resetAll and tests). */
 export async function deleteDatabase(): Promise<void> {
-  _db = null;
+  if (_db) {
+    _db.close();
+    _db = null;
+  }
   const { deleteDB } = await import('idb');
   await deleteDB(DB_NAME);
 }

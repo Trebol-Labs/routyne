@@ -7,7 +7,7 @@ import { SetRow } from '@/components/workout/SetRow';
 import { RestTimer } from '@/components/workout/RestTimer';
 import { SetInputSheet } from '@/components/workout/overlays/SetInputSheet';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
-import { ChevronLeft, Clock, Zap, CheckCircle2 } from 'lucide-react';
+import { ChevronLeft, Clock, Zap, CheckCircle2, XCircle } from 'lucide-react';
 
 interface PendingSet {
   exerciseId: string;
@@ -40,6 +40,7 @@ export function ActiveSessionView() {
     setCompletion,
     toggleSetCompletion,
     finishSession,
+    abandonSession,
     profile,
   } = useWorkoutStore();
 
@@ -175,7 +176,7 @@ export function ActiveSessionView() {
         ))}
       </div>
 
-      <div className="px-2 sm:px-0">
+      <div className="px-2 sm:px-0 space-y-3">
         <Button
           variant="glass-primary"
           size="xl"
@@ -185,6 +186,17 @@ export function ActiveSessionView() {
           <CheckCircle2 className="w-7 h-7 text-emerald-400 group-hover:scale-110 transition-transform" />
           FINISH WORKOUT
         </Button>
+        <button
+          onClick={() => {
+            if (confirm('Abandon this workout? All progress will be lost.')) {
+              abandonSession();
+            }
+          }}
+          className="w-full flex items-center justify-center gap-2 py-3 text-white/20 hover:text-red-400 transition-colors text-[11px] font-black uppercase tracking-[0.2em]"
+        >
+          <XCircle className="w-3.5 h-3.5" />
+          Abandon Workout
+        </button>
       </div>
 
       <AnimatePresence>

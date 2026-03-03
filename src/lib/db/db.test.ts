@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { resetDBSingleton } from './index';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { resetDBSingleton, deleteDatabase } from './index';
 import { saveRoutine, loadRoutine, listRoutines, deleteRoutine } from './routines';
-import { saveHistoryEntry, loadHistory, loadAllHistory } from './history';
+import { saveHistoryEntry, loadHistory } from './history';
 import { saveActiveSession, loadActiveSession, clearActiveSession } from './activeSession';
 import { loadProfile, saveProfile } from './profile';
 import type { RoutineData, HistoryEntry } from '@/types/workout';
@@ -48,7 +48,11 @@ const mockEntry: HistoryEntry = {
   totalVolume: 3000,
 };
 
-beforeEach(() => {
+beforeEach(async () => {
+  await deleteDatabase();  // fresh IDB for every test
+});
+
+afterEach(() => {
   resetDBSingleton();
 });
 

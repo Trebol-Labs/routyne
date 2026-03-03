@@ -1,5 +1,7 @@
 // Global test setup — runs before every test file.
-import 'fake-indexeddb/auto';  // patches globalThis.indexedDB for all tests
+// Must be first: patches ALL IDB globals (indexedDB, IDBRequest, IDBKeyRange, IDBCursor, etc.)
+import 'fake-indexeddb/auto';
+import { IDBFactory } from 'fake-indexeddb';
 import { vi } from 'vitest';
 import { resetDBSingleton } from '@/lib/db/index';
 
@@ -16,8 +18,9 @@ const localStorageMock = {
 
 vi.stubGlobal('localStorage', localStorageMock);
 
-// Reset storage between tests so state doesn't leak across test cases.
+// Reset storage + IDB between tests so state doesn't leak across test cases.
 beforeEach(() => {
   storage = {};
-  resetDBSingleton();  // force fresh IDB connection each test
+  resetDBSingleton();
+  vi.stubGlobal('indexedDB', new IDBFactory());  // fresh IDB per test
 });

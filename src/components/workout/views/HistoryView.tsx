@@ -1,8 +1,9 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Calendar, CheckCircle2, Dumbbell } from 'lucide-react';
+import { Calendar, CheckCircle2, Dumbbell, ChevronDown, Loader2 } from 'lucide-react';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
+import { useState } from 'react';
 
 function formatRelativeDate(date: Date): string {
   const diffDays = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
@@ -13,7 +14,17 @@ function formatRelativeDate(date: Date): string {
 }
 
 export function HistoryView() {
-  const { history } = useWorkoutStore();
+  const { history, historyHasMore, loadMoreHistory } = useWorkoutStore();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleLoadMore = async () => {
+    setIsLoading(true);
+    try {
+      await loadMoreHistory();
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <motion.div
@@ -92,6 +103,25 @@ export function HistoryView() {
               )}
             </div>
           ))}
+
+          {historyHasMore && (
+            <motion.button
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              onClick={handleLoadMore}
+              disabled={isLoading}
+              className="w-full flex items-center justify-center gap-2 py-4 glass-panel rounded-[2rem] border-white/10 text-white/30 hover:text-white/60 hover:border-white/20 transition-all text-[11px] font-black uppercase tracking-widest"
+            >
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <>
+                  <ChevronDown className="w-4 h-4" />
+                  Load More
+                </>
+              )}
+            </motion.button>
+          )}
         </div>
       )}
     </motion.div>

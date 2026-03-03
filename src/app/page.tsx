@@ -23,8 +23,11 @@ import {
 import { cn } from '@/lib/utils';
 import { WorkoutView } from '@/types/workout';
 import { useWakeLock } from '@/hooks/useWakeLock';
+import { useHydration } from '@/hooks/useHydration';
 
 export default function Home() {
+  const isReady = useHydration();
+
   const {
     currentRoutine,
     currentView,
@@ -37,6 +40,28 @@ export default function Home() {
 
   // Screen Wake Lock during active sessions
   useWakeLock(currentView === 'active-session');
+
+  if (!isReady) {
+    return (
+      <main className="min-h-screen liquid-bg-dark flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="flex flex-col items-center gap-6"
+        >
+          <div className="relative">
+            <div className="absolute inset-0 bg-blue-600 blur-[40px] opacity-40 animate-pulse rounded-full" />
+            <div className="relative w-16 h-16 rounded-[1.5rem] bg-gradient-to-tr from-white/20 to-white/5 p-px backdrop-blur-3xl shadow-2xl">
+              <div className="w-full h-full rounded-[1.4rem] bg-black/40 flex items-center justify-center border border-white/5">
+                <Dumbbell className="text-white w-8 h-8 animate-pulse" />
+              </div>
+            </div>
+          </div>
+          <p className="text-[11px] text-white/20 font-black uppercase tracking-[0.3em]">Loading...</p>
+        </motion.div>
+      </main>
+    );
+  }
 
   const handleNavClick = (view: WorkoutView) => {
     if (view === 'uploader' && currentRoutine) {
