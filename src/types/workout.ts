@@ -5,7 +5,7 @@ export interface ParsedExercise {
   sets: number;
   repsMin: number;
   repsMax: number;
-  restSeconds: number; // Added for the timer system
+  restSeconds: number;
   mediaUrl: string | null;
   notes?: string;
 }
@@ -23,6 +23,15 @@ export interface RoutineData {
   createdAt: Date;
 }
 
+export interface RoutineSummary {
+  id: string;
+  title: string;
+  createdAt: string;   // ISO 8601
+  updatedAt: string;   // ISO 8601
+  sessionCount: number;
+  exerciseCount: number;
+}
+
 export interface SetStatus {
   completed: boolean;
   repsDone?: number;
@@ -32,12 +41,28 @@ export interface SetStatus {
 
 export type WorkoutView = 'uploader' | 'routine-overview' | 'active-session' | 'history' | 'stats';
 
+export interface UserProfile {
+  displayName: string;
+  avatarEmoji: string;
+  weightUnit: 'kg' | 'lbs';
+  heightCm: number | null;
+  defaultRestSeconds: number;
+}
+
+export interface ExerciseBrowseItem {
+  id: string;
+  name: string;
+  bodyPart: string;
+  equipment: string;
+  gifUrl?: string;
+}
+
 export interface ExerciseVolume {
   exerciseId: string;
   cleanName: string;
   setsCompleted: number;
   totalReps: number;
-  totalVolume: number; // reps × weight (0 for bodyweight)
+  totalVolume: number;
 }
 
 export interface HistoryEntry {
@@ -45,28 +70,42 @@ export interface HistoryEntry {
   sessionIdx: number;
   sessionTitle: string;
   completedAt: Date;
-  completedExercises: string[];   // kept for backward compat
-  volumeData: ExerciseVolume[];   // per-exercise volume breakdown
-  totalVolume: number;            // session aggregate
+  completedExercises: string[];
+  volumeData: ExerciseVolume[];
+  totalVolume: number;
 }
 
-// Store state interface
+// ── Store state interface ────────────────────────────────────────────────────
+
 export interface WorkoutState {
-  currentRoutine: RoutineData | null;
+  // UI state (Zustand-only, NOT persisted to IDB)
   currentView: WorkoutView;
-  activeSessionIdx: number | null;
   isLoading: boolean;
-  
-  // Progress tracking: key is "sessionIdx-exerciseId-setIdx"
+  isHydrated: boolean;
+
+  // Data state (cached from IDB)
+  currentRoutine: RoutineData | null;
+  activeSessionIdx: number | null;
   setCompletion: Record<string, SetStatus>;
-  
   history: HistoryEntry[];
-  
-  // Actions
-  setCurrentRoutine: (routine: RoutineData) => void;
-  setCurrentView: (view: WorkoutView) => void;
-  setIsLoading: (isLoading: boolean) => void;
-  startSession: (sessionIdx: number) => void;
+  historyHasMore: boolean;
+  profile: UserProfile;
+  routineLibrary: RoutineSummary[];
+
+  // ── Async actions (update Zustand synchronously, write IDB in background) ──
+  hydrate: () => Promise<void>;
+  importRoutine: (routine: RoutineData, sourceMarkdown: string) => Promise<void>;
+  loadRoutineFromLibrary: (routineId: string) => Promise<void>;
+  deleteRoutineFromLibrary: (routineId: string) => Promise<void>;
+  startSession: (sessionIdx: number) => Promise<void>;
+  finishSession: () => Promise<void>;
+  abandonSession: () => Promise<void>;
+  loadMoreHistory: () => Promise<void>;
+  updateProfile: (patch: Partial<UserProfile>) => Promise<void>;
+  resetAll: () => Promise<void>;
+
+  // ── Sync actions ─────────────────────────────────────────────────────────
+  /** Sync Zustand update + fire-and-forget IDB write. */
   toggleSetCompletion: (
     sessionIdx: number,
     exerciseId: string,
@@ -74,7 +113,11 @@ export interface WorkoutState {
     repsDone?: number,
     weight?: number
   ) => void;
-  finishSession: () => void;
+
+  setCurrentView: (view: WorkoutView) => void;
+  setIsLoading: (loading: boolean) => void;
   resetProgress: () => void;
-  resetAll: () => void;
+
+  /** Backward-compat alias for importRoutine (sourceMarkdown='', used in tests). */
+  setCurrentRoutine: (routine: RoutineData) => void;
 }

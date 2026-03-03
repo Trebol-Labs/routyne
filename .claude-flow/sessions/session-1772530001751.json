@@ -1,0 +1,15 @@
+{
+  "id": "session-1772530001751",
+  "startedAt": "2026-03-03T09:26:41.751Z",
+  "platform": "darwin",
+  "cwd": "/Users/sierra/Code/routyne",
+  "context": {},
+  "metrics": {
+    "edits": 40,
+    "commands": 0,
+    "tasks": 0,
+    "errors": 0
+  },
+  "endedAt": "2026-03-03T11:40:37.859Z",
+  "duration": 8036109
+}

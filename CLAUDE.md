@@ -37,12 +37,37 @@ Views are extracted into standalone components under `src/components/workout/vie
 3. During an active session, set completions are tracked as `Record<"sessionIdx-exerciseId-setIdx", SetStatus>`
 4. `finishSession()` writes a `HistoryEntry` (with volume tracking per exercise) and transitions to `history`
 
+### Persistence (planned migration — see plans)
+
+**Current**: Zustand `persist` middleware → localStorage (`routyne-storage` key). Persists `history`, `currentRoutine`, `profile`. `setCompletion` is volatile (lost on refresh).
+
+**Target**: `idb` (1.2KB) + Zustand hybrid — IndexedDB as durable source of truth, Zustand as reactive in-memory cache.
+
+| IndexedDB Store | Purpose |
+|----------------|---------|
+| `routines` | Routine library (multiple saved routines) |
+| `sessions` | Normalized sessions within routines |
+| `exercises` | Normalized exercises within sessions |
+| `history` | Completed workouts with per-set detail |
+| `activeSession` | In-progress workout state (survives refresh/crash) |
+| `profile` | User preferences (name, unit, rest default) |
+| `meta` | Schema version flags, migration state |
+
+Key patterns:
+- `toggleSetCompletion` is sync (Zustand) + fire-and-forget async (IDB write)
+- `hydrate()` loads IDB → Zustand on mount; shows loading skeleton until ready
+- Legacy migration: one-time, idempotent, reads `routyne-storage` → writes to IDB → deletes localStorage
+- Cursor-based pagination for history (never load all records)
+- `navigator.storage.persist()` on first use to prevent eviction
+
+Data access layer lives in `src/lib/db/` — thin functional modules, one per store.
+
 ### Key Files
 
 | File | Purpose |
 |------|---------|
 | `src/app/page.tsx` | View orchestrator + header + bottom nav + stats view |
-| `src/store/useWorkoutStore.ts` | Zustand store with persist middleware — single source of truth |
+| `src/store/useWorkoutStore.ts` | Zustand store — single source of truth for UI + data cache |
 | `src/types/workout.ts` | All shared TypeScript interfaces |
 | `src/lib/markdown/parser.ts` | Markdown → `RoutineData` parser (NaN guard on both formats) |
 | `src/lib/media/resolver.ts` | Resolves exercise names to `/api/media/{slug}` URLs |
@@ -103,7 +128,9 @@ Never commit screenshots. They are temporary verification artifacts only.
 
 ### Plans
 
-Implementation plans are stored in `.claude/plans/` (gitignored). To execute a plan in a new session:
+All implementation plans live in the project-local `.claude/plans/` directory (gitignored via `.claude/`). New plans should always be created here — **not** in the global `~/.claude/plans/`.
+
+To execute a plan in a new session:
 ```
 Execute the plan at .claude/plans/<plan-file>.md
 ```
@@ -112,3 +139,19 @@ Current plans:
 - `2026-02-26-exercise-media-sourcing.md` — ExerciseDB API integration (7 tasks)
 - `2026-02-26-exercise-media-sourcing-design.md` — Design doc for media sourcing
 - `2026-02-27-ui-fine-tuning.md` — UI polish: fonts, button system, anime.js, a11y (11 tasks)
+- `2026-03-03-secondary-features.md` — Profile, Search, Stats Charts, Weight/Rep Input (17 tasks, 3 phases)
+- `2026-03-03-persistence-architecture.md` — IndexedDB migration, session persistence, routine library, export/import (5 phases)
+
+### Future Considerations
+
+**Deployment readiness:**
+- Request `navigator.storage.persist()` on first use to prevent browser eviction of IndexedDB
+- Add error boundaries around all IDB operations (IndexedDB throws in some private browsing modes)
+- Export/import is the user's only data recovery path — implement early (before cloud sync)
+
+**Post-launch priorities:**
+- Cloud sync (Supabase or similar) — requires conflict resolution strategy beyond current merge-on-import
+- Offline queue for API calls (media resolution) when network returns
+- Per-set `weightUnit` storage (currently unit is display-only; switching kg↔lbs reinterprets stored numbers)
+- Infinite scroll for history view with `IntersectionObserver` + `loadMoreHistory()`
+- Storage usage indicator in profile via `navigator.storage.estimate()`

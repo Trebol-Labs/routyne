@@ -1,6 +1,7 @@
 // Global test setup — runs before every test file.
-// Provides a working localStorage for tests that use Zustand persist middleware.
+import 'fake-indexeddb/auto';  // patches globalThis.indexedDB for all tests
 import { vi } from 'vitest';
+import { resetDBSingleton } from '@/lib/db/index';
 
 let storage: Record<string, string> = {};
 
@@ -18,4 +19,5 @@ vi.stubGlobal('localStorage', localStorageMock);
 // Reset storage between tests so state doesn't leak across test cases.
 beforeEach(() => {
   storage = {};
+  resetDBSingleton();  // force fresh IDB connection each test
 });

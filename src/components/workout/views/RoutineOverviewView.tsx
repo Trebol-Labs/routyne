@@ -1,27 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ExerciseCard } from '@/components/workout/ExerciseCard';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
-import { staggerReveal } from '@/lib/animations';
-import {
-  Play,
-  LayoutGrid,
-  TrendingUp,
-  MoreVertical,
-  Dumbbell,
-} from 'lucide-react';
+import { Play, LayoutGrid, Dumbbell } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function RoutineOverviewView() {
   const { currentRoutine, startSession } = useWorkoutStore();
   const [sessionPickerIdx, setSessionPickerIdx] = useState(0);
-
-  useEffect(() => {
-    staggerReveal('.exercise-card-anim');
-  }, [sessionPickerIdx]);
 
   if (!currentRoutine) return null;
 
@@ -32,127 +21,101 @@ export function RoutineOverviewView() {
       key="routine"
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.8, ease: "easeOut" }}
-      className="space-y-10"
+      transition={{ duration: 0.6, ease: "easeOut" }}
+      className="space-y-8"
     >
       {/* Routine Hero Section */}
-      <div className="space-y-6 relative group">
-        <div className="absolute inset-0 bg-blue-600/10 blur-[120px] rounded-[3rem] opacity-40 group-hover:opacity-60 transition-opacity pointer-events-none" />
-        <div className="relative p-6 sm:p-10 rounded-[3rem] glass-panel border border-white/10 overflow-hidden shadow-2xl">
-          <div className="absolute top-[-50px] right-[-50px] p-6 opacity-5 group-hover:opacity-20 transition-all duration-1000 scale-150 group-hover:rotate-45">
-             <Dumbbell className="w-64 h-64 text-white" />
+      <div className="space-y-4 relative group">
+        <div className="relative p-5 sm:p-8 rounded-[2.5rem] glass-panel border border-white/10 overflow-hidden">
+          <div className="absolute top-[-40px] right-[-40px] opacity-[0.04] pointer-events-none">
+             <Dumbbell className="w-48 h-48 text-white" />
           </div>
 
-          <div className="relative space-y-4">
-            <div className="inline-flex items-center gap-3 px-4 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-full">
-               <TrendingUp className="w-4 h-4 text-blue-400" />
-               <span className="text-[11px] font-black text-blue-400 uppercase tracking-[0.25em]">Hypertrophy Engine</span>
+          <div className="relative space-y-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/8 rounded-full">
+               <LayoutGrid className="w-3.5 h-3.5 text-white/40" />
+               <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.25em]">{currentRoutine.sessions.length} Sessions · {pickerSession?.exercises.length} Exercises</span>
             </div>
 
-            <div className="space-y-4 text-center">
-              <h1 className="text-5xl sm:text-7xl font-black tracking-tighter text-liquid leading-[0.9] uppercase font-display">
+            <div className="space-y-2">
+              <h1 className="text-4xl sm:text-5xl font-black tracking-tighter text-white leading-[0.95] uppercase font-display">
                 {currentRoutine.title}
               </h1>
-              <p className="text-white/40 text-lg font-bold tracking-tight px-4">
-                {currentRoutine.sessions.length} training cycles synchronized.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 pt-4">
-               <div className="flex items-center gap-3 glass-btn px-6 py-3 rounded-[1.5rem] border border-white/5 shadow-inner">
-                  <LayoutGrid className="w-5 h-5 text-emerald-400" />
-                  <span className="text-sm font-black text-white/80 uppercase tracking-widest">{pickerSession?.exercises.length} EXERCISES</span>
-               </div>
             </div>
           </div>
         </div>
 
         {/* Horizontal Session Picker */}
-        <div className="space-y-6">
-          <div className="flex items-center justify-between px-4 sm:px-2">
-             <h3 className="text-[12px] font-black text-white/30 uppercase tracking-[0.4em] pl-1 font-display">Phases</h3>
-          </div>
+        <div className="space-y-3">
+          <h3 className="text-[11px] font-black text-white/25 uppercase tracking-[0.4em] pl-1 font-display">Sessions</h3>
 
-          <div className="flex gap-6 overflow-x-auto pb-6 no-scrollbar -mx-4 px-4 sm:-mx-2 sm:px-2 pt-2">
+          <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar -mx-4 px-4 sm:-mx-2 sm:px-2">
             {currentRoutine.sessions.map((session, idx) => (
               <button
                 key={session.id}
                 onClick={() => setSessionPickerIdx(idx)}
                 className={cn(
-                  "shrink-0 relative group flex flex-col items-center justify-center min-w-[120px] h-[130px] rounded-[2.5rem] border transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]",
+                  "shrink-0 relative flex flex-col items-center justify-center min-w-[100px] h-[110px] rounded-[2rem] border transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]",
                   sessionPickerIdx === idx
-                    ? "glass-panel active-glass-btn scale-[1.05] -translate-y-2 z-10"
-                    : "bg-white/5 border-white/[0.03] text-white/20 hover:border-white/10 hover:bg-white/[0.08]"
+                    ? "active-glass-btn scale-[1.03] -translate-y-1 z-10"
+                    : "bg-white/[0.04] border-white/[0.08] hover:bg-white/[0.07] hover:border-white/[0.12]"
                 )}
               >
                 <div className={cn(
-                  "w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-700 shadow-2xl mb-3",
-                  sessionPickerIdx === idx ? "bg-white/20 scale-110" : "bg-black/30"
+                  "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-500 mb-2",
+                  sessionPickerIdx === idx ? "bg-white/20" : "bg-white/8"
                 )}>
                    <span className={cn(
-                     "text-lg font-black tracking-tighter font-display",
-                     sessionPickerIdx === idx ? "text-white" : "text-white/10"
+                     "text-base font-black tracking-tighter font-display",
+                     sessionPickerIdx === idx ? "text-white" : "text-white/40"
                    )}>{idx + 1}</span>
                 </div>
 
                 <h4 className={cn(
-                  "text-xs font-black tracking-[0.2em] uppercase leading-none",
-                  sessionPickerIdx === idx ? "text-white/80" : "text-white/10"
+                  "text-[10px] font-black tracking-[0.2em] uppercase leading-none",
+                  sessionPickerIdx === idx ? "text-white/80" : "text-white/40"
                 )}>
                   Day
                 </h4>
 
                 <span className={cn(
-                  "text-[10px] font-black uppercase tracking-widest mt-1.5",
-                  sessionPickerIdx === idx ? "text-white/40" : "text-white/[0.08]"
+                  "text-[9px] font-black uppercase tracking-widest mt-1",
+                  sessionPickerIdx === idx ? "text-white/40" : "text-white/20"
                 )}>
                   {session.exercises.length}ex
                 </span>
-
-                {sessionPickerIdx === idx && (
-                   <motion.div
-                     layoutId="activePickerIndicator"
-                     className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-white shadow-[0_0_20px_white] border-2 border-blue-500 z-50"
-                   />
-                )}
               </button>
             ))}
           </div>
         </div>
 
-        <div className="px-2 relative group/btn">
-          <div className="absolute inset-x-0 bottom-0 top-0 bg-blue-600/10 blur-[60px] opacity-0 group-hover/btn:opacity-100 transition-opacity pointer-events-none" />
-          <Button
-            variant="glass-primary"
-            size="xl"
-            onClick={() => startSession(sessionPickerIdx)}
-            className="w-full relative z-10 rounded-[2rem] gap-4 group shadow-[0_8px_30px_-8px_rgba(59,130,246,0.4)]"
-          >
-            <Play className="w-7 h-7 fill-white group-hover:scale-110 transition-transform" />
-            START SESSION {sessionPickerIdx + 1}
-          </Button>
-        </div>
+        <Button
+          variant="glass-primary"
+          size="xl"
+          onClick={() => startSession(sessionPickerIdx)}
+          className="w-full rounded-[2rem] gap-3 group"
+        >
+          <Play className="w-5 h-5 fill-white group-hover:scale-110 transition-transform" />
+          START SESSION {sessionPickerIdx + 1}
+        </Button>
       </div>
 
       {/* Exercises Sequence Overview */}
-      <div className="space-y-12 pt-10">
-        <div className="flex items-center justify-between px-4 sm:px-2">
-          <div className="flex items-center gap-5">
-             <div className="w-2 h-10 bg-blue-600 rounded-full shadow-[0_0_20px_rgba(59,130,246,0.6)]" />
-             <h3 className="text-white font-black text-3xl tracking-tighter uppercase font-display">
-               Sequence
-             </h3>
-          </div>
+      <div className="space-y-4 pt-2">
+        <div className="flex items-center gap-3 px-1">
+          <div className="w-1 h-6 bg-blue-500 rounded-full" />
+          <h3 className="text-white font-black text-xl tracking-tighter uppercase font-display">
+            Sequence
+          </h3>
         </div>
 
-        <div className="grid gap-8 px-2 sm:px-0">
+        <div className="grid gap-3 px-2 sm:px-0">
           {pickerSession?.exercises.map((exercise, index) => (
-            <div key={exercise.id} className="exercise-card-anim opacity-0">
-              <ExerciseCard
-                exercise={exercise}
-                index={index}
-              />
-            </div>
+            <ExerciseCard
+              key={exercise.id}
+              exercise={exercise}
+              index={index}
+            />
           ))}
         </div>
       </div>

@@ -58,19 +58,16 @@ export function ExerciseCard({ exercise, index }: ExerciseCardProps) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 24 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ delay: index * 0.08, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.06, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
       className="group relative h-full"
     >
-      <div className="absolute inset-0 bg-blue-500/10 blur-[60px] opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
-
-      <div className="relative glass-panel rounded-[2.5rem] overflow-hidden p-5 sm:p-6 transition-all duration-500 hover:border-white/20 hover:bg-white/[0.05] shadow-2xl flex flex-col sm:flex-row items-start sm:items-center gap-6">
+      <div className="relative glass-panel rounded-[2rem] overflow-hidden p-4 transition-all duration-300 hover:border-white/15 flex flex-row items-center gap-4">
 
         {/* Media Section */}
         <div
-          className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-3xl bg-black/40 overflow-hidden shrink-0 border border-white/10 shadow-inner group-hover:scale-[1.03] transition-transform duration-700 mx-auto sm:mx-0"
+          className="relative w-14 h-14 rounded-2xl bg-white/[0.06] overflow-hidden shrink-0 border border-white/10 transition-transform duration-300"
           onMouseEnter={() => setIsPlaying(true)}
           onMouseLeave={() => setIsPlaying(false)}
         >
@@ -80,7 +77,7 @@ export function ExerciseCard({ exercise, index }: ExerciseCardProps) {
 
           {showFallback && (
             <div className="w-full h-full flex items-center justify-center text-white/30">
-              <Dumbbell className="w-12 h-12" />
+              <Dumbbell className="w-7 h-7" />
             </div>
           )}
 
@@ -131,22 +128,20 @@ export function ExerciseCard({ exercise, index }: ExerciseCardProps) {
         </div>
 
         {/* Content Section */}
-        <div className="flex-grow min-w-0 flex flex-col justify-center space-y-3 text-left w-full">
-          <div className="flex items-start justify-between gap-3 w-full">
-            <h3 className="text-xl sm:text-2xl font-black text-white tracking-tighter leading-tight group-hover:text-blue-400 transition-colors break-words font-display">
-              {exercise.cleanName.toUpperCase()}
-            </h3>
-          </div>
+        <div className="flex-grow min-w-0 flex flex-col justify-center space-y-2 text-left w-full">
+          <h3 className="text-sm font-black text-white tracking-tight leading-tight group-hover:text-blue-300 transition-colors break-words font-display">
+            {exercise.cleanName.toUpperCase()}
+          </h3>
 
-          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-            <div className="flex items-center gap-2.5 px-4 py-2 bg-black/30 backdrop-blur-xl rounded-2xl border border-white/[0.03] shadow-inner">
-              <span className="text-[10px] font-black text-blue-400 uppercase tracking-[0.25em] font-display">Sets</span>
-              <span className="text-base font-black text-white/90">{exercise.sets}</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-black/30 rounded-xl border border-white/5">
+              <span className="text-[9px] font-black text-blue-400/80 uppercase tracking-[0.2em] font-display">Sets</span>
+              <span className="text-sm font-black text-white/90">{exercise.sets}</span>
             </div>
 
-            <div className="flex items-center gap-2.5 px-4 py-2 bg-black/30 backdrop-blur-xl rounded-2xl border border-white/[0.03] shadow-inner">
-              <span className="text-[10px] font-black text-indigo-300 uppercase tracking-[0.25em] font-display">Reps</span>
-              <span className="text-base font-black text-white/90">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-black/30 rounded-xl border border-white/5">
+              <span className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] font-display">Reps</span>
+              <span className="text-sm font-black text-white/90">
                 {exercise.repsMin}{exercise.repsMin !== exercise.repsMax ? `-${exercise.repsMax}` : ''}
               </span>
             </div>
