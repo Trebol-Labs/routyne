@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Barlow_Condensed, Inter } from "next/font/google";
 import "./globals.css";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -14,9 +14,20 @@ const inter = Inter({
   variable: "--font-body",
 });
 
+export const viewport: Viewport = {
+  themeColor: '#000000',
+  viewportFit: 'cover',
+};
+
 export const metadata: Metadata = {
   title: "Routyne — Workout Tracker",
   description: "Mobile-first PWA workout tracker with liquid glass UI",
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Routyne',
+  },
 };
 
 export default function RootLayout({
@@ -25,7 +36,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" style={{ colorScheme: 'dark' }}>
       <body
         className={`${barlowCondensed.variable} ${inter.variable} antialiased`}
       >

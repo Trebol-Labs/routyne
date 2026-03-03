@@ -18,8 +18,42 @@
   --font-body: var(--font-body), 'Inter', ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-body);
   --font-mono: ui-monospace, SFMono-Regular, monospace;
-  
+
+  /* Blur scale */
+  --blur-sm: 8px;
+  --blur-md: 20px;
+  --blur-lg: 40px;
+  --blur-xl: 64px;
+  --blur-glow: 80px;
+  --blur-ambient: 100px;
+
+  /* Border-radius scale */
+  --radius-sm: 0.75rem;
+  --radius-md: 1.25rem;
+  --radius-lg: 1.75rem;
+  --radius-xl: 2.5rem;
+  --radius-full: 9999px;
   --radius-glass: 2.5rem;
+
+  /* Z-index scale */
+  --z-header: 40;
+  --z-nav: 50;
+  --z-overlay: 60;
+  --z-timer: 70;
+  --z-drag: 80;
+  --z-toast: 90;
+
+  /* Spacing */
+  --space-page-x: 1rem;
+  --space-card: 1.25rem;
+  --space-section: 1.5rem;
+  --space-nav-clear: 10rem;
+
+  /* Animation */
+  --ease-out-expo: cubic-bezier(0.23, 1, 0.32, 1);
+  --duration-fast: 200ms;
+  --duration-normal: 400ms;
+  --duration-slow: 700ms;
 }
 
 @layer base {
@@ -43,17 +77,29 @@
     overflow-x: hidden;
     -webkit-tap-highlight-color: transparent;
     -webkit-font-smoothing: antialiased;
-    overscroll-behavior: none; /* Prevents the bounce effect if that's preferred, but usually just a matching background is enough. I'll set background instead. */
+    overscroll-behavior-y: contain;
+    padding-top: env(safe-area-inset-top);
   }
 
-  /* Custom Hide Scrollbar */
-  ::-webkit-scrollbar {
-    display: none;
+  /* Hide scrollbars on touch devices */
+  @media (hover: none) {
+    ::-webkit-scrollbar {
+      display: none;
+    }
+    * {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  }
+
+  /* Thin scrollbars on pointer devices (desktop) */
+  @media (hover: hover) and (pointer: fine) {
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+    ::-webkit-scrollbar-track { background: transparent; }
   }
 
   * {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
     border-color: var(--color-glass-border);
   }
 }
@@ -68,8 +114,8 @@
 
   .glass-panel {
     background: var(--color-glass-bg);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(var(--blur-md)) saturate(180%);
+    -webkit-backdrop-filter: blur(var(--blur-md)) saturate(180%);
     border: 1px solid var(--color-glass-border);
     box-shadow:
       0 8px 32px -8px rgba(0, 0, 0, 0.6),
@@ -100,8 +146,8 @@
 
   .active-glass-btn {
     background: linear-gradient(135deg, rgba(59, 130, 246, 0.65) 0%, rgba(99, 102, 241, 0.65) 100%);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(var(--blur-md));
+    -webkit-backdrop-filter: blur(var(--blur-md));
     border: 1px solid rgba(255, 255, 255, 0.18);
     box-shadow: 0 4px 20px -4px rgba(59, 130, 246, 0.45);
   }
@@ -109,10 +155,13 @@
   /* Standard glass button — consistent interactive surface */
   .glass-btn {
     background: var(--color-surface-raised);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(var(--blur-md));
+    -webkit-backdrop-filter: blur(var(--blur-md));
     border: 1px solid rgba(255, 255, 255, 0.08);
-    transition: all 200ms ease;
+    transition: background-color var(--duration-fast) var(--ease-out-expo),
+                border-color var(--duration-fast) var(--ease-out-expo),
+                box-shadow var(--duration-fast) var(--ease-out-expo),
+                transform var(--duration-fast) var(--ease-out-expo);
     cursor: pointer;
   }
   .glass-btn:focus-visible {

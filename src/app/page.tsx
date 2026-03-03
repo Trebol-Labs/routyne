@@ -50,14 +50,14 @@ export default function Home() {
           className="flex flex-col items-center gap-6"
         >
           <div className="relative">
-            <div className="absolute inset-0 bg-blue-600 blur-[40px] opacity-40 animate-pulse rounded-full" />
-            <div className="relative w-16 h-16 rounded-[1.5rem] bg-gradient-to-tr from-white/20 to-white/5 p-px backdrop-blur-3xl shadow-2xl">
-              <div className="w-full h-full rounded-[1.4rem] bg-black/40 flex items-center justify-center border border-white/5">
+            <div className="absolute inset-0 bg-blue-600 blur-[var(--blur-lg)] opacity-40 animate-pulse rounded-full" />
+            <div className="relative w-16 h-16 rounded-[var(--radius-lg)] bg-gradient-to-tr from-white/20 to-white/5 p-px backdrop-blur-3xl shadow-2xl">
+              <div className="w-full h-full rounded-[var(--radius-md)] bg-black/40 flex items-center justify-center border border-white/5">
                 <Dumbbell className="text-white w-8 h-8 animate-pulse" />
               </div>
             </div>
           </div>
-          <p className="text-[11px] text-white/20 font-black uppercase tracking-[0.3em]">Loading...</p>
+          <p className="text-[11px] text-white/40 font-black uppercase tracking-[0.3em]">Loading...</p>
         </motion.div>
       </main>
     );
@@ -75,26 +75,27 @@ export default function Home() {
 
   return (
     <main className="min-h-screen liquid-bg-dark text-zinc-100 selection:bg-blue-500/40 font-sans pb-40">
-      <div className="max-w-screen-md mx-auto min-h-screen flex flex-col relative px-4 sm:px-0">
+      <div className="max-w-screen-md mx-auto min-h-screen flex flex-col relative px-4">
 
         {/* Apple Liquid Glass Header */}
-        <div className="sticky top-4 z-50 w-full flex justify-center pointer-events-none mb-4">
-          <header className="pointer-events-auto w-full px-6 py-4 flex items-center justify-between glass-panel rounded-[2.5rem] border-white/10 shadow-2xl">
-            <div className="absolute inset-0 -z-10 bg-blue-600/10 blur-[100px] rounded-[2.5rem] pointer-events-none" />
+        <div className="sticky top-4 z-[var(--z-header)] w-full flex justify-center pointer-events-none mb-4">
+          <header className="pointer-events-auto w-full px-6 py-4 flex items-center justify-between glass-panel rounded-[var(--radius-xl)] border-white/10 shadow-2xl">
+            <div className="absolute inset-0 -z-10 bg-blue-600/10 blur-[var(--blur-ambient)] rounded-[var(--radius-xl)] pointer-events-none" />
             <div className="flex items-center gap-5">
               <div className="relative group">
-                 <div className="absolute inset-0 bg-blue-600 blur-[30px] opacity-40 group-hover:opacity-80 transition-opacity" />
-                 <div className="relative w-12 h-12 rounded-[1.2rem] bg-gradient-to-tr from-white/20 to-white/5 p-px backdrop-blur-3xl shadow-2xl">
-                    <div className="w-full h-full rounded-[1.1rem] bg-black/40 flex items-center justify-center border border-white/5">
+                 <div className="absolute inset-0 bg-blue-600 blur-[var(--blur-lg)] opacity-40 group-hover:opacity-80 transition-opacity" />
+                 <div className="relative w-12 h-12 rounded-[var(--radius-md)] bg-gradient-to-tr from-white/20 to-white/5 p-px backdrop-blur-3xl shadow-2xl">
+                    <div className="w-full h-full rounded-[var(--radius-sm)] bg-black/40 flex items-center justify-center border border-white/5">
                       <Dumbbell className="text-white w-7 h-7" />
                     </div>
                  </div>
               </div>
               <div className="flex flex-col">
-                <h2 className="text-2xl font-black tracking-tighter leading-none text-white font-display">ROUTYNE</h2>
+                <h1 className="sr-only">Routyne Workout Tracker</h1>
+                <span className="text-2xl font-black tracking-tighter leading-none text-white font-display" aria-hidden="true">ROUTYNE</span>
                 <div className="flex items-center gap-2 mt-1.5 pl-0.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                  <p className="text-[11px] text-white/20 font-black uppercase tracking-[0.3em] whitespace-nowrap">OFFLINE READY</p>
+                  <p className="text-[11px] text-white/40 font-black uppercase tracking-[0.3em] whitespace-nowrap">OFFLINE READY</p>
                 </div>
               </div>
             </div>
@@ -110,7 +111,10 @@ export default function Home() {
           </header>
         </div>
 
-        <div className="flex-grow pt-10 pb-32">
+        <div className="flex-grow pt-10 pb-[var(--space-nav-clear)]">
+          <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:p-4 focus:bg-black focus:text-white focus:rounded-lg">
+            Skip to content
+          </a>
           <AnimatePresence mode="wait">
             {currentView === 'uploader' ? (
               <motion.div
@@ -120,6 +124,7 @@ export default function Home() {
                 exit={{ opacity: 0, scale: 1.1, y: -40 }}
                 transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
                 className="flex-grow h-full flex items-center justify-center"
+                id="main-content"
               >
                 <ErrorBoundary
                   fallback={
@@ -153,22 +158,22 @@ export default function Home() {
         </div>
 
         {/* Global Floating Glass Control Center */}
-        <div className="fixed bottom-0 left-0 right-0 h-44 bg-gradient-to-t from-black/90 via-black/40 to-transparent backdrop-blur-xl z-40 pointer-events-none" />
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[60] w-[calc(100%-48px)] max-w-[420px]">
-          <nav role="navigation" className="relative group p-1.5 glass-panel rounded-[3rem] border-white/20 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.9)] overflow-hidden">
-             <div className="absolute inset-0 bg-blue-600/10 backdrop-blur-3xl rounded-[3rem] pointer-events-none" />
-             <div className="absolute inset-0 bg-blue-600/20 blur-[100px] rounded-[3rem] opacity-60 group-hover:opacity-100 transition-opacity" />
-             <div className="absolute inset-0 -z-10 bg-indigo-500/10 blur-[60px] rounded-[3rem] group-hover:bg-indigo-500/20 transition-all" />
+        <div className="fixed bottom-0 left-0 right-0 h-44 bg-gradient-to-t from-black/90 via-black/40 to-transparent backdrop-blur-xl z-[var(--z-nav)] pointer-events-none" />
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[var(--z-nav)] w-[calc(100%-48px)] max-w-[420px] pb-[env(safe-area-inset-bottom)]">
+          <nav role="navigation" className="relative group p-1.5 glass-panel rounded-[var(--radius-xl)] border-white/20 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.9)] overflow-hidden">
+             <div className="absolute inset-0 bg-blue-600/10 backdrop-blur-3xl rounded-[var(--radius-xl)] pointer-events-none" />
+             <div className="absolute inset-0 bg-blue-600/20 blur-[var(--blur-ambient)] rounded-[var(--radius-xl)] opacity-60 group-hover:opacity-100 transition-opacity" />
+             <div className="absolute inset-0 -z-10 bg-indigo-500/10 blur-[var(--blur-xl)] rounded-[var(--radius-xl)] group-hover:bg-indigo-500/20 transition-colors" />
              <div className="relative flex justify-between p-2">
                 <button
                   onClick={() => handleNavClick('uploader')}
                   aria-label="Import routine"
                   aria-current={currentView === 'uploader' ? 'page' : undefined}
                   className={cn(
-                    "w-14 h-14 rounded-[1.5rem] flex items-center justify-center transition-all cursor-pointer relative",
+                    "w-14 h-14 rounded-[var(--radius-lg)] flex items-center justify-center transition-colors transition-shadow duration-200 cursor-pointer relative",
                     currentView === 'uploader'
                       ? "bg-white text-black shadow-lg"
-                      : "text-white/30 hover:text-white/50 hover:bg-white/5"
+                      : "text-white/40 hover:text-white/60 hover:bg-white/5"
                   )}
                 >
                   <Plus className="w-6 h-6" />
@@ -178,10 +183,10 @@ export default function Home() {
                    aria-label="Overview"
                    aria-current={currentView === 'routine-overview' || currentView === 'active-session' ? 'page' : undefined}
                    className={cn(
-                    "w-14 h-14 rounded-[1.5rem] flex items-center justify-center transition-all cursor-pointer relative",
+                    "w-14 h-14 rounded-[var(--radius-lg)] flex items-center justify-center transition-colors transition-shadow duration-200 cursor-pointer relative",
                     currentView === 'routine-overview' || currentView === 'active-session'
                       ? "bg-white text-black shadow-lg"
-                      : "text-white/30 hover:text-white/50 hover:bg-white/5"
+                      : "text-white/40 hover:text-white/60 hover:bg-white/5"
                   )}
                 >
                   <Dumbbell className="w-6 h-6" />
@@ -191,10 +196,10 @@ export default function Home() {
                    aria-label="History"
                    aria-current={currentView === 'history' ? 'page' : undefined}
                    className={cn(
-                    "w-14 h-14 rounded-[1.5rem] flex items-center justify-center transition-all cursor-pointer relative",
+                    "w-14 h-14 rounded-[var(--radius-lg)] flex items-center justify-center transition-colors transition-shadow duration-200 cursor-pointer relative",
                     currentView === 'history'
                       ? "bg-white text-black shadow-lg"
-                      : "text-white/30 hover:text-white/50 hover:bg-white/5"
+                      : "text-white/40 hover:text-white/60 hover:bg-white/5"
                   )}
                 >
                   <Calendar className="w-6 h-6" />
@@ -204,10 +209,10 @@ export default function Home() {
                    aria-label="Stats"
                    aria-current={currentView === 'stats' ? 'page' : undefined}
                    className={cn(
-                    "w-14 h-14 rounded-[1.5rem] flex items-center justify-center transition-all cursor-pointer relative",
+                    "w-14 h-14 rounded-[var(--radius-lg)] flex items-center justify-center transition-colors transition-shadow duration-200 cursor-pointer relative",
                     currentView === 'stats'
                       ? "bg-white text-black shadow-lg"
-                      : "text-white/30 hover:text-white/50 hover:bg-white/5"
+                      : "text-white/40 hover:text-white/60 hover:bg-white/5"
                   )}
                 >
                   <TrendingUp className="w-6 h-6" />

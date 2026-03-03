@@ -89,17 +89,24 @@ export function ActiveSessionView() {
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="space-y-8 pb-6 px-2 sm:px-0"
+      className="space-y-8 pb-6 px-4"
     >
       {/* Session progress */}
-      <div className="px-2 sm:px-0 -mt-2">
+      <div className="-mt-2">
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em]">Progress</span>
-          <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">
+          <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">Progress</span>
+          <span className="text-[10px] font-black text-white/50 uppercase tracking-widest">
             {completedSets} / {totalSets}
           </span>
         </div>
-        <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+        <div
+          className="h-1 w-full bg-white/5 rounded-full overflow-hidden"
+          role="progressbar"
+          aria-valuenow={completedSets}
+          aria-valuemin={0}
+          aria-valuemax={totalSets}
+          aria-label={`Workout progress: ${completedSets} of ${totalSets} sets completed`}
+        >
           <motion.div
             className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full"
             initial={{ width: 0 }}
@@ -109,7 +116,7 @@ export function ActiveSessionView() {
         </div>
       </div>
 
-      <div className="flex items-center justify-between px-2 sm:px-0">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button
             variant="glass-icon"
@@ -145,9 +152,9 @@ export function ActiveSessionView() {
       <div className="grid gap-8">
         {activeSession.exercises.map((exercise) => (
           <div key={exercise.id} className="space-y-3">
-            <div className="flex items-center justify-between px-1 sm:px-0">
+            <div className="flex items-center justify-between">
               <h3 className="text-xl font-black text-white tracking-tighter uppercase font-display">{exercise.cleanName}</h3>
-              <span className="text-xs font-black text-white/30 uppercase tracking-[0.25em]">
+              <span className="text-xs font-black text-white/50 uppercase tracking-[0.25em]">
                 {exercise.sets} Sets / {exercise.repsMin}{exercise.repsMin !== exercise.repsMax ? `-${exercise.repsMax}` : ''} Reps
               </span>
             </div>
@@ -176,12 +183,12 @@ export function ActiveSessionView() {
         ))}
       </div>
 
-      <div className="px-2 sm:px-0 space-y-3">
+      <div className="space-y-3">
         <Button
           variant="glass-primary"
           size="xl"
           onClick={() => finishSession()}
-          className="w-full rounded-[2rem] gap-4 group mt-4 !bg-emerald-500/25 hover:!bg-emerald-500/35 border-emerald-500/20"
+          className="w-full rounded-[var(--radius-xl)] gap-4 group mt-4 !bg-emerald-500/25 hover:!bg-emerald-500/35 border-emerald-500/20"
         >
           <CheckCircle2 className="w-7 h-7 text-emerald-400 group-hover:scale-110 transition-transform" />
           FINISH WORKOUT
@@ -192,7 +199,7 @@ export function ActiveSessionView() {
               abandonSession();
             }
           }}
-          className="w-full flex items-center justify-center gap-2 py-3 text-white/20 hover:text-red-400 transition-colors text-[11px] font-black uppercase tracking-[0.2em]"
+          className="w-full flex items-center justify-center gap-2 py-3 text-white/40 hover:text-red-400 transition-colors text-[11px] font-black uppercase tracking-[0.2em]"
         >
           <XCircle className="w-3.5 h-3.5" />
           Abandon Workout

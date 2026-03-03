@@ -94,16 +94,16 @@ export function RestTimer({ duration, onFinish, onClose }: RestTimerProps) {
       initial={{ opacity: 0, scale: 0.9, y: 20 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.9, y: 20 }}
-      className="fixed bottom-32 left-1/2 -translate-x-1/2 z-[100] w-[calc(100%-48px)] max-w-[400px] glass-panel rounded-[3rem] p-8 border-white/20 shadow-[0_40px_80px_-15px_rgba(0,0,0,0.8)] overflow-hidden"
+      className="fixed bottom-32 left-1/2 -translate-x-1/2 z-[var(--z-timer)] w-[calc(100%-48px)] max-w-[400px] glass-panel rounded-[var(--radius-xl)] p-8 border-white/20 shadow-[0_40px_80px_-15px_rgba(0,0,0,0.8)] overflow-hidden"
     >
       {/* Liquid background glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-blue-600/10 blur-[80px] rounded-full pointer-events-none" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-blue-600/10 blur-[var(--blur-glow)] rounded-full pointer-events-none" />
       
       <div className="relative flex flex-col items-center space-y-8">
         <div className="flex items-center justify-between w-full mb-2">
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-blue-400" />
-            <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] font-display">Rest Timer</span>
+            <span className="text-[10px] font-black text-white/50 uppercase tracking-[0.3em] font-display">Rest Timer</span>
           </div>
           <button
             onClick={onClose}
@@ -146,7 +146,7 @@ export function RestTimer({ duration, onFinish, onClose }: RestTimerProps) {
             </defs>
           </svg>
           
-          <div className="flex flex-col items-center">
+          <div className="flex flex-col items-center" aria-live="polite" aria-label={`Rest timer: ${Math.floor(timeLeft / 60)} minutes ${timeLeft % 60} seconds remaining`}>
             <span className="text-6xl font-black text-white tracking-tighter tabular-nums leading-none font-display">
               {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}
             </span>
