@@ -1,6 +1,6 @@
 {
-  "name": "routyne",
-  "short_name": "routyne",
+  "name": "Routyne",
+  "short_name": "Routyne",
   "description": "Premium Mobile Fitness Tracker",
   "start_url": "/",
   "display": "standalone",
