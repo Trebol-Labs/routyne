@@ -13,6 +13,7 @@ function entryToRecord(
     id: entry.id,
     routineId,
     sessionId,
+    sessionIdx: entry.sessionIdx,
     sessionTitle: entry.sessionTitle,
     completedAt: entry.completedAt instanceof Date
       ? entry.completedAt.toISOString()
@@ -24,7 +25,12 @@ function entryToRecord(
       setsCompleted: ev.setsCompleted,
       totalReps: ev.totalReps,
       totalVolume: ev.totalVolume,
-      setDetails: [],  // populated when setCompletion is available
+      setDetails: (ev.setDetails ?? []).map(sd => ({
+        setIdx: sd.setIdx,
+        repsDone: sd.repsDone,
+        weight: sd.weight,
+        timestamp: sd.timestamp instanceof Date ? sd.timestamp.toISOString() : (sd.timestamp ?? new Date().toISOString()),
+      })),
     })),
   };
 }
@@ -32,7 +38,7 @@ function entryToRecord(
 function recordToEntry(r: HistoryRecord): HistoryEntry {
   return {
     id: r.id,
-    sessionIdx: 0,            // not stored in IDB, fallback
+    sessionIdx: r.sessionIdx ?? 0,
     sessionTitle: r.sessionTitle,
     completedAt: new Date(r.completedAt),
     completedExercises: r.volumeData.map((ev) => ev.exerciseId),
@@ -42,6 +48,12 @@ function recordToEntry(r: HistoryRecord): HistoryEntry {
       setsCompleted: ev.setsCompleted,
       totalReps: ev.totalReps,
       totalVolume: ev.totalVolume,
+      setDetails: ev.setDetails.map((sd) => ({
+        setIdx: sd.setIdx,
+        repsDone: sd.repsDone,
+        weight: sd.weight,
+        timestamp: sd.timestamp ? new Date(sd.timestamp) : null,
+      })),
     })),
     totalVolume: r.totalVolume,
   };

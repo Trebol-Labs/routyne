@@ -54,6 +54,7 @@ export interface HistoryRecord {
   id: string;
   routineId: string;
   sessionId: string;
+  sessionIdx?: number;
   sessionTitle: string;
   completedAt: string;  // ISO 8601
   totalVolume: number;

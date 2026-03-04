@@ -57,12 +57,20 @@ export interface ExerciseBrowseItem {
   gifUrl?: string;
 }
 
+export interface SetDetail {
+  setIdx: number;
+  repsDone: number;
+  weight: number | null;
+  timestamp: Date | null;
+}
+
 export interface ExerciseVolume {
   exerciseId: string;
   cleanName: string;
   setsCompleted: number;
   totalReps: number;
   totalVolume: number;
+  setDetails?: SetDetail[];
 }
 
 export interface HistoryEntry {

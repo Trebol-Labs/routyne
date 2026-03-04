@@ -63,3 +63,23 @@ export async function deleteDatabase(): Promise<void> {
   const { deleteDB } = await import('idb');
   await deleteDB(DB_NAME);
 }
+
+/**
+ * Clear all workout data stores except profile.
+ * Used by resetAll() to preserve user identity.
+ */
+export async function clearWorkoutData(): Promise<void> {
+  const db = await getDB();
+  const tx = db.transaction(
+    ['routines', 'sessions', 'exercises', 'history', 'activeSession'],
+    'readwrite'
+  );
+  await Promise.all([
+    tx.objectStore('routines').clear(),
+    tx.objectStore('sessions').clear(),
+    tx.objectStore('exercises').clear(),
+    tx.objectStore('history').clear(),
+    tx.objectStore('activeSession').clear(),
+  ]);
+  await tx.done;
+}

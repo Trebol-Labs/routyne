@@ -10,11 +10,12 @@ import { migrateLegacyData } from '@/lib/db/migrate-legacy';
 import {
   saveRoutine, loadRoutine, listRoutines, deleteRoutine,
 } from '@/lib/db/routines';
-import { saveHistoryEntry, loadAllHistory } from '@/lib/db/history';
+import { saveHistoryEntry, loadHistory } from '@/lib/db/history';
 import {
   saveActiveSession, loadActiveSession, clearActiveSession,
 } from '@/lib/db/activeSession';
 import { loadProfile, saveProfile } from '@/lib/db/profile';
+import { clearWorkoutData } from '@/lib/db/index';
 
 // ── Default profile ──────────────────────────────────────────────────────────
 
@@ -50,6 +51,12 @@ function buildVolumeData(
         setsCompleted: completedSets.length,
         totalReps,
         totalVolume,
+        setDetails: completedSets.map(([key, s]) => ({
+          setIdx: parseInt(key.split('-')[2] ?? '0', 10),
+          repsDone: s.repsDone ?? 0,
+          weight: s.weight ?? null,
+          timestamp: s.timestamp ?? null,
+        })),
       };
     })
     .filter((ev) => ev.setsCompleted > 0);
@@ -75,10 +82,10 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
     try {
       await migrateLegacyData();
 
-      const [profile, library, historyEntries, activeSession] = await Promise.all([
+      const [profile, library, historyResult, activeSession] = await Promise.all([
         loadProfile(),
         listRoutines(),
-        loadAllHistory(),
+        loadHistory(50),
         loadActiveSession(),
       ]);
 
@@ -86,7 +93,8 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
       set({
         profile,
         routineLibrary: library,
-        history: historyEntries,
+        history: historyResult.entries,
+        historyHasMore: historyResult.hasMore,
         isHydrated: true,
       });
 
@@ -264,7 +272,7 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
   },
 
   abandonSession: async () => {
-    set({ currentView: 'routine-overview', setCompletion: {}, activeSessionIdx: 0 });
+    set({ currentView: 'routine-overview', setCompletion: {}, activeSessionIdx: null });
     clearActiveSession().catch(console.error);
   },
 
@@ -305,10 +313,7 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
       history: [],
       routineLibrary: [],
     });
-    // Clear IDB in background
-    Promise.all([
-      clearActiveSession(),
-      import('@/lib/db/index').then(({ deleteDatabase }) => deleteDatabase()),
-    ]).catch(console.error);
+    // Clear workout data in background, preserving profile
+    clearWorkoutData().catch(console.error);
   },
 }));

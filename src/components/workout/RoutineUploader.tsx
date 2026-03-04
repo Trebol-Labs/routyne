@@ -6,11 +6,13 @@ import { Upload, Loader2, Code, Dumbbell, Trash2 } from 'lucide-react';
 import { parseRoutine } from '@/lib/markdown/parser';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { cn } from '@/lib/utils';
 
 export function RoutineUploader() {
   const [text, setText] = useState('');
   const [isDragging, setIsDragging] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const {
     importRoutine,
     isLoading,
@@ -24,8 +26,6 @@ export function RoutineUploader() {
     if (!content.trim()) return;
 
     setIsLoading(true);
-    await new Promise(r => setTimeout(r, 1000));
-
     try {
       const routine = parseRoutine(content);
       await importRoutine(routine, content);
@@ -220,11 +220,7 @@ export function RoutineUploader() {
                       Load
                     </Button>
                     <button
-                      onClick={() => {
-                        if (confirm(`Delete "${r.title}"?`)) {
-                          deleteRoutineFromLibrary(r.id);
-                        }
-                      }}
+                      onClick={() => setPendingDeleteId(r.id)}
                       className="w-8 h-8 rounded-xl flex items-center justify-center text-white/20 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                       aria-label={`Delete ${r.title}`}
                     >
@@ -237,6 +233,20 @@ export function RoutineUploader() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        title="Delete Routine?"
+        message={`"${routineLibrary.find((r) => r.id === pendingDeleteId)?.title ?? ''}" will be removed.`}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={() => {
+          if (pendingDeleteId) deleteRoutineFromLibrary(pendingDeleteId);
+          setPendingDeleteId(null);
+        }}
+        onCancel={() => setPendingDeleteId(null)}
+      />
     </div>
   );
 }

@@ -6,7 +6,9 @@ import { Button } from '@/components/ui/button';
 import { SetRow } from '@/components/workout/SetRow';
 import { RestTimer } from '@/components/workout/RestTimer';
 import { SetInputSheet } from '@/components/workout/overlays/SetInputSheet';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
+import { useWakeLock } from '@/hooks/useWakeLock';
 import { ChevronLeft, Clock, Zap, CheckCircle2, XCircle } from 'lucide-react';
 
 interface PendingSet {
@@ -44,9 +46,12 @@ export function ActiveSessionView() {
     profile,
   } = useWorkoutStore();
 
+  const { isLocked } = useWakeLock(true);
+
   const [showRestTimer, setShowRestTimer] = useState(false);
   const [restDuration, setRestDuration] = useState(90);
   const [pendingSet, setPendingSet] = useState<PendingSet | null>(null);
+  const [showAbandon, setShowAbandon] = useState(false);
 
   const activeSession = currentRoutine?.sessions[activeSessionIdx ?? 0];
   if (!activeSession) return null;
@@ -129,7 +134,7 @@ export function ActiveSessionView() {
           <div>
             <h2 className="text-2xl font-black text-white uppercase tracking-tighter leading-none font-display">{activeSession.title}</h2>
             <div className="flex items-center gap-2 mt-2">
-              {typeof window !== 'undefined' && 'wakeLock' in navigator && (
+              {isLocked && (
                 <div className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-500/10 border border-blue-500/20 rounded-full">
                   <Zap className="w-3 h-3 text-blue-400 fill-blue-400" />
                   <span className="text-[9px] font-black text-blue-400 uppercase tracking-widest">WAKE LOCK ON</span>
@@ -194,11 +199,7 @@ export function ActiveSessionView() {
           FINISH WORKOUT
         </Button>
         <button
-          onClick={() => {
-            if (confirm('Abandon this workout? All progress will be lost.')) {
-              abandonSession();
-            }
-          }}
+          onClick={() => setShowAbandon(true)}
           className="w-full flex items-center justify-center gap-2 py-3 text-white/40 hover:text-red-400 transition-colors text-[11px] font-black uppercase tracking-[0.2em]"
         >
           <XCircle className="w-3.5 h-3.5" />
@@ -232,6 +233,17 @@ export function ActiveSessionView() {
           />
         )}
       </AnimatePresence>
+
+      <ConfirmDialog
+        open={showAbandon}
+        title="Abandon Workout?"
+        message="All progress will be lost."
+        confirmLabel="Abandon"
+        cancelLabel="Keep Going"
+        variant="danger"
+        onConfirm={() => { abandonSession(); setShowAbandon(false); }}
+        onCancel={() => setShowAbandon(false)}
+      />
     </motion.div>
   );
 }
