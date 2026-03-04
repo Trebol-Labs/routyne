@@ -12,15 +12,12 @@ import { HistoryView } from '@/components/workout/views/HistoryView';
 import { StatsView } from '@/components/workout/views/StatsView';
 import { ProfileSheet } from '@/components/workout/overlays/ProfileSheet';
 import { SearchSheet } from '@/components/workout/overlays/SearchSheet';
+import { BottomNav } from '@/components/workout/BottomNav';
 import {
-  Plus,
-  Calendar,
   Search,
-  TrendingUp,
   User,
   Dumbbell,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { WorkoutView } from '@/types/workout';
 import { useHydration } from '@/hooks/useHydration';
 import { useStoragePersist } from '@/hooks/useStoragePersist';
@@ -156,69 +153,8 @@ export default function Home() {
           </AnimatePresence>
         </div>
 
-        {/* Global Floating Glass Control Center */}
-        <div className="fixed bottom-0 left-0 right-0 h-44 bg-gradient-to-t from-black/90 via-black/40 to-transparent backdrop-blur-xl z-[var(--z-nav)] pointer-events-none" />
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[var(--z-nav)] w-[calc(100%-48px)] max-w-[420px] pb-[env(safe-area-inset-bottom)]">
-          <nav role="navigation" className="relative group p-1.5 glass-panel rounded-[var(--radius-xl)] border-white/20 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.9)] overflow-hidden">
-             <div className="absolute inset-0 bg-blue-600/10 backdrop-blur-3xl rounded-[var(--radius-xl)] pointer-events-none" />
-             <div className="absolute inset-0 bg-blue-600/20 blur-[var(--blur-ambient)] rounded-[var(--radius-xl)] opacity-60 group-hover:opacity-100 transition-opacity" />
-             <div className="absolute inset-0 -z-10 bg-indigo-500/10 blur-[var(--blur-xl)] rounded-[var(--radius-xl)] group-hover:bg-indigo-500/20 transition-colors" />
-             <div className="relative flex justify-between p-2">
-                <button
-                  onClick={() => handleNavClick('uploader')}
-                  aria-label="Import routine"
-                  aria-current={currentView === 'uploader' ? 'page' : undefined}
-                  className={cn(
-                    "w-14 h-14 rounded-[var(--radius-lg)] flex items-center justify-center transition-colors transition-shadow duration-200 cursor-pointer relative",
-                    currentView === 'uploader'
-                      ? "bg-white text-black shadow-lg"
-                      : "text-white/40 hover:text-white/60 hover:bg-white/5"
-                  )}
-                >
-                  <Plus className="w-6 h-6" />
-                </button>
-                <button
-                   onClick={() => handleNavClick('routine-overview')}
-                   aria-label="Overview"
-                   aria-current={currentView === 'routine-overview' || currentView === 'active-session' ? 'page' : undefined}
-                   className={cn(
-                    "w-14 h-14 rounded-[var(--radius-lg)] flex items-center justify-center transition-colors transition-shadow duration-200 cursor-pointer relative",
-                    currentView === 'routine-overview' || currentView === 'active-session'
-                      ? "bg-white text-black shadow-lg"
-                      : "text-white/40 hover:text-white/60 hover:bg-white/5"
-                  )}
-                >
-                  <Dumbbell className="w-6 h-6" />
-                </button>
-                <button
-                   onClick={() => handleNavClick('history')}
-                   aria-label="History"
-                   aria-current={currentView === 'history' ? 'page' : undefined}
-                   className={cn(
-                    "w-14 h-14 rounded-[var(--radius-lg)] flex items-center justify-center transition-colors transition-shadow duration-200 cursor-pointer relative",
-                    currentView === 'history'
-                      ? "bg-white text-black shadow-lg"
-                      : "text-white/40 hover:text-white/60 hover:bg-white/5"
-                  )}
-                >
-                  <Calendar className="w-6 h-6" />
-                </button>
-                <button
-                   onClick={() => handleNavClick('stats')}
-                   aria-label="Stats"
-                   aria-current={currentView === 'stats' ? 'page' : undefined}
-                   className={cn(
-                    "w-14 h-14 rounded-[var(--radius-lg)] flex items-center justify-center transition-colors transition-shadow duration-200 cursor-pointer relative",
-                    currentView === 'stats'
-                      ? "bg-white text-black shadow-lg"
-                      : "text-white/40 hover:text-white/60 hover:bg-white/5"
-                  )}
-                >
-                  <TrendingUp className="w-6 h-6" />
-                </button>
-             </div>
-          </nav>
-        </div>
+        {/* Bottom Navigation with Floating Action Button */}
+        <BottomNav currentView={currentView} onNavigate={handleNavClick} />
       </div>
 
       {/* Overlay sheets */}
