@@ -22,12 +22,14 @@ export function useWakeLock(isActive: boolean) {
     if (typeof window !== 'undefined' && 'wakeLock' in navigator) {
       try {
         const nav = navigator as unknown as { wakeLock: { request(type: 'screen'): Promise<WakeLockSentinel> } };
-        wakeLockRef.current = await nav.wakeLock.request('screen');
-        setIsLocked(true);
+        const sentinel = await nav.wakeLock.request('screen');
+        wakeLockRef.current = sentinel;
 
-        wakeLockRef.current?.addEventListener('release', () => {
-          setIsLocked(false);
+        sentinel.addEventListener('release', () => {
+          wakeLockRef.current = null;
+          queueMicrotask(() => setIsLocked(false));
         });
+        queueMicrotask(() => setIsLocked(true));
       } catch (err: unknown) {
         // Silent fail to avoid breaking the app on unsupported browsers
         if (err instanceof Error) {
@@ -42,7 +44,7 @@ export function useWakeLock(isActive: boolean) {
       try {
         await wakeLockRef.current.release();
         wakeLockRef.current = null;
-        setIsLocked(false);
+        queueMicrotask(() => setIsLocked(false));
       } catch (err: unknown) {
         if (err instanceof Error) {
           console.warn(`Wake Lock release failed: ${err.message}`);
@@ -53,9 +55,9 @@ export function useWakeLock(isActive: boolean) {
 
   useEffect(() => {
     if (isActive) {
-      requestWakeLock();
+      void requestWakeLock();
     } else {
-      releaseWakeLock();
+      void releaseWakeLock();
     }
 
     const handleVisibilityChange = async () => {
@@ -68,7 +70,7 @@ export function useWakeLock(isActive: boolean) {
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      releaseWakeLock();
+      void releaseWakeLock();
     };
   }, [isActive, requestWakeLock, releaseWakeLock]);
 
