@@ -28,6 +28,9 @@ export const metadata: Metadata = {
     statusBarStyle: 'black-translucent',
     title: 'Routyne',
   },
+  icons: {
+    apple: '/apple-touch-icon.png',
+  },
 };
 
 export default function RootLayout({
