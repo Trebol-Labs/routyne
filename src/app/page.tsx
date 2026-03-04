@@ -22,8 +22,9 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { WorkoutView } from '@/types/workout';
-import { useWakeLock } from '@/hooks/useWakeLock';
 import { useHydration } from '@/hooks/useHydration';
+import { useStoragePersist } from '@/hooks/useStoragePersist';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 export default function Home() {
   const isReady = useHydration();
@@ -37,9 +38,9 @@ export default function Home() {
 
   const [showProfile, setShowProfile] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [confirmNewRoutine, setConfirmNewRoutine] = useState(false);
 
-  // Screen Wake Lock during active sessions
-  useWakeLock(currentView === 'active-session');
+  useStoragePersist();
 
   if (!isReady) {
     return (
@@ -65,9 +66,7 @@ export default function Home() {
 
   const handleNavClick = (view: WorkoutView) => {
     if (view === 'uploader' && currentRoutine) {
-      if (confirm('Start a new routine? Current data will be lost.')) {
-        resetAll();
-      }
+      setConfirmNewRoutine(true);
       return;
     }
     setCurrentView(view);
@@ -229,6 +228,16 @@ export default function Home() {
       <AnimatePresence>
         {showSearch && <SearchSheet onClose={() => setShowSearch(false)} />}
       </AnimatePresence>
+
+      <ConfirmDialog
+        open={confirmNewRoutine}
+        title="Start New Routine?"
+        message="Your current routine will be replaced. Workout history is preserved."
+        confirmLabel="Continue"
+        cancelLabel="Cancel"
+        onConfirm={() => { resetAll(); setConfirmNewRoutine(false); }}
+        onCancel={() => setConfirmNewRoutine(false)}
+      />
     </main>
   );
 }

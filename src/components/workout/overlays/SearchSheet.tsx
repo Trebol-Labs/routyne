@@ -33,7 +33,7 @@ function ExerciseBrowseCard({ item }: { item: ExerciseBrowseItem }) {
 }
 
 export function SearchSheet({ onClose }: SearchSheetProps) {
-  const { history } = useWorkoutStore();
+  const { history, profile } = useWorkoutStore();
   const [tab, setTab] = useState<'exercises' | 'history'>('exercises');
   const [query, setQuery] = useState('');
   const [selectedBodyPart, setSelectedBodyPart] = useState('All');
@@ -159,7 +159,7 @@ export function SearchSheet({ onClose }: SearchSheetProps) {
                   </div>
                   {entry.totalVolume > 0 && (
                     <span className="text-[10px] font-black text-blue-400/60 uppercase tracking-widest shrink-0 ml-3">
-                      {entry.totalVolume.toLocaleString()}kg
+                      {entry.totalVolume.toLocaleString()} {profile.weightUnit}
                     </span>
                   )}
                 </div>

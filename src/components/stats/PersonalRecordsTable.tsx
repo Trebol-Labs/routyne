@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { HistoryEntry } from '@/types/workout';
 import { Trophy } from 'lucide-react';
 
@@ -15,25 +16,25 @@ interface PersonalRecordsTableProps {
 }
 
 export function PersonalRecordsTable({ history, weightUnit }: PersonalRecordsTableProps) {
-  const prMap = new Map<string, PRRow>();
-
-  for (const entry of history) {
-    for (const ev of entry.volumeData) {
-      const existing = prMap.get(ev.cleanName);
-      if (!existing) {
-        prMap.set(ev.cleanName, {
-          cleanName: ev.cleanName,
-          sessions: 1,
-          maxVolume: ev.totalVolume,
-        });
-      } else {
-        existing.sessions += 1;
-        if (ev.totalVolume > existing.maxVolume) existing.maxVolume = ev.totalVolume;
+  const rows = useMemo(() => {
+    const prMap = new Map<string, PRRow>();
+    for (const entry of history) {
+      for (const ev of entry.volumeData) {
+        const existing = prMap.get(ev.cleanName);
+        if (!existing) {
+          prMap.set(ev.cleanName, {
+            cleanName: ev.cleanName,
+            sessions: 1,
+            maxVolume: ev.totalVolume,
+          });
+        } else {
+          existing.sessions += 1;
+          if (ev.totalVolume > existing.maxVolume) existing.maxVolume = ev.totalVolume;
+        }
       }
     }
-  }
-
-  const rows = Array.from(prMap.values()).sort((a, b) => b.sessions - a.sessions);
+    return Array.from(prMap.values()).sort((a, b) => b.sessions - a.sessions);
+  }, [history]);
 
   if (rows.length === 0) return null;
 

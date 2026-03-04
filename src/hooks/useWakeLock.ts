@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 
 interface WakeLockSentinel extends EventTarget {
   readonly released: boolean;
@@ -16,15 +16,17 @@ interface WakeLockSentinel extends EventTarget {
  */
 export function useWakeLock(isActive: boolean) {
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+  const [isLocked, setIsLocked] = useState(false);
 
   const requestWakeLock = useCallback(async () => {
     if (typeof window !== 'undefined' && 'wakeLock' in navigator) {
       try {
         const nav = navigator as unknown as { wakeLock: { request(type: 'screen'): Promise<WakeLockSentinel> } };
         wakeLockRef.current = await nav.wakeLock.request('screen');
-        
+        setIsLocked(true);
+
         wakeLockRef.current?.addEventListener('release', () => {
-          // console.log('Wake Lock was released');
+          setIsLocked(false);
         });
       } catch (err: unknown) {
         // Silent fail to avoid breaking the app on unsupported browsers
@@ -40,6 +42,7 @@ export function useWakeLock(isActive: boolean) {
       try {
         await wakeLockRef.current.release();
         wakeLockRef.current = null;
+        setIsLocked(false);
       } catch (err: unknown) {
         if (err instanceof Error) {
           console.warn(`Wake Lock release failed: ${err.message}`);
@@ -69,5 +72,5 @@ export function useWakeLock(isActive: boolean) {
     };
   }, [isActive, requestWakeLock, releaseWakeLock]);
 
-  return { requestWakeLock, releaseWakeLock };
+  return { requestWakeLock, releaseWakeLock, isLocked };
 }

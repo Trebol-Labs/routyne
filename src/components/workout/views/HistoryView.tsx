@@ -14,7 +14,7 @@ function formatRelativeDate(date: Date): string {
 }
 
 export function HistoryView() {
-  const { history, historyHasMore, loadMoreHistory } = useWorkoutStore();
+  const { history, historyHasMore, loadMoreHistory, profile } = useWorkoutStore();
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLoadMore = async () => {
@@ -64,7 +64,7 @@ export function HistoryView() {
                       <div className="flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/20 px-2.5 py-0.5 rounded-full">
                         <Dumbbell className="w-3 h-3 text-blue-400" />
                         <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">
-                          {entry.totalVolume.toLocaleString()} kg
+                          {entry.totalVolume.toLocaleString()} {profile.weightUnit}
                         </span>
                       </div>
                     )}

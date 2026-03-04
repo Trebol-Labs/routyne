@@ -10,7 +10,11 @@ interface VolumeBarChartProps {
 }
 
 export function VolumeBarChart({ history, limit, weightUnit }: VolumeBarChartProps) {
-  const entries = history.slice(0, limit).reverse();
+  const cutoff = Date.now() - limit * 24 * 60 * 60 * 1000;
+  const entries = history
+    .filter((e) => new Date(e.completedAt).getTime() >= cutoff)
+    .slice()
+    .reverse();
   const maxV = Math.max(...entries.map((e) => e.totalVolume), 1);
 
   if (entries.length === 0) {
