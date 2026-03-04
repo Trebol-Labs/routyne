@@ -66,10 +66,11 @@ export function ActiveSessionView() {
     repsMax: number,
     restSeconds: number
   ) => {
+    if (activeSessionIdx === null) return;
     const isAlreadyCompleted = setCompletion[`${activeSessionIdx}-${exerciseId}-${setIdx}`]?.completed;
     if (isAlreadyCompleted) {
       // Toggle off immediately — no input needed
-      toggleSetCompletion(activeSessionIdx!, exerciseId, setIdx);
+      toggleSetCompletion(activeSessionIdx, exerciseId, setIdx);
       return;
     }
     setRestDuration(restSeconds || profile.defaultRestSeconds);
@@ -78,12 +79,13 @@ export function ActiveSessionView() {
       exerciseName,
       setIdx,
       targetRepsMax: repsMax,
-      lastWeight: getLastWeight(setCompletion, activeSessionIdx!, exerciseId),
+      lastWeight: getLastWeight(setCompletion, activeSessionIdx, exerciseId),
     });
   };
 
   const handleConfirmSet = (repsDone: number, weight: number | undefined) => {
-    toggleSetCompletion(activeSessionIdx!, pendingSet!.exerciseId, pendingSet!.setIdx, repsDone, weight);
+    if (pendingSet === null || activeSessionIdx === null) return;
+    toggleSetCompletion(activeSessionIdx, pendingSet.exerciseId, pendingSet.setIdx, repsDone, weight);
     setShowRestTimer(true);
     setPendingSet(null);
   };
