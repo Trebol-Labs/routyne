@@ -175,6 +175,7 @@ export function ProfileSheet({ onClose }: ProfileSheetProps) {
               type="file"
               accept=".json,application/json"
               className="hidden"
+              title="Import backup file"
               onChange={handleImport}
             />
           </div>

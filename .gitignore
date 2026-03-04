@@ -29,6 +29,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+.vscode/
+.claude-flow/
 
 # env files (can opt-in for committing if needed)
 .env*
@@ -50,6 +52,7 @@ gemini.md
 
 # Claude plans & sessions
 .claude/
+.claude-flow/
 
 # Playwright MCP logs & screenshots
 .playwright-mcp/
