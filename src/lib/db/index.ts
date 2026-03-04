@@ -70,16 +70,26 @@ export async function deleteDatabase(): Promise<void> {
  */
 export async function clearWorkoutData(): Promise<void> {
   const db = await getDB();
-  const tx = db.transaction(
-    ['routines', 'sessions', 'exercises', 'history', 'activeSession'],
-    'readwrite'
-  );
-  await Promise.all([
-    tx.objectStore('routines').clear(),
-    tx.objectStore('sessions').clear(),
-    tx.objectStore('exercises').clear(),
-    tx.objectStore('history').clear(),
-    tx.objectStore('activeSession').clear(),
-  ]);
-  await tx.done;
+  if (!_db) return;
+  
+  try {
+    const tx = db.transaction(
+      ['routines', 'sessions', 'exercises', 'history', 'activeSession'],
+      'readwrite'
+    );
+    await Promise.all([
+      tx.objectStore('routines').clear(),
+      tx.objectStore('sessions').clear(),
+      tx.objectStore('exercises').clear(),
+      tx.objectStore('history').clear(),
+      tx.objectStore('activeSession').clear(),
+    ]);
+    await tx.done;
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'InvalidStateError') {
+      _db = null;
+      return;
+    }
+    throw err;
+  }
 }

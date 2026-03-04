@@ -60,6 +60,7 @@ gemini.md
 # Claude plans & sessions
 .claude/
 .claude-flow/
+.opencode/
 
 # Playwright MCP logs & screenshots
 .playwright-mcp/
