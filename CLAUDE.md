@@ -2,6 +2,26 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Context7
+
+Always use the **Context7 MCP** (`resolve-library-id` → `query-docs`) when the task involves:
+- Library or API documentation lookups
+- Code generation using third-party APIs or frameworks
+- Setup or configuration steps for any dependency
+
+Do this proactively — do not wait for the user to ask.
+
+## Deployment
+
+- **Production URL**: https://routyne-nu.vercel.app
+- **Host**: Vercel Hobby tier (free) — auto-deploys from `main` via GitHub integration
+- **CI**: `.github/workflows/ci.yml` — lint + test + build on every push/PR
+- **Env vars**: `RAPIDAPI_KEY` set in Vercel dashboard (see `.env.example`)
+- **PWA install (Android)**: open production URL in Chrome → ⋮ menu → "Add to Home Screen"
+- **Preview deploys**: every PR gets a unique `*.vercel.app` URL automatically
+- **SW build artifacts** (`public/sw.js`, `workbox-*.js`) are gitignored — regenerated on each build
+- **Node version**: pinned to 20 via `.nvmrc` (read by Vercel and GitHub Actions)
+
 ## Commands
 
 ```bash
