@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { HistoryEntry } from '@/types/workout';
 
@@ -10,12 +11,20 @@ interface VolumeBarChartProps {
 }
 
 export function VolumeBarChart({ history, limit, weightUnit }: VolumeBarChartProps) {
-  const cutoff = Date.now() - limit * 24 * 60 * 60 * 1000;
-  const entries = history
-    .filter((e) => new Date(e.completedAt).getTime() >= cutoff)
-    .slice()
-    .reverse();
-  const maxV = Math.max(...entries.map((e) => e.totalVolume), 1);
+  const [cutoff, setCutoff] = useState(0);
+
+  useEffect(() => {
+    setCutoff(Date.now() - limit * 24 * 60 * 60 * 1000);
+  }, [limit]);
+
+  const entries = useMemo(() => {
+    if (!cutoff) return [];
+    return history
+      .filter((e) => new Date(e.completedAt).getTime() >= cutoff)
+      .slice()
+      .reverse();
+  }, [history, cutoff]);
+  const maxV = useMemo(() => Math.max(...entries.map((e) => e.totalVolume), 1), [entries]);
 
   if (entries.length === 0) {
     return (
