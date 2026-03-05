@@ -31,25 +31,24 @@ const NavButton = memo(({
     aria-label={label}
     aria-current={isActive ? 'page' : undefined}
     className={cn(
-      'w-12 h-12 rounded-xl flex items-center justify-center',
+      'w-11 h-11 rounded-lg flex items-center justify-center',
       'transition-all duration-300 cursor-pointer relative',
-      'flex-1 max-w-[64px]',
       isPrimary
         ? cn(
             'active-glass-btn group overflow-hidden',
             isActive
-              ? 'ring-2 ring-white/40 scale-105 shadow-[0_0_30px_-5px_rgba(59,130,246,0.6)]'
-              : 'hover:scale-105 hover:shadow-xl'
+              ? 'ring-2 ring-white/40 scale-100 shadow-[0_0_25px_-5px_rgba(59,130,246,0.5)]'
+              : 'hover:scale-95 hover:shadow-md'
           )
         : isActive
-          ? 'bg-white text-black shadow-[0_8px_20px_-4px_rgba(255,255,255,0.3)] scale-100'
-          : 'text-white/40 hover:text-white/70 hover:bg-white/5'
+          ? 'bg-white text-black shadow-[0_6px_15px_-4px_rgba(255,255,255,0.25)] scale-100'
+          : 'text-white/40 hover:text-white/60 hover:bg-white/5'
     )}
   >
     {isPrimary && (
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 -translate-x-full group-hover:translate-x-full" />
     )}
-    <Icon className={cn("w-5 h-5 transition-transform duration-300 relative z-10", isActive && isPrimary && "rotate-45", isActive && !isPrimary && "scale-110")} />
+    <Icon className={cn("w-5 h-5 transition-transform duration-300 relative z-10", isActive && isPrimary && "rotate-45", isActive && !isPrimary && "scale-105")} />
     {isActive && !isPrimary && (
       <motion.div
         layoutId="active-pill"
@@ -87,17 +86,21 @@ export const BottomNav = memo(({ currentView, onNavigate, hasRoutine }: BottomNa
   return (
     <>
       {/* Gradient backdrop - precisely sized to nav height */}
-      <div className="fixed bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/80 via-black/30 to-transparent z-[var(--z-nav)] pointer-events-none" />
+      <div className="fixed bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-[var(--z-nav)] pointer-events-none" />
 
       {/* Container for floating nav */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[var(--z-nav)] w-[calc(100%-48px)] max-w-md pb-[env(safe-area-inset-bottom)]">
+      <div
+        className="fixed bottom-0 inset-x-0 z-[var(--z-nav)] flex justify-center px-3 sm:px-4"
+        style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 18px)' }}
+      >
         {/* Main Navigation Panel */}
         <nav
           role="navigation"
           className={cn(
-            'relative flex items-center justify-between gap-2 p-1.5 px-2',
-            'glass-panel rounded-[24px] border-white/10',
-            'shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)]',
+            'relative flex items-center justify-between gap-1.5 p-2',
+            'w-full max-w-xs',
+            'glass-panel rounded-[20px] border-white/10',
+            'shadow-[0_20px_50px_-15px_rgba(0,0,0,0.8)]',
             'backdrop-blur-2xl'
           )}
         >

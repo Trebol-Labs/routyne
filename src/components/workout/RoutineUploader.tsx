@@ -57,44 +57,49 @@ export function RoutineUploader() {
   }, [handleParse]);
 
   return (
-    <div className="w-full max-w-2xl mx-auto space-y-6 p-4 flex flex-col items-center">
+    <div className="w-full max-w-lg mx-auto flex flex-col gap-4 px-1">
+      {/* Header block */}
       <motion.div
-        initial={{ opacity: 0, y: 30 }}
+        initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center space-y-2 w-full flex flex-col items-center"
+        transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
+        className="flex flex-col items-center gap-2 pt-2"
       >
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="inline-flex items-center gap-3 px-5 py-2.5 bg-white/5 backdrop-blur-3xl border border-white/10 rounded-full glass-border-light shadow-2xl"
+          transition={{ delay: 0.05 }}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 backdrop-blur-3xl border border-white/10 rounded-full shadow-xl"
         >
-          <Code className="w-4 h-4 text-blue-400" />
-          <span className="text-[12px] font-black text-white/90 uppercase tracking-[0.25em] font-display">Markdown Parser</span>
+          <Code className="w-3.5 h-3.5 text-blue-400" />
+          <span className="text-[11px] font-black text-white/80 uppercase tracking-[0.25em] font-display">Markdown Parser</span>
         </motion.div>
 
-        <h1 className="text-3xl sm:text-6xl font-black tracking-tighter text-liquid leading-tight text-center font-display">
+        <h1 className="text-4xl sm:text-5xl font-black tracking-tighter text-liquid leading-none text-center font-display">
           IMPORT <span className="brightness-125 [-webkit-text-fill-color:#3b82f6]">ROUTINE</span>
         </h1>
-        <p className="text-white/40 font-medium text-sm tracking-tight max-w-xs mx-auto">Paste your raw markdown. We handle the rest.</p>
+        <p className="text-white/35 font-medium text-sm tracking-tight text-center">Paste your raw markdown. We handle the rest.</p>
       </motion.div>
 
+      {/* Main card */}
       <motion.div
         onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
         onDragLeave={() => setIsDragging(false)}
         onDrop={onDrop}
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1, duration: 0.55, ease: [0.23, 1, 0.32, 1] }}
         className={cn(
           "relative group transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]",
-          "rounded-[3rem] p-1.5 w-full",
-          isDragging
-            ? "scale-[1.03] rotate-1"
-            : "hover:scale-[1.01]"
+          "rounded-[2.2rem] p-1 w-full",
+          isDragging ? "scale-[1.02] rotate-[0.5deg]" : "hover:scale-[1.005]"
         )}
       >
-        <div className="absolute inset-0 bg-blue-600/10 blur-[120px] rounded-[3rem] opacity-40 group-hover:opacity-60 transition-opacity pointer-events-none" />
-        {/* Main Glass Hero Panel */}
-        <div className="relative glass-panel rounded-[2.8rem] p-5 sm:p-8 overflow-hidden">
-          <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-600/10 blur-[100px] rounded-full" />
-          <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-indigo-600/10 blur-[100px] rounded-full" />
+        <div className="absolute inset-0 bg-blue-600/10 blur-[80px] rounded-[2.2rem] opacity-40 group-hover:opacity-55 transition-opacity pointer-events-none" />
+
+        <div className="relative glass-panel rounded-[2rem] p-4 sm:p-6 overflow-hidden">
+          <div className="absolute -top-16 -right-16 w-48 h-48 bg-blue-600/10 blur-[80px] rounded-full" />
+          <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-indigo-600/10 blur-[80px] rounded-full" />
 
           <AnimatePresence mode="wait">
             {isLoading ? (
@@ -103,14 +108,14 @@ export function RoutineUploader() {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 1.05 }}
-                className="flex flex-col items-center justify-center py-20 space-y-8"
+                className="flex flex-col items-center justify-center py-14 gap-6"
               >
                 <div className="relative">
                   <div className="absolute inset-0 bg-blue-500/30 blur-[40px] rounded-full animate-pulse" />
-                  <Loader2 className="w-20 h-20 text-white animate-[spin_2s_linear_infinite]" />
+                  <Loader2 className="w-14 h-14 text-white animate-[spin_2s_linear_infinite]" />
                 </div>
-                <div className="text-center space-y-3">
-                  <p className="text-white font-black text-2xl tracking-tighter">Syncing Structure...</p>
+                <div className="text-center space-y-1.5">
+                  <p className="text-white font-black text-xl tracking-tighter">Syncing Structure...</p>
                   <p className="text-blue-400/60 text-xs font-black uppercase tracking-[0.3em]">Processing Nodes</p>
                 </div>
               </motion.div>
@@ -120,22 +125,24 @@ export function RoutineUploader() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="space-y-6"
+                className="flex flex-col gap-3"
               >
+                {/* Textarea */}
                 <div className="relative group/input">
-                  <div className="absolute -inset-px bg-white/5 rounded-3xl opacity-0 group-hover/input:opacity-100 transition-opacity" />
+                  <div className="absolute -inset-px bg-white/5 rounded-2xl opacity-0 group-hover/input:opacity-100 transition-opacity" />
                   <textarea
                     value={text}
                     onChange={(e) => setText(e.target.value)}
                     placeholder="# Push Day&#10;## Bench Press&#10;- 3x12&#10;- Rest: 90s"
-                    className="w-full h-36 sm:h-56 bg-black/30 backdrop-blur-md rounded-3xl p-6 border border-white/5 focus:ring-0 text-white placeholder:text-white/10 resize-none font-mono text-lg leading-relaxed selection:bg-blue-500/40 sunken-glass"
+                    className="w-full h-32 sm:h-44 bg-black/30 backdrop-blur-md rounded-2xl px-5 py-4 border border-white/5 focus:ring-0 text-white placeholder:text-white/10 resize-none font-mono text-sm leading-relaxed selection:bg-blue-500/40 sunken-glass"
                   />
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4 w-full">
-                  <label className="flex items-center gap-4 px-8 py-5 glass-btn rounded-[2rem] cursor-pointer w-full sm:w-auto justify-center">
-                    <Upload className="w-5 h-5 text-blue-400" />
-                    <span className="text-[11px] font-black text-white/40 uppercase tracking-[0.2em] leading-none whitespace-nowrap font-display">Drop or Select .md</span>
+                {/* Action buttons — always side by side */}
+                <div className="flex items-stretch gap-3">
+                  <label className="flex items-center justify-center gap-2.5 px-5 py-4 glass-btn rounded-[1.5rem] cursor-pointer flex-1">
+                    <Upload className="w-4 h-4 text-blue-400 shrink-0" />
+                    <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.18em] leading-none whitespace-nowrap font-display">Select .md</span>
                     <input
                       type="file"
                       accept=".md,text/markdown"
@@ -157,12 +164,12 @@ export function RoutineUploader() {
 
                   <Button
                     variant="glass-primary"
-                    size="xl"
+                    size="lg"
                     onClick={() => handleParse(text)}
                     disabled={!text.trim() || isLoading}
-                    className="w-full sm:w-auto"
+                    className="flex-[1.6] text-[11px] tracking-[0.15em] rounded-[1.5rem] py-4"
                   >
-                    GENERATE WORKOUT
+                    GENERATE
                   </Button>
                 </div>
               </motion.div>
@@ -171,27 +178,28 @@ export function RoutineUploader() {
         </div>
 
         {isDragging && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center rounded-[3rem] bg-blue-500/20 backdrop-blur-2xl border-2 border-white/30 pointer-events-none">
+          <div className="absolute inset-0 z-50 flex items-center justify-center rounded-[2.2rem] bg-blue-500/20 backdrop-blur-2xl border-2 border-white/30 pointer-events-none">
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="flex flex-col items-center space-y-6"
+              className="flex flex-col items-center gap-4"
             >
-              <div className="w-28 h-28 rounded-full bg-white flex items-center justify-center shadow-[0_0_50px_rgba(255,255,255,0.4)]">
-                <Upload className="w-12 h-12 text-blue-600" />
+              <div className="w-20 h-20 rounded-full bg-white flex items-center justify-center shadow-[0_0_50px_rgba(255,255,255,0.4)]">
+                <Upload className="w-9 h-9 text-blue-600" />
               </div>
-              <span className="text-white font-black text-3xl tracking-tighter">GENERATE</span>
+              <span className="text-white font-black text-2xl tracking-tighter">GENERATE</span>
             </motion.div>
           </div>
         )}
       </motion.div>
 
+      {/* Error banner */}
       {error && (
         <motion.div
-          initial={{ opacity: 0, y: -10 }}
+          initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          className="w-full max-w-2xl rounded-2xl bg-red-500/10 border border-red-500/30 p-4"
+          exit={{ opacity: 0, y: -8 }}
+          className="w-full rounded-2xl bg-red-500/10 border border-red-500/30 px-4 py-3"
         >
           <p className="text-red-400 text-sm font-medium">{error}</p>
         </motion.div>
@@ -201,23 +209,23 @@ export function RoutineUploader() {
       <AnimatePresence>
         {routineLibrary.length > 0 && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="w-full space-y-3"
+            exit={{ opacity: 0, y: -8 }}
+            className="flex flex-col gap-2.5"
           >
-            <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] px-2">Saved Routines</p>
-            <div className="grid gap-3">
+            <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] px-1">Saved Routines</p>
+            <div className="flex flex-col gap-2">
               {routineLibrary.map((r, i) => (
                 <motion.div
                   key={r.id}
-                  initial={{ opacity: 0, x: -20 }}
+                  initial={{ opacity: 0, x: -16 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  className="glass-panel rounded-[1.8rem] p-4 border-white/10 flex items-center gap-4"
+                  transition={{ delay: i * 0.04 }}
+                  className="glass-panel rounded-[1.5rem] px-4 py-3 border-white/10 flex items-center gap-3"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
-                    <Dumbbell className="w-5 h-5 text-blue-400" />
+                  <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
+                    <Dumbbell className="w-4 h-4 text-blue-400" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-white font-black text-sm uppercase tracking-tight truncate font-display">{r.title}</p>
@@ -236,7 +244,7 @@ export function RoutineUploader() {
                     </Button>
                     <button
                       onClick={() => setPendingDeleteId(r.id)}
-                      className="w-8 h-8 rounded-xl flex items-center justify-center text-white/20 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                      className="w-8 h-8 rounded-xl flex items-center justify-center text-white/20 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
                       aria-label={`Delete ${r.title}`}
                     >
                       <Trash2 className="w-4 h-4" />
