@@ -8,6 +8,7 @@ import { useWorkoutStore } from '@/store/useWorkoutStore';
 import { HistoryEntry } from '@/types/workout';
 import { Flame, Download, Upload, HardDrive } from 'lucide-react';
 import { exportAllData, downloadExportFile, importAllData } from '@/lib/db/export';
+import { cn } from '@/lib/utils';
 
 function computeStreak(history: HistoryEntry[]): number {
   const days = new Set(history.map((e) => new Date(e.completedAt).toDateString()));
@@ -82,97 +83,104 @@ export function ProfileSheet({ onClose }: ProfileSheetProps) {
   };
 
   return (
-    <Sheet onClose={onClose} title="Profile" maxHeight="92vh">
-      <div className="px-4 sm:px-5 pb-5 space-y-4">
-        {/* Avatar + Name Section */}
-        <div className="flex flex-col items-center gap-2.5">
-          <div className="w-16 h-16 rounded-xl glass-panel border-white/20 flex items-center justify-center text-3xl">
+    <Sheet onClose={onClose} title="Profile" maxHeight="90vh">
+      <div className="px-3 pb-3 grid grid-cols-2 gap-2.5 auto-rows-max">
+        
+        {/* Avatar - Full width at top */}
+        <div className="col-span-2 flex flex-col items-center gap-2">
+          <div className="w-14 h-14 rounded-lg glass-panel border-white/20 flex items-center justify-center text-2xl">
             {profile.avatarEmoji}
           </div>
           <EmojiPicker value={profile.avatarEmoji} onChange={(emoji) => updateProfile({ avatarEmoji: emoji })} />
         </div>
 
-        {/* Display name */}
-        <div className="space-y-1">
-          <label className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em]">Name</label>
+        {/* Display Name - Full width */}
+        <div className="col-span-2 space-y-0.5">
+          <label className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em]">Name</label>
           <input
             type="text"
             value={profile.displayName}
             onChange={(e) => updateProfile({ displayName: e.target.value })}
-            className="sunken-glass rounded-lg p-2.5 text-base font-black text-white w-full bg-transparent border-none outline-none placeholder:text-white/20"
+            className="sunken-glass rounded-lg px-2 py-1.5 text-sm font-black text-white w-full bg-transparent border-none outline-none placeholder:text-white/20"
             placeholder="Athlete"
             maxLength={24}
           />
         </div>
 
-        {/* Settings Grid - Weight + Rest */}
-        <div className="grid grid-cols-2 gap-3">
-          {/* Weight unit */}
-          <div className="space-y-1">
-            <label className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em]">Weight</label>
-            <ToggleGroup
-              options={['kg', 'lbs']}
-              value={profile.weightUnit}
-              onChange={(v) => updateProfile({ weightUnit: v as 'kg' | 'lbs' })}
-              ariaLabel="Weight unit"
-            />
-          </div>
+        {/* Weight Unit */}
+        <div className="space-y-0.5">
+          <label className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em]">Weight</label>
+          <ToggleGroup
+            options={['kg', 'lbs']}
+            value={profile.weightUnit}
+            onChange={(v) => updateProfile({ weightUnit: v as 'kg' | 'lbs' })}
+            ariaLabel="Weight unit"
+          />
+        </div>
 
-          {/* Default rest */}
-          <div className="space-y-1">
-            <label className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em]">Rest</label>
-            <ToggleGroup
-              options={['60s', '90s', '120s']}
-              value={`${profile.defaultRestSeconds}s`}
-              onChange={(v) => updateProfile({ defaultRestSeconds: parseInt(v) })}
-              ariaLabel="Default rest duration"
-            />
+        {/* Default Rest */}
+        <div className="space-y-0.5">
+          <label className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em]">Rest</label>
+          <div className="flex gap-1 text-[8px]">
+            {['60s', '90s', '120s'].map((opt) => (
+              <button
+                key={opt}
+                onClick={() => updateProfile({ defaultRestSeconds: parseInt(opt) })}
+                className={cn(
+                  'flex-1 px-1.5 py-1 rounded-md font-black uppercase tracking-widest transition-all text-[7px]',
+                  `${profile.defaultRestSeconds}s` === opt
+                    ? 'active-glass-btn text-white'
+                    : 'bg-white/5 border border-white/10 text-white/40 hover:text-white/60'
+                )}
+              >
+                {opt}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="space-y-1.5">
-          <span className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em]">Stats</span>
-          <div className="grid grid-cols-3 gap-2">
-            <div className="flex flex-col items-center gap-0.5 px-2 py-2 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-              <span className="text-base font-black text-blue-400 font-display">{totalSessions}</span>
-              <span className="text-[7px] font-black text-blue-400/60 uppercase tracking-widest">Sessions</span>
-            </div>
-            <div className="flex flex-col items-center gap-0.5 px-2 py-2 bg-indigo-500/10 border border-indigo-500/20 rounded-lg">
-              <span className="text-base font-black text-indigo-400 font-display">
-                {totalVolume > 0 ? `${Math.round(totalVolume).toLocaleString()}` : '—'}
-              </span>
-              <span className="text-[7px] font-black text-indigo-400/60 uppercase tracking-widest">{profile.weightUnit}</span>
-            </div>
-            <div className="flex flex-col items-center gap-0.5 px-2 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
-              <span className="text-base font-black text-emerald-400 font-display flex items-center gap-0.5">
-                {streak}<Flame className="w-3 h-3" />
-              </span>
-              <span className="text-[7px] font-black text-emerald-400/60 uppercase tracking-widest">Streak</span>
-            </div>
-          </div>
+        {/* Sessions Stat */}
+        <div className="flex flex-col items-center gap-0.5 px-2 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+          <span className="text-sm font-black text-blue-400 font-display">{totalSessions}</span>
+          <span className="text-[6px] font-black text-blue-400/60 uppercase tracking-widest">Sessions</span>
+        </div>
+
+        {/* Volume Stat */}
+        <div className="flex flex-col items-center gap-0.5 px-2 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-lg">
+          <span className="text-sm font-black text-indigo-400 font-display leading-none">
+            {totalVolume > 0 ? `${Math.round(totalVolume / 100)}` : '—'}
+          </span>
+          <span className="text-[6px] font-black text-indigo-400/60 uppercase tracking-widest">{profile.weightUnit}</span>
+        </div>
+
+        {/* Streak Stat */}
+        <div className="col-span-2 flex flex-col items-center gap-0.5 px-2 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+          <span className="text-sm font-black text-emerald-400 font-display flex items-center gap-0.5">
+            {streak}<Flame className="w-2.5 h-2.5" />
+          </span>
+          <span className="text-[6px] font-black text-emerald-400/60 uppercase tracking-widest">Day Streak</span>
         </div>
 
         {/* Data Management - Commented Out by Default */}
         {/* 
-        <div className="space-y-2">
-          <span className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em]">Data</span>
-          <div className="grid grid-cols-2 gap-2">
+        <div className="col-span-2 space-y-1">
+          <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.3em]">Data</span>
+          <div className="grid grid-cols-2 gap-1.5">
             <button
               onClick={handleExport}
               disabled={isExporting}
-              className="flex items-center justify-center gap-1.5 px-2.5 py-2 glass-panel rounded-lg border-white/10 text-white/60 hover:text-white hover:border-white/20 transition-all text-[9px] font-black uppercase tracking-widest"
+              className="flex items-center justify-center gap-1 px-2 py-1.5 glass-panel rounded-lg border-white/10 text-white/60 hover:text-white hover:border-white/20 transition-all text-[7px] font-black uppercase tracking-widest"
             >
-              <Download className="w-3 h-3" />
-              {isExporting ? 'Exporting…' : 'Export'}
+              <Download className="w-2.5 h-2.5" />
+              {isExporting ? '...' : 'Export'}
             </button>
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={isImporting}
-              className="flex items-center justify-center gap-1.5 px-2.5 py-2 glass-panel rounded-lg border-white/10 text-white/60 hover:text-white hover:border-white/20 transition-all text-[9px] font-black uppercase tracking-widest"
+              className="flex items-center justify-center gap-1 px-2 py-1.5 glass-panel rounded-lg border-white/10 text-white/60 hover:text-white hover:border-white/20 transition-all text-[7px] font-black uppercase tracking-widest"
             >
-              <Upload className="w-3 h-3" />
-              {isImporting ? 'Importing…' : 'Import'}
+              <Upload className="w-2.5 h-2.5" />
+              {isImporting ? '...' : 'Import'}
             </button>
             <input
               ref={fileInputRef}
@@ -185,9 +193,9 @@ export function ProfileSheet({ onClose }: ProfileSheetProps) {
           </div>
 
           {storageUsed && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/3 border border-white/5">
-              <HardDrive className="w-2.5 h-2.5 text-white/20" />
-              <span className="text-[8px] font-black text-white/20 uppercase tracking-widest">{storageUsed} used</span>
+            <div className="col-span-2 flex items-center gap-1 px-2 py-1 rounded-lg bg-white/3 border border-white/5">
+              <HardDrive className="w-2 h-2 text-white/20 shrink-0" />
+              <span className="text-[6px] font-black text-white/20 uppercase tracking-widest truncate">{storageUsed}</span>
             </div>
           )}
         </div>
