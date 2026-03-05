@@ -66,13 +66,13 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen liquid-bg-dark text-zinc-100 selection:bg-blue-500/40 font-sans pb-40">
-      <div className="max-w-screen-md mx-auto min-h-screen flex flex-col relative px-4">
+    <main className="min-h-screen liquid-bg-dark text-zinc-100 selection:bg-blue-500/40 font-sans">
+      <div className="max-w-screen-md mx-auto h-dvh flex flex-col relative px-4">
 
         {/* Top Header with Brand and Actions */}
         <TopHeader onSearchClick={() => setShowSearch(true)} onProfileClick={() => setShowProfile(true)} />
 
-        <div className="flex-grow pt-10 pb-[var(--space-nav-clear)]">
+        <div className="flex-grow pt-4 pb-[var(--space-nav-clear)] flex flex-col">
           <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:p-4 focus:bg-black focus:text-white focus:rounded-lg">
             Skip to content
           </a>
@@ -84,7 +84,7 @@ export default function Home() {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 1.1, y: -40 }}
                 transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
-                className="flex-grow h-full flex items-center justify-center"
+                className="flex-1 flex flex-col justify-center"
                 id="main-content"
               >
                 <ErrorBoundary
