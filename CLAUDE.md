@@ -182,6 +182,10 @@ Execute the plan at .claude/plans/<plan-file>.md
 Current plans:
 - `2026-03-03-ui-ux-audit.md` — UI/UX audit findings and polish tasks
 
+*** Future Implementation Notes
+
+- **Routine Manager:** Implement a full routine management view (accessible via the `Library` icon in the bottom nav when a routine is active). This should allow users to view, manage, and switch between multiple saved routines seamlessly.
+
 ### Future Considerations
 
 **Deployment readiness:**
