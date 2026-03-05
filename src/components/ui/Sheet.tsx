@@ -106,20 +106,20 @@ export function Sheet({ onClose, title, children, maxHeight = '90vh' }: SheetPro
         style={{ maxHeight }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-6 pt-6 pb-4 shrink-0">
-          <div className="w-10 h-1 bg-white/20 rounded-full absolute top-3 left-1/2 -translate-x-1/2" aria-hidden="true" />
-          <h2 className="text-lg font-black text-white uppercase tracking-tight font-display">{title}</h2>
-          <button
-            onClick={onClose}
-            className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors"
-            aria-label="Close"
-          >
-            <X className="w-4 h-4 text-white/60" />
-          </button>
-        </div>
-        <div className="overflow-y-auto overscroll-contain" style={{ maxHeight: `calc(${maxHeight} - 80px)` }}>
-          {children}
-        </div>
+        <div className="flex items-center justify-between px-4 sm:px-5 pt-5 pb-3 shrink-0">
+           <div className="w-8 h-1 bg-white/20 rounded-full absolute top-2 left-1/2 -translate-x-1/2" aria-hidden="true" />
+           <h2 className="text-base font-black text-white uppercase tracking-tight font-display">{title}</h2>
+           <button
+             onClick={onClose}
+             className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer"
+             aria-label="Close"
+           >
+             <X className="w-3.5 h-3.5 text-white/60" />
+           </button>
+         </div>
+         <div className="overflow-y-auto overscroll-contain" style={{ maxHeight: `calc(${maxHeight} - 72px)` }}>
+           {children}
+         </div>
       </motion.div>
     </>
   );
