@@ -73,16 +73,16 @@ export function SearchSheet({ onClose }: SearchSheetProps) {
   );
 
   return (
-    <Sheet onClose={onClose} title="Search" maxHeight="94vh">
-      <div className="px-4 sm:px-5 pb-5 space-y-3.5">
+    <Sheet onClose={onClose} title="Search" maxHeight="90vh">
+      <div className="px-4 sm:px-5 pb-4 space-y-2.5">
         {/* Tabs */}
-        <div className="flex gap-1.5">
+        <div className="flex gap-1">
           {(['exercises', 'history'] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
               className={cn(
-                'flex-1 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all',
+                'flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all',
                 tab === t ? 'active-glass-btn text-white' : 'bg-white/5 text-white/30 hover:text-white/50'
               )}
             >
@@ -93,27 +93,27 @@ export function SearchSheet({ onClose }: SearchSheetProps) {
 
         {/* Search input */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30" />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-white/30" />
           <input
             ref={inputRef}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={tab === 'exercises' ? 'Search exercises...' : 'Search sessions...'}
-            className="sunken-glass rounded-xl pl-9 pr-3 py-2.5 text-sm font-black text-white w-full bg-transparent border-none outline-none placeholder:text-white/20"
+            className="sunken-glass rounded-lg pl-8 pr-3 py-2 text-sm font-black text-white w-full bg-transparent border-none outline-none placeholder:text-white/20"
           />
         </div>
 
         {tab === 'exercises' && (
           <>
             {/* Body part chips */}
-            <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar -mx-0.5 px-0.5">
+            <div className="flex gap-1 overflow-x-auto pb-0.5 no-scrollbar -mx-0.5 px-0.5">
               {BODY_PARTS.map((bp) => (
                 <button
                   key={bp}
                   onClick={() => setSelectedBodyPart(bp)}
                   className={cn(
-                    'shrink-0 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest transition-all',
+                    'shrink-0 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest transition-all',
                     selectedBodyPart === bp
                       ? 'active-glass-btn text-white'
                       : 'bg-white/5 border border-white/10 text-white/40 hover:text-white/60'
@@ -125,15 +125,15 @@ export function SearchSheet({ onClose }: SearchSheetProps) {
             </div>
 
             {/* Results */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
-                  <Skeleton key={i} className="h-15 w-full rounded-xl bg-white/5" />
+                  <Skeleton key={i} className="h-14 w-full rounded-lg bg-white/5" />
                 ))
               ) : results.length === 0 ? (
-                <div className="py-10 flex flex-col items-center gap-2.5 text-center">
-                  <Dumbbell className="w-8 h-8 text-white/10" />
-                  <p className="text-xs font-black text-white/25 uppercase tracking-widest">No exercises found</p>
+                <div className="py-8 flex flex-col items-center gap-2 text-center">
+                  <Dumbbell className="w-6 h-6 text-white/10" />
+                  <p className="text-[10px] font-black text-white/25 uppercase tracking-widest">No exercises found</p>
                 </div>
               ) : (
                 results.map((item) => <ExerciseBrowseCard key={item.id} item={item} />)
@@ -143,22 +143,22 @@ export function SearchSheet({ onClose }: SearchSheetProps) {
         )}
 
         {tab === 'history' && (
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {filteredHistory.length === 0 ? (
-              <div className="py-10 flex flex-col items-center gap-2.5 text-center">
-                <p className="text-xs font-black text-white/25 uppercase tracking-widest">No sessions found</p>
+              <div className="py-8 flex flex-col items-center gap-2 text-center">
+                <p className="text-[10px] font-black text-white/25 uppercase tracking-widest">No sessions found</p>
               </div>
             ) : (
               filteredHistory.map((entry) => (
-                <div key={entry.id} className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] transition-colors cursor-pointer">
+                <div key={entry.id} className="flex items-center justify-between p-2 rounded-lg bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] transition-colors cursor-pointer">
                   <div className="min-w-0">
                     <p className="text-sm font-black text-white/80 uppercase tracking-tight truncate">{entry.sessionTitle}</p>
-                    <p className="text-[9px] font-black text-white/30 uppercase tracking-widest mt-0.5">
+                    <p className="text-[8px] font-black text-white/30 uppercase tracking-widest mt-0.5">
                       {new Date(entry.completedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {entry.volumeData.length} exercises
                     </p>
                   </div>
                   {entry.totalVolume > 0 && (
-                    <span className="text-[9px] font-black text-blue-400/60 uppercase tracking-widest shrink-0 ml-2.5">
+                    <span className="text-[8px] font-black text-blue-400/60 uppercase tracking-widest shrink-0 ml-2">
                       {entry.totalVolume.toLocaleString()} {profile.weightUnit}
                     </span>
                   )}
