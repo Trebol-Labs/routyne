@@ -57,10 +57,12 @@ gemini.md
 # Git worktrees
 .worktrees/
 
-# Claude plans & sessions
+# Claude files
+
 .claude/
 .claude-flow/
 .opencode/
+CLAUDE.md
 
 # Playwright MCP logs & screenshots
 .playwright-mcp/

@@ -119,7 +119,7 @@ export default function Home() {
         </div>
 
         {/* Bottom Navigation with Floating Action Button */}
-        <BottomNav currentView={currentView} onNavigate={handleNavClick} />
+        <BottomNav currentView={currentView} onNavigate={handleNavClick} hasRoutine={!!currentRoutine} />
       </div>
 
       {/* Overlay sheets */}
