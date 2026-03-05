@@ -160,10 +160,13 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
       ],
     }));
 
-    // IDB write in background
-    saveRoutine(routine, sourceMarkdown).catch((err) =>
-      console.error('[useWorkoutStore] importRoutine IDB write failed', err)
-    );
+    // Ensure IDB write completes before import is considered done
+    try {
+      await saveRoutine(routine, sourceMarkdown);
+    } catch (err) {
+      console.error('[useWorkoutStore] importRoutine IDB write failed', err);
+      throw err;
+    }
   },
 
   // backward-compat sync alias used by tests
