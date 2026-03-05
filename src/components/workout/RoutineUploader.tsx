@@ -13,6 +13,7 @@ export function RoutineUploader() {
   const [text, setText] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const {
     importRoutine,
     isLoading,
@@ -26,11 +27,14 @@ export function RoutineUploader() {
     if (!content.trim()) return;
 
     setIsLoading(true);
+    setError(null);
     try {
       const routine = parseRoutine(content);
       await importRoutine(routine, content);
     } catch (error) {
-      console.error('Failed to parse routine:', error);
+      const message = error instanceof Error ? error.message : 'Failed to save routine';
+      setError(message);
+      console.error('Failed to parse or save routine:', error);
     } finally {
       setIsLoading(false);
     }
@@ -181,6 +185,17 @@ export function RoutineUploader() {
           </div>
         )}
       </motion.div>
+
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          className="w-full max-w-2xl rounded-2xl bg-red-500/10 border border-red-500/30 p-4"
+        >
+          <p className="text-red-400 text-sm font-medium">{error}</p>
+        </motion.div>
+      )}
 
       {/* Saved Routines Library */}
       <AnimatePresence>
