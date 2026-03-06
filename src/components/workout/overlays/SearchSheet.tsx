@@ -115,7 +115,7 @@ export function SearchSheet({ onClose }: SearchSheetProps) {
         {tab === 'exercises' && (
           <>
             {/* Row 3 — Body part chips (horizontal scroll only) */}
-            <div className="shrink-0 flex gap-1 overflow-x-auto no-scrollbar -mx-0.5 px-0.5">
+            <div className="shrink-0 flex gap-1 overflow-x-auto overscroll-contain no-scrollbar -mx-0.5 px-0.5">
               {BODY_PARTS.map((bp) => (
                 <button
                   key={bp}
@@ -133,7 +133,7 @@ export function SearchSheet({ onClose }: SearchSheetProps) {
             </div>
 
             {/* Row 4 — Results list: ONLY this scrolls */}
-            <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-1.5">
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain no-scrollbar space-y-1.5">
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <Skeleton key={i} className="h-14 w-full rounded-lg bg-white/5" />
@@ -152,7 +152,7 @@ export function SearchSheet({ onClose }: SearchSheetProps) {
 
         {tab === 'history' && (
           /* History results: ONLY this scrolls */
-          <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-1.5">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain no-scrollbar space-y-1.5">
             {filteredHistory.length === 0 ? (
               <div className="py-8 flex flex-col items-center gap-2 text-center">
                 <p className="text-[10px] font-black text-white/25 uppercase tracking-widest">No sessions found</p>

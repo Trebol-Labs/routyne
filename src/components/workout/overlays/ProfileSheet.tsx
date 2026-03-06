@@ -74,7 +74,7 @@ export function ProfileSheet({ onClose }: ProfileSheetProps) {
         </div>
 
         {/* Row 2 — Emoji picker: single horizontal scroll strip, no wrap */}
-        <div className="shrink-0 flex gap-1.5 overflow-x-auto no-scrollbar">
+        <div className="shrink-0 flex gap-1.5 overflow-x-auto overscroll-contain no-scrollbar">
           {SPORT_EMOJIS.map((emoji) => (
             <button
               key={emoji}
