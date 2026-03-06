@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { Sheet } from '@/components/ui/Sheet';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
 import type { HistoryEntry } from '@/types/workout';

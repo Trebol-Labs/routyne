@@ -1,8 +1,8 @@
 'use client';
 
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, useMotionValue, useTransform, animate, type PanInfo } from 'framer-motion';
 import { X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 
 interface SheetProps {
   onClose: () => void;
@@ -11,19 +11,6 @@ interface SheetProps {
   /** Height of the panel. Both sheets use the same value for symmetric animation. */
   height?: string;
 }
-
-const backdropVariants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1 },
-  exit: { opacity: 0 },
-};
-
-// Panel always slides from exactly `height` below the bottom — same start for every sheet
-const panelVariants = {
-  hidden: { y: '100%' },
-  visible: { y: 0, transition: { duration: 0.45, ease: [0.23, 1, 0.32, 1] as const } },
-  exit: { y: '100%', transition: { duration: 0.3, ease: [0.23, 1, 0.32, 1] as const } },
-};
 
 const FOCUSABLE = [
   'a[href]',
@@ -37,21 +24,34 @@ const FOCUSABLE = [
 // Shared fixed height — both dialogs open to the same point on screen
 const SHEET_HEIGHT = '72vh';
 
-// Drag-to-close threshold: swipe down >60px to trigger close
-const CLOSE_THRESHOLD = 60;
+// Drag-to-close threshold: swipe down >80px or fast velocity
+const CLOSE_THRESHOLD = 80;
+
+const EASE = [0.23, 1, 0.32, 1] as const;
 
 export function Sheet({ onClose, title, children, height = SHEET_HEIGHT }: SheetProps) {
   const panelRef = useRef<HTMLDivElement>(null);
-  const [dragY, setDragY] = useState(0);
 
+  // Motion value for pan-to-dismiss gesture offset (separate from entry animation).
+  // This drives the `top` style so it doesn't conflict with Framer Motion's `y` transform.
+  const panOffset = useMotionValue(0);
+  // Backdrop fades as user drags the sheet down
+  const backdropOpacity = useTransform(panOffset, [0, 400], [1, 0]);
+
+  // Prevent background scroll while sheet is open.
+  // We use overflow:hidden on <html> (not position:fixed on body) because
+  // position:fixed on body creates a new containing block and breaks
+  // position:fixed on descendants like this sheet panel.
   useEffect(() => {
-    // We intentionally DO NOT auto-focus elements on mount.
-    // On mobile devices, focusing an input inside the Sheet (like Profile Name or Search)
-    // immediately triggers the software keyboard to open. This causes the viewport (dvh) 
-    // to rapidly resize, resulting in the background violently jumping/squishing 
-    // while the Sheet is trying to animate in. 
+    const html = document.documentElement;
+    const prevOverflow = html.style.overflow;
+    html.style.overflow = 'hidden';
+    return () => {
+      html.style.overflow = prevOverflow;
+    };
   }, []);
 
+  // Focus trap
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') { onClose(); return; }
@@ -72,50 +72,69 @@ export function Sheet({ onClose, title, children, height = SHEET_HEIGHT }: Sheet
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  // Drag-to-close handler
-  const handlePanelDragEnd = (_event: unknown, info: { offset: { y: number } }) => {
-    if (info.offset.y > CLOSE_THRESHOLD) {
-      onClose();
+  // Pan gesture: swipe down to dismiss.
+  // Uses onPan/onPanEnd instead of drag="y" to avoid Framer Motion
+  // taking over position/transform on the element.
+  const handlePan = useCallback((_event: PointerEvent, info: PanInfo) => {
+    // Only allow downward drag (positive y). Clamp upward movement to 0.
+    panOffset.set(Math.max(0, info.offset.y));
+  }, [panOffset]);
+
+  const handlePanEnd = useCallback((_event: PointerEvent, info: PanInfo) => {
+    if (info.offset.y > CLOSE_THRESHOLD || info.velocity.y > 500) {
+      // Swipe exceeded threshold — animate off-screen then unmount
+      const panelHeight = panelRef.current?.getBoundingClientRect().height ?? 600;
+      animate(panOffset, panelHeight, { duration: 0.25, ease: EASE }).then(() => {
+        onClose();
+      });
     } else {
-      setDragY(0);
+      // Snap back to resting position
+      animate(panOffset, 0, { type: 'spring', stiffness: 500, damping: 30 });
     }
-  };
+  }, [panOffset, onClose]);
 
   return (
     <>
+      {/* Backdrop */}
       <motion.div
         key="sheet-backdrop"
-        variants={backdropVariants}
-        initial="hidden"
-        animate="visible"
-        exit="exit"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
         transition={{ duration: 0.25 }}
         className="fixed inset-0 z-[var(--z-overlay)] bg-black/60 backdrop-blur-sm touch-none"
+        style={{ opacity: backdropOpacity }}
         onClick={onClose}
         aria-hidden="true"
       />
+
+      {/* Panel — fixed to viewport bottom, slides up on enter via y transform */}
       <motion.div
         key="sheet-panel"
         ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        variants={panelVariants}
-        initial="hidden"
-        animate="visible"
-        exit="exit"
-        drag="y"
-        dragElastic={{ top: 0, bottom: 0.3 }}
-        dragConstraints={{ top: 0, bottom: 300 }}
-        onDragEnd={handlePanelDragEnd}
-        onDrag={(_event, info) => setDragY(info.offset.y)}
-        className="fixed bottom-0 left-0 right-0 z-[var(--z-overlay)] glass-panel rounded-t-[2rem] border-white/10 flex flex-col overscroll-none cursor-grab active:cursor-grabbing"
-        style={{ height }}
+        // Entry/exit animation via y (Framer Motion manages this transform)
+        initial={{ y: '100%' }}
+        animate={{ y: 0 }}
+        exit={{ y: '100%' }}
+        transition={{ duration: 0.45, ease: EASE }}
+        // Pan offset is applied as marginTop so it doesn't conflict with the y transform.
+        // marginTop shifts the panel downward within its fixed positioning.
+        // position:fixed must be inline — .glass-panel sets position:relative for its ::before
+        // pseudo-element, which overrides Tailwind's .fixed at equal specificity.
+        style={{ position: 'fixed', height, marginTop: panOffset }}
+        onPan={handlePan}
+        onPanEnd={handlePanEnd}
+        className="inset-x-0 bottom-0 z-[var(--z-overlay)] glass-panel rounded-t-[2rem] border-white/10 flex flex-col overscroll-none touch-pan-x cursor-grab active:cursor-grabbing"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Drag handle indicator */}
+        <div className="w-8 h-1 bg-white/20 rounded-full mx-auto mt-2 mb-1 shrink-0" aria-hidden="true" />
+
         {/* Header — fixed, never scrolls */}
-        <div className="flex items-center justify-between px-4 pt-4 pb-3 shrink-0">
-          <div className="w-8 h-1 bg-white/20 rounded-full absolute top-2 left-1/2 -translate-x-1/2" aria-hidden="true" />
+        <div className="flex items-center justify-between px-4 pb-3 shrink-0">
           <h2 className="text-sm font-black text-white uppercase tracking-widest font-display">{title}</h2>
           <button
             onClick={onClose}
