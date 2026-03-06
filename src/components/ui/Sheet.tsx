@@ -42,33 +42,14 @@ const CLOSE_THRESHOLD = 60;
 
 export function Sheet({ onClose, title, children, height = SHEET_HEIGHT }: SheetProps) {
   const panelRef = useRef<HTMLDivElement>(null);
-  const previousFocusRef = useRef<HTMLElement | null>(null);
   const [dragY, setDragY] = useState(0);
 
   useEffect(() => {
-    previousFocusRef.current = document.activeElement as HTMLElement;
-    const firstFocusable = panelRef.current?.querySelector<HTMLElement>(FOCUSABLE);
-    firstFocusable?.focus();
-
-    // Lock body scroll and prevent rubber-banding on mobile
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-    const originalOverflow = document.body.style.overflow;
-    const originalOverscroll = document.body.style.overscrollBehavior;
-    const originalPaddingRight = document.body.style.paddingRight;
-    
-    document.body.style.overflow = 'hidden';
-    document.body.style.overscrollBehavior = 'none';
-    // Add padding to compensate for removed scrollbar, prevents layout shift
-    if (scrollbarWidth > 0) {
-      document.body.style.paddingRight = `${scrollbarWidth}px`;
-    }
-
-    return () => {
-      previousFocusRef.current?.focus();
-      document.body.style.overflow = originalOverflow;
-      document.body.style.overscrollBehavior = originalOverscroll;
-      document.body.style.paddingRight = originalPaddingRight;
-    };
+    // We intentionally DO NOT auto-focus elements on mount.
+    // On mobile devices, focusing an input inside the Sheet (like Profile Name or Search)
+    // immediately triggers the software keyboard to open. This causes the viewport (dvh) 
+    // to rapidly resize, resulting in the background violently jumping/squishing 
+    // while the Sheet is trying to animate in. 
   }, []);
 
   useEffect(() => {
