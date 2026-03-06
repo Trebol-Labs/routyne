@@ -1,8 +1,8 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface SheetProps {
   onClose: () => void;
@@ -37,9 +37,13 @@ const FOCUSABLE = [
 // Shared fixed height — both dialogs open to the same point on screen
 const SHEET_HEIGHT = '72vh';
 
+// Drag-to-close threshold: swipe down >60px to trigger close
+const CLOSE_THRESHOLD = 60;
+
 export function Sheet({ onClose, title, children, height = SHEET_HEIGHT }: SheetProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const [dragY, setDragY] = useState(0);
 
   useEffect(() => {
     previousFocusRef.current = document.activeElement as HTMLElement;
@@ -79,6 +83,15 @@ export function Sheet({ onClose, title, children, height = SHEET_HEIGHT }: Sheet
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
+  // Drag-to-close handler
+  const handlePanelDragEnd = (_event: unknown, info: { offset: { y: number } }) => {
+    if (info.offset.y > CLOSE_THRESHOLD) {
+      onClose();
+    } else {
+      setDragY(0);
+    }
+  };
+
   return (
     <>
       <motion.div
@@ -102,7 +115,12 @@ export function Sheet({ onClose, title, children, height = SHEET_HEIGHT }: Sheet
         initial="hidden"
         animate="visible"
         exit="exit"
-        className="fixed bottom-0 left-0 right-0 z-[var(--z-overlay)] glass-panel rounded-t-[2rem] border-white/10 flex flex-col overscroll-none"
+        drag="y"
+        dragElastic={{ top: 0, bottom: 0.3 }}
+        dragConstraints={{ top: 0, bottom: 300 }}
+        onDragEnd={handlePanelDragEnd}
+        onDrag={(_event, info) => setDragY(info.offset.y)}
+        className="fixed bottom-0 left-0 right-0 z-[var(--z-overlay)] glass-panel rounded-t-[2rem] border-white/10 flex flex-col overscroll-none cursor-grab active:cursor-grabbing"
         style={{ height }}
         onClick={(e) => e.stopPropagation()}
       >
