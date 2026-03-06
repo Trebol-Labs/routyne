@@ -3,13 +3,14 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { SetRow } from '@/components/workout/SetRow';
+import { SetRow, type AutoSuggestion, type SetRowState } from '@/components/workout/SetRow';
 import { RestTimer } from '@/components/workout/RestTimer';
 import { SetInputSheet } from '@/components/workout/overlays/SetInputSheet';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
 import { useWakeLock } from '@/hooks/useWakeLock';
-import { ChevronLeft, Clock, Zap, CheckCircle2, XCircle } from 'lucide-react';
+import type { HistoryEntry, WorkoutState } from '@/types/workout';
+import { ChevronLeft, Clock, Zap, CheckCircle2 } from 'lucide-react';
 
 interface PendingSet {
   exerciseId: string;
@@ -19,19 +20,101 @@ interface PendingSet {
   lastWeight?: number;
 }
 
-function getLastWeight(
-  setCompletion: Record<string, { completed: boolean; weight?: number }>,
+interface ArmedPreview {
+  key: string;
+  suggestion: AutoSuggestion;
+}
+
+function normalizeExerciseName(name: string): string {
+  return name.trim().toLowerCase();
+}
+
+function toPositiveNumber(value: number | null | undefined): number | undefined {
+  if (value == null || Number.isNaN(value) || value <= 0) {
+    return undefined;
+  }
+
+  return value;
+}
+
+function getSameSessionPreviousSetSuggestion(
+  setCompletion: WorkoutState['setCompletion'],
   sessionIdx: number,
-  exerciseId: string
-): number | undefined {
-  const prefix = `${sessionIdx}-${exerciseId}-`;
-  let last: number | undefined;
-  for (const [key, status] of Object.entries(setCompletion)) {
-    if (key.startsWith(prefix) && status.completed && status.weight != null) {
-      last = status.weight;
+  exerciseId: string,
+  setIdx: number
+): AutoSuggestion | null {
+  for (let i = setIdx - 1; i >= 0; i -= 1) {
+    const status = setCompletion[`${sessionIdx}-${exerciseId}-${i}`];
+    if (status?.completed && (status.repsDone ?? 0) > 0) {
+      return {
+        repsDone: status.repsDone ?? 0,
+        weight: toPositiveNumber(status.weight),
+      };
     }
   }
-  return last;
+
+  return null;
+}
+
+function getHistorySetSuggestion(
+  history: HistoryEntry[],
+  exerciseId: string,
+  exerciseName: string,
+  setIdx: number
+): AutoSuggestion | null {
+  const normalizedExerciseName = normalizeExerciseName(exerciseName);
+
+  for (const entry of history) {
+    const matchingExercise =
+      entry.volumeData.find((ev) => ev.exerciseId === exerciseId) ??
+      entry.volumeData.find((ev) => normalizeExerciseName(ev.cleanName) === normalizedExerciseName);
+
+    if (!matchingExercise?.setDetails?.length) {
+      continue;
+    }
+
+    const matchingSet = matchingExercise.setDetails.find(
+      (setDetail) => setDetail.setIdx === setIdx && setDetail.repsDone > 0
+    );
+
+    if (!matchingSet) {
+      continue;
+    }
+
+    return {
+      repsDone: matchingSet.repsDone,
+      weight: toPositiveNumber(matchingSet.weight),
+    };
+  }
+
+  return null;
+}
+
+function getAutoSetSuggestion(params: {
+  setCompletion: WorkoutState['setCompletion'];
+  history: HistoryEntry[];
+  sessionIdx: number;
+  exerciseId: string;
+  exerciseName: string;
+  setIdx: number;
+}): AutoSuggestion | null {
+  const sameSessionSuggestion = getSameSessionPreviousSetSuggestion(
+    params.setCompletion,
+    params.sessionIdx,
+    params.exerciseId,
+    params.setIdx
+  );
+
+  if (sameSessionSuggestion) {
+    return sameSessionSuggestion;
+  }
+
+  return getHistorySetSuggestion(
+    params.history,
+    params.exerciseId,
+    params.exerciseName,
+    params.setIdx
+  );
 }
 
 export function ActiveSessionView() {
@@ -40,6 +123,7 @@ export function ActiveSessionView() {
     activeSessionIdx,
     setCurrentView,
     setCompletion,
+    history,
     toggleSetCompletion,
     finishSession,
     abandonSession,
@@ -49,9 +133,11 @@ export function ActiveSessionView() {
   const { isLocked } = useWakeLock(true);
 
   const [showRestTimer, setShowRestTimer] = useState(false);
+  const [restTimerKey, setRestTimerKey] = useState(0);
   const [restDuration, setRestDuration] = useState(90);
-  const [pendingSet, setPendingSet] = useState<PendingSet | null>(null);
   const [showAbandon, setShowAbandon] = useState(false);
+  const [pendingSet, setPendingSet] = useState<PendingSet | null>(null);
+  const [armedPreview, setArmedPreview] = useState<ArmedPreview | null>(null);
 
   const activeSession = currentRoutine?.sessions[activeSessionIdx ?? 0];
   if (!activeSession) return null;
@@ -59,7 +145,46 @@ export function ActiveSessionView() {
   const totalSets = activeSession.exercises.reduce((sum, ex) => sum + ex.sets, 0);
   const completedSets = Object.values(setCompletion).filter((s) => s.completed).length;
 
-  const handleRequestSetCompletion = (
+  const clearArmedPreview = () => setArmedPreview(null);
+
+  const completeSet = (
+    exerciseId: string,
+    setIdx: number,
+    repsDone: number,
+    weight: number | undefined,
+    restSeconds: number
+  ) => {
+    if (activeSessionIdx === null) return;
+
+    toggleSetCompletion(activeSessionIdx, exerciseId, setIdx, repsDone, weight);
+    clearArmedPreview();
+    setPendingSet(null);
+    setRestDuration(restSeconds || profile.defaultRestSeconds);
+    setRestTimerKey((prev) => prev + 1);
+    setShowRestTimer(true);
+  };
+
+  const openManualEntry = (
+    exerciseId: string,
+    exerciseName: string,
+    setIdx: number,
+    repsMax: number,
+    restSeconds: number,
+    suggestion?: AutoSuggestion | null
+  ) => {
+    clearArmedPreview();
+    setShowRestTimer(false);
+    setRestDuration(restSeconds || profile.defaultRestSeconds);
+    setPendingSet({
+      exerciseId,
+      exerciseName,
+      setIdx,
+      targetRepsMax: suggestion?.repsDone ?? repsMax,
+      lastWeight: suggestion?.weight,
+    });
+  };
+
+  const handleRowSwipe = (
     exerciseId: string,
     exerciseName: string,
     setIdx: number,
@@ -67,29 +192,88 @@ export function ActiveSessionView() {
     restSeconds: number
   ) => {
     if (activeSessionIdx === null) return;
-    const isAlreadyCompleted = setCompletion[`${activeSessionIdx}-${exerciseId}-${setIdx}`]?.completed;
-    if (isAlreadyCompleted) {
-      // Toggle off immediately — no input needed
+
+    const key = `${activeSessionIdx}-${exerciseId}-${setIdx}`;
+    const currentStatus = setCompletion[key];
+    const isCompleted = !!currentStatus?.completed;
+
+    if (isCompleted) {
       toggleSetCompletion(activeSessionIdx, exerciseId, setIdx);
+      clearArmedPreview();
       return;
     }
-    setRestDuration(restSeconds || profile.defaultRestSeconds);
-    // Dismiss rest timer when starting to log a new set
-    setShowRestTimer(false);
-    setPendingSet({
+
+    const suggestion = getAutoSetSuggestion({
+      setCompletion,
+      history,
+      sessionIdx: activeSessionIdx,
       exerciseId,
       exerciseName,
       setIdx,
-      targetRepsMax: repsMax,
-      lastWeight: getLastWeight(setCompletion, activeSessionIdx, exerciseId),
     });
+
+    if (armedPreview?.key === key && suggestion) {
+      completeSet(exerciseId, setIdx, suggestion.repsDone, suggestion.weight, restSeconds);
+      return;
+    }
+
+    if (suggestion) {
+      setPendingSet(null);
+      setArmedPreview({ key, suggestion });
+      return;
+    }
+
+    openManualEntry(exerciseId, exerciseName, setIdx, repsMax, restSeconds);
+  };
+
+  const handleRowTap = (
+    exerciseId: string,
+    exerciseName: string,
+    setIdx: number,
+    repsMax: number,
+    restSeconds: number
+  ) => {
+    if (activeSessionIdx === null) return;
+
+    const key = `${activeSessionIdx}-${exerciseId}-${setIdx}`;
+    const currentStatus = setCompletion[key];
+    const isCompleted = !!currentStatus?.completed;
+
+    if (isCompleted) {
+      toggleSetCompletion(activeSessionIdx, exerciseId, setIdx);
+      clearArmedPreview();
+      return;
+    }
+
+    const suggestion = getAutoSetSuggestion({
+      setCompletion,
+      history,
+      sessionIdx: activeSessionIdx,
+      exerciseId,
+      exerciseName,
+      setIdx,
+    });
+
+    if (armedPreview?.key === key) {
+      openManualEntry(exerciseId, exerciseName, setIdx, repsMax, restSeconds, suggestion);
+      return;
+    }
+
+    // Always open manual entry on tap — regardless of whether a suggestion exists
+    openManualEntry(exerciseId, exerciseName, setIdx, repsMax, restSeconds, suggestion);
   };
 
   const handleConfirmSet = (repsDone: number, weight: number | undefined) => {
-    if (pendingSet === null || activeSessionIdx === null) return;
-    toggleSetCompletion(activeSessionIdx, pendingSet.exerciseId, pendingSet.setIdx, repsDone, weight);
-    setShowRestTimer(true);
-    setPendingSet(null);
+    if (pendingSet === null) return;
+
+    const exercise = activeSession.exercises.find((item) => item.id === pendingSet.exerciseId);
+    completeSet(
+      pendingSet.exerciseId,
+      pendingSet.setIdx,
+      repsDone,
+      weight,
+      exercise?.restSeconds ?? profile.defaultRestSeconds
+    );
   };
 
   return (
@@ -98,18 +282,17 @@ export function ActiveSessionView() {
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="space-y-8 pb-6 px-4"
+      className="space-y-8 px-4 pb-6"
     >
-      {/* Session progress */}
       <div className="-mt-2">
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">Progress</span>
-          <span className="text-[10px] font-black text-white/50 uppercase tracking-widest">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">Progress</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-white/50">
             {completedSets} / {totalSets}
           </span>
         </div>
         <div
-          className="h-1 w-full bg-white/5 rounded-full overflow-hidden"
+          className="h-1.5 w-full overflow-hidden rounded-full bg-white/[0.06]"
           role="progressbar"
           aria-valuenow={completedSets}
           aria-valuemin={0}
@@ -117,7 +300,7 @@ export function ActiveSessionView() {
           aria-label={`Workout progress: ${completedSets} of ${totalSets} sets completed`}
         >
           <motion.div
-            className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full"
+            className="h-full rounded-full bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-400"
             initial={{ width: 0 }}
             animate={{ width: totalSets > 0 ? `${(completedSets / totalSets) * 100}%` : '0%' }}
             transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
@@ -133,15 +316,17 @@ export function ActiveSessionView() {
             onClick={() => setCurrentView('routine-overview')}
             aria-label="Back to overview"
           >
-            <ChevronLeft className="w-6 h-6 text-white" />
+            <ChevronLeft className="h-6 w-6 text-white" />
           </Button>
           <div>
-            <h2 className="text-2xl font-black text-white uppercase tracking-tighter leading-none font-display">{activeSession.title}</h2>
-            <div className="flex items-center gap-2 mt-2">
+            <h2 className="font-display text-2xl font-black uppercase leading-none tracking-tighter text-white">
+              {activeSession.title}
+            </h2>
+            <div className="mt-2 flex items-center gap-2">
               {isLocked && (
-                <div className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-500/10 border border-blue-500/20 rounded-full">
-                  <Zap className="w-3 h-3 text-blue-400 fill-blue-400" />
-                  <span className="text-[9px] font-black text-blue-400 uppercase tracking-widest">WAKE LOCK ON</span>
+                <div className="flex items-center gap-1.5 rounded-full border border-blue-500/20 bg-blue-500/10 px-2 py-0.5">
+                  <Zap className="h-3 w-3 fill-blue-400 text-blue-400" />
+                  <span className="text-[9px] font-black uppercase tracking-widest text-blue-400">Wake Lock On</span>
                 </div>
               )}
             </div>
@@ -154,39 +339,58 @@ export function ActiveSessionView() {
           onClick={() => setShowRestTimer(true)}
           aria-label="Open rest timer"
         >
-          <Clock className="w-6 h-6 text-blue-400" />
+          <Clock className="h-6 w-6 text-blue-400" />
         </Button>
       </div>
 
-      <div className="grid gap-8">
+      <div className="grid gap-7">
         {activeSession.exercises.map((exercise) => (
-          <div key={exercise.id} className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xl font-black text-white tracking-tighter uppercase font-display">{exercise.cleanName}</h3>
-              <span className="text-xs font-black text-white/50 uppercase tracking-[0.25em]">
-                {exercise.sets} Sets / {exercise.repsMin}{exercise.repsMin !== exercise.repsMax ? `-${exercise.repsMax}` : ''} Reps
+          <div key={exercise.id} className="space-y-2.5">
+            <div className="flex items-end justify-between gap-3 px-1">
+              <h3 className="font-display text-lg font-black uppercase tracking-tight text-white/90">
+                {exercise.cleanName}
+              </h3>
+              <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-white/35">
+                {exercise.sets}×{exercise.repsMin}{exercise.repsMin !== exercise.repsMax ? `-${exercise.repsMax}` : ''}
               </span>
             </div>
 
             <div className="grid grid-cols-1 gap-2">
-              {Array.from({ length: exercise.sets }).map((_, setIdx) => (
-                <SetRow
-                  key={setIdx}
-                  setIdx={setIdx}
-                  sessionIdx={activeSessionIdx!}
-                  exercise={exercise}
-                  isCompleted={!!setCompletion[`${activeSessionIdx}-${exercise.id}-${setIdx}`]?.completed}
-                  onRequestComplete={() =>
-                    handleRequestSetCompletion(
+              {Array.from({ length: exercise.sets }).map((_, setIdx) => {
+                const key = `${activeSessionIdx}-${exercise.id}-${setIdx}`;
+                const currentStatus = setCompletion[key];
+                const phase: SetRowState = currentStatus?.completed
+                  ? 'completed'
+                  : armedPreview?.key === key
+                    ? 'armed'
+                    : 'idle';
+
+                return (
+                  <SetRow
+                    key={key}
+                    setIdx={setIdx}
+                    exercise={exercise}
+                    setStatus={currentStatus}
+                    weightUnit={profile.weightUnit}
+                    phase={phase}
+                    preview={armedPreview?.key === key ? armedPreview.suggestion : null}
+                    onSwipe={() => handleRowSwipe(
                       exercise.id,
                       exercise.cleanName,
                       setIdx,
                       exercise.repsMax,
                       exercise.restSeconds
-                    )
-                  }
-                />
-              ))}
+                    )}
+                    onTap={() => handleRowTap(
+                      exercise.id,
+                      exercise.cleanName,
+                      setIdx,
+                      exercise.repsMax,
+                      exercise.restSeconds
+                    )}
+                  />
+                );
+              })}
             </div>
           </div>
         ))}
@@ -197,16 +401,15 @@ export function ActiveSessionView() {
           variant="glass-primary"
           size="xl"
           onClick={() => finishSession()}
-          className="w-full rounded-[var(--radius-xl)] gap-4 group mt-4 !bg-emerald-500/25 hover:!bg-emerald-500/35 border-emerald-500/20"
+          className="group mt-4 w-full gap-4 rounded-[var(--radius-xl)] border-emerald-500/20 !bg-emerald-500/25 hover:!bg-emerald-500/35"
         >
-          <CheckCircle2 className="w-7 h-7 text-emerald-400 group-hover:scale-110 transition-transform" />
-          FINISH WORKOUT
+          <CheckCircle2 className="h-7 w-7 text-emerald-400 transition-transform group-hover:scale-110" />
+          Finish Workout
         </Button>
         <button
           onClick={() => setShowAbandon(true)}
-          className="w-full flex items-center justify-center gap-2 py-3 text-white/40 hover:text-red-400 transition-colors text-[11px] font-black uppercase tracking-[0.2em]"
+          className="w-full py-3 text-[11px] font-black uppercase tracking-[0.2em] text-white/40 transition-colors hover:text-red-400"
         >
-          <XCircle className="w-3.5 h-3.5" />
           Abandon Workout
         </button>
       </div>
@@ -214,6 +417,7 @@ export function ActiveSessionView() {
       <AnimatePresence>
         {showRestTimer && (
           <RestTimer
+            key={restTimerKey}
             duration={restDuration}
             onClose={() => setShowRestTimer(false)}
             onFinish={() => {
@@ -245,7 +449,10 @@ export function ActiveSessionView() {
         confirmLabel="Abandon"
         cancelLabel="Keep Going"
         variant="danger"
-        onConfirm={() => { abandonSession(); setShowAbandon(false); }}
+        onConfirm={() => {
+          abandonSession();
+          setShowAbandon(false);
+        }}
         onCancel={() => setShowAbandon(false)}
       />
     </motion.div>
