@@ -37,7 +37,7 @@ export default function Home() {
 
   if (!isReady) {
     return (
-      <main className="min-h-screen liquid-bg-dark flex items-center justify-center">
+      <main className="min-h-[100dvh] liquid-bg-dark flex items-center justify-center">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -66,7 +66,7 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen liquid-bg-dark text-zinc-100 selection:bg-blue-500/40 font-sans">
+    <main className="min-h-[100dvh] liquid-bg-dark text-zinc-100 selection:bg-blue-500/40 font-sans">
       <div className="max-w-screen-md mx-auto h-dvh flex flex-col relative px-4">
 
         {/* Top Header with Brand and Actions */}

@@ -43,8 +43,7 @@ export function SearchSheet({ onClose }: SearchSheetProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Auto-focus
-    setTimeout(() => inputRef.current?.focus(), 300);
+    // Removed auto-focus to prevent keyboard from popping up immediately and causing layout shifts on mobile
   }, []);
 
   useEffect(() => {
