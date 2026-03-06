@@ -6,12 +6,30 @@ import { HistoryEntry } from '@/types/workout';
 import { cn } from '@/lib/utils';
 
 function computeStreak(workoutDays: Set<string>): number {
+  const today = new Date();
+  const todayStr = today.toDateString();
+
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  const yesterdayStr = yesterday.toDateString();
+
+  let check: Date | null = null;
+  if (workoutDays.has(todayStr)) {
+    check = new Date(today);
+  } else if (workoutDays.has(yesterdayStr)) {
+    check = new Date(yesterday);
+  }
+
+  if (!check) {
+    return 0;
+  }
+
   let streak = 0;
-  const check = new Date();
   while (workoutDays.has(check.toDateString())) {
-    streak++;
+    streak += 1;
     check.setDate(check.getDate() - 1);
   }
+
   return streak;
 }
 
@@ -43,15 +61,15 @@ export function StreakCalendar({ history }: StreakCalendarProps) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <Flame className="w-4 h-4 text-emerald-400" />
-        <span className="text-sm font-black text-emerald-400 font-display">{streak}</span>
-        <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">day streak</span>
-      </div>
-      <div className="grid grid-cols-7 gap-1">
-        {['M','T','W','T','F','S','S'].map((d, i) => (
-          <div key={i} className="text-center text-[8px] font-black text-white/20 uppercase pb-1">{d}</div>
-        ))}
+       <div className="flex items-center gap-2">
+         <Flame className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" />
+         <span className="text-sm font-black text-emerald-400 font-display">{streak}</span>
+         <span className="text-[9px] sm:text-[10px] font-black text-white/30 uppercase tracking-widest">day streak</span>
+       </div>
+       <div className="grid grid-cols-7 gap-0.5 sm:gap-1">
+         {['M','T','W','T','F','S','S'].map((d, i) => (
+           <div key={i} className="text-center text-[7px] sm:text-[8px] font-black text-white/20 uppercase pb-0.5 sm:pb-1">{d}</div>
+         ))}
         {allCells.map((day, i) => {
           if (!day) return <div key={`pad-${i}`} />;
           const isWorkout = workoutDays.has(day.toDateString());
