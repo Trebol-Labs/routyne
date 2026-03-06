@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { HistoryEntry } from '@/types/workout';
 
@@ -10,15 +10,16 @@ interface VolumeBarChartProps {
   weightUnit: string;
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 export function VolumeBarChart({ history, limit, weightUnit }: VolumeBarChartProps) {
-  const [cutoff, setCutoff] = useState(0);
+  const [cutoff, setCutoff] = useState(() => Date.now() - limit * DAY_MS);
 
   useEffect(() => {
-    setCutoff(Date.now() - limit * 24 * 60 * 60 * 1000);
+    setCutoff(Date.now() - limit * DAY_MS);
   }, [limit]);
 
   const entries = useMemo(() => {
-    if (!cutoff) return [];
     return history
       .filter((e) => new Date(e.completedAt).getTime() >= cutoff)
       .slice()
@@ -56,13 +57,21 @@ export function VolumeBarChart({ history, limit, weightUnit }: VolumeBarChartPro
         })}
       </div>
       <div className="flex gap-1">
-        {entries.map((entry) => (
-          <div key={entry.id} className="flex-1 text-center">
-            <span className="text-[8px] font-black text-white/20 uppercase">
-              {new Date(entry.completedAt).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}
-            </span>
-          </div>
-        ))}
+        {entries.map((entry, i) => {
+          const showLabel = limit === 7 || i % 5 === 0 || i === entries.length - 1;
+
+          return (
+            <div key={entry.id} className="flex-1 text-center">
+              {showLabel ? (
+                <span className="text-[8px] font-black text-white/20 uppercase">
+                  {new Date(entry.completedAt).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}
+                </span>
+              ) : (
+                <span aria-hidden className="text-[8px] font-black text-white/0 uppercase">00/00</span>
+              )}
+            </div>
+          );
+        })}
       </div>
       {maxV > 0 && (
         <p className="text-[9px] font-black text-white/20 uppercase tracking-widest text-right">
