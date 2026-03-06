@@ -8,7 +8,8 @@ interface SheetProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
-  maxHeight?: string;
+  /** Height of the panel. Both sheets use the same value for symmetric animation. */
+  height?: string;
 }
 
 const backdropVariants = {
@@ -17,9 +18,10 @@ const backdropVariants = {
   exit: { opacity: 0 },
 };
 
+// Panel always slides from exactly `height` below the bottom — same start for every sheet
 const panelVariants = {
   hidden: { y: '100%' },
-  visible: { y: 0, transition: { duration: 0.5, ease: [0.23, 1, 0.32, 1] as const } },
+  visible: { y: 0, transition: { duration: 0.45, ease: [0.23, 1, 0.32, 1] as const } },
   exit: { y: '100%', transition: { duration: 0.3, ease: [0.23, 1, 0.32, 1] as const } },
 };
 
@@ -32,30 +34,23 @@ const FOCUSABLE = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(', ');
 
-export function Sheet({ onClose, title, children, maxHeight = '90vh' }: SheetProps) {
+// Shared fixed height — both dialogs open to the same point on screen
+const SHEET_HEIGHT = '72vh';
+
+export function Sheet({ onClose, title, children, height = SHEET_HEIGHT }: SheetProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
-  // Store the element that triggered the sheet so we can restore focus on close
   useEffect(() => {
     previousFocusRef.current = document.activeElement as HTMLElement;
-    // Move focus into the panel on mount
     const firstFocusable = panelRef.current?.querySelector<HTMLElement>(FOCUSABLE);
     firstFocusable?.focus();
-
-    return () => {
-      // Restore focus to the trigger element on unmount
-      previousFocusRef.current?.focus();
-    };
+    return () => { previousFocusRef.current?.focus(); };
   }, []);
 
-  // Escape key + focus trap
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-        return;
-      }
+      if (e.key === 'Escape') { onClose(); return; }
       if (e.key !== 'Tab') return;
       const panel = panelRef.current;
       if (!panel) return;
@@ -64,15 +59,9 @@ export function Sheet({ onClose, title, children, maxHeight = '90vh' }: SheetPro
       const first = focusables[0];
       const last = focusables[focusables.length - 1];
       if (e.shiftKey) {
-        if (document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        }
+        if (document.activeElement === first) { e.preventDefault(); last.focus(); }
       } else {
-        if (document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
+        if (document.activeElement === last) { e.preventDefault(); first.focus(); }
       }
     };
     document.addEventListener('keydown', handleKeyDown);
@@ -102,24 +91,27 @@ export function Sheet({ onClose, title, children, maxHeight = '90vh' }: SheetPro
         initial="hidden"
         animate="visible"
         exit="exit"
-        className="fixed bottom-0 left-0 right-0 z-[var(--z-overlay)] glass-panel rounded-t-[var(--radius-xl)] border-white/10 overflow-hidden"
-        style={{ maxHeight }}
+        className="fixed bottom-0 left-0 right-0 z-[var(--z-overlay)] glass-panel rounded-t-[2rem] border-white/10 flex flex-col"
+        style={{ height }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-4 sm:px-5 pt-5 pb-3 shrink-0">
-           <div className="w-8 h-1 bg-white/20 rounded-full absolute top-2 left-1/2 -translate-x-1/2" aria-hidden="true" />
-           <h2 className="text-base font-black text-white uppercase tracking-tight font-display">{title}</h2>
-           <button
-             onClick={onClose}
-             className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer"
-             aria-label="Close"
-           >
-             <X className="w-3.5 h-3.5 text-white/60" />
-           </button>
-         </div>
-         <div className="overflow-y-auto overscroll-contain" style={{ maxHeight: `calc(${maxHeight} - 72px)` }}>
-           {children}
-         </div>
+        {/* Header — fixed, never scrolls */}
+        <div className="flex items-center justify-between px-4 pt-4 pb-3 shrink-0">
+          <div className="w-8 h-1 bg-white/20 rounded-full absolute top-2 left-1/2 -translate-x-1/2" aria-hidden="true" />
+          <h2 className="text-sm font-black text-white uppercase tracking-widest font-display">{title}</h2>
+          <button
+            onClick={onClose}
+            className="w-7 h-7 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer"
+            aria-label="Close"
+          >
+            <X className="w-3 h-3 text-white/60" />
+          </button>
+        </div>
+
+        {/* Content area — children control their own overflow */}
+        <div className="flex-1 min-h-0">
+          {children}
+        </div>
       </motion.div>
     </>
   );
