@@ -45,7 +45,18 @@ export function Sheet({ onClose, title, children, height = SHEET_HEIGHT }: Sheet
     previousFocusRef.current = document.activeElement as HTMLElement;
     const firstFocusable = panelRef.current?.querySelector<HTMLElement>(FOCUSABLE);
     firstFocusable?.focus();
-    return () => { previousFocusRef.current?.focus(); };
+
+    // Lock body scroll and prevent rubber-banding on mobile
+    const originalOverflow = document.body.style.overflow;
+    const originalOverscroll = document.body.style.overscrollBehavior;
+    document.body.style.overflow = 'hidden';
+    document.body.style.overscrollBehavior = 'none';
+
+    return () => {
+      previousFocusRef.current?.focus();
+      document.body.style.overflow = originalOverflow;
+      document.body.style.overscrollBehavior = originalOverscroll;
+    };
   }, []);
 
   useEffect(() => {
@@ -77,7 +88,7 @@ export function Sheet({ onClose, title, children, height = SHEET_HEIGHT }: Sheet
         animate="visible"
         exit="exit"
         transition={{ duration: 0.25 }}
-        className="fixed inset-0 z-[var(--z-overlay)] bg-black/60 backdrop-blur-sm"
+        className="fixed inset-0 z-[var(--z-overlay)] bg-black/60 backdrop-blur-sm touch-none"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -91,7 +102,7 @@ export function Sheet({ onClose, title, children, height = SHEET_HEIGHT }: Sheet
         initial="hidden"
         animate="visible"
         exit="exit"
-        className="fixed bottom-0 left-0 right-0 z-[var(--z-overlay)] glass-panel rounded-t-[2rem] border-white/10 flex flex-col"
+        className="fixed bottom-0 left-0 right-0 z-[var(--z-overlay)] glass-panel rounded-t-[2rem] border-white/10 flex flex-col overscroll-none"
         style={{ height }}
         onClick={(e) => e.stopPropagation()}
       >
