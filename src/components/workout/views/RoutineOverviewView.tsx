@@ -49,7 +49,7 @@ export function RoutineOverviewView() {
         <div className="space-y-3">
           <h3 className="text-[11px] font-black text-white/25 uppercase tracking-[0.4em] pl-1 font-display">Sessions</h3>
 
-          <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar -mx-4 px-4">
+          <div className="flex gap-3 overflow-x-auto pt-3 pb-3 no-scrollbar -mx-4 px-4">
             {currentRoutine.sessions.map((session, idx) => (
               <button
                 key={session.id}
@@ -79,10 +79,12 @@ export function RoutineOverviewView() {
                 </h4>
 
                 <span className={cn(
-                  "text-[9px] font-black uppercase tracking-widest mt-1",
-                  sessionPickerIdx === idx ? "text-white/50" : "text-white/40"
+                  "text-[9px] font-black uppercase tracking-[0.12em] mt-1.5 px-2 py-0.5 rounded-full",
+                  sessionPickerIdx === idx
+                    ? "text-white/70 bg-white/15"
+                    : "text-white/35 bg-white/[0.05]"
                 )}>
-                  {session.exercises.length}ex
+                  {session.exercises.length} Ex
                 </span>
               </button>
             ))}

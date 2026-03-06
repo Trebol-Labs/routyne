@@ -61,6 +61,7 @@ gemini.md
 .claude/
 .opencode/
 CLAUDE.md
+TestRoutine.md
 
 # Playwright MCP logs & screenshots
 .playwright-mcp/

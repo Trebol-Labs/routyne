@@ -74,6 +74,8 @@ export function ActiveSessionView() {
       return;
     }
     setRestDuration(restSeconds || profile.defaultRestSeconds);
+    // Dismiss rest timer when starting to log a new set
+    setShowRestTimer(false);
     setPendingSet({
       exerciseId,
       exerciseName,
