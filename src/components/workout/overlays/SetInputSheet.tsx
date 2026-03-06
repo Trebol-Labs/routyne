@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, useMotionValue, animate, type PanInfo } from 'framer-motion';
-import { CheckCircle2, X } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface SetInputSheetProps {
@@ -33,7 +33,7 @@ export function SetInputSheet({
   const panelRef = useRef<HTMLDivElement>(null);
   const panOffset = useMotionValue(0);
 
-  // Lock background scroll while sheet is open (same as Sheet.tsx)
+  // Lock background scroll while sheet is open
   useEffect(() => {
     const html = document.documentElement;
     const prev = html.style.overflow;
@@ -70,7 +70,7 @@ export function SetInputSheet({
 
   return (
     <>
-      {/* Backdrop — same z-level as Sheet.tsx overlays */}
+      {/* Backdrop */}
       <motion.div
         key="setinput-backdrop"
         initial={{ opacity: 0 }}
@@ -96,47 +96,51 @@ export function SetInputSheet({
         style={{ position: 'fixed', marginTop: panOffset }}
         onPan={handlePan}
         onPanEnd={handlePanEnd}
-        className="inset-x-0 bottom-0 z-[var(--z-overlay)] glass-panel rounded-t-[2rem] border-white/10 overscroll-none touch-pan-x cursor-grab active:cursor-grabbing"
+        className="inset-x-0 bottom-0 z-[var(--z-overlay)] glass-panel rounded-t-3xl border-white/10 overscroll-none touch-pan-x cursor-grab active:cursor-grabbing"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Drag handle */}
-        <div className="w-8 h-1 bg-white/20 rounded-full mx-auto mt-3 mb-1" aria-hidden="true" />
+        <div className="flex justify-center pt-3 pb-1" aria-hidden="true">
+          <div className="h-1 w-10 rounded-full bg-white/15" />
+        </div>
 
         {/* Header row */}
-        <div className="flex items-start justify-between px-6 pt-3 pb-4">
-          <div className="flex-1 min-w-0 pr-3">
-            <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em] mb-1">
+        <div className="flex items-start justify-between px-5 pt-2 pb-4">
+          <div className="min-w-0 flex-1 pr-3">
+            <p className="mb-1 text-[10px] font-black uppercase tracking-[0.3em] text-white/30">
               Set {setIdx + 1}
             </p>
-            <h3 className="text-lg font-black text-white uppercase tracking-tight font-display truncate leading-tight">
+            <h3 className="truncate font-display text-lg font-black uppercase leading-tight tracking-tight text-white">
               {exerciseName}
             </h3>
           </div>
           <button
             onClick={onClose}
-            className="mt-1 w-7 h-7 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+            className="mt-0.5 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-white/8 bg-white/[0.04] transition-colors hover:bg-white/10"
             aria-label="Close"
           >
-            <X className="w-3 h-3 text-white/60" />
+            <X className="h-3.5 w-3.5 text-white/50" />
           </button>
         </div>
 
         {/* Inputs */}
-        <div className="grid grid-cols-2 gap-3 px-6 pb-5">
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.25em] block">Reps</label>
+        <div className="grid grid-cols-2 gap-3 px-5 pb-5">
+          <div className="space-y-1.5">
+            <label className="block text-[10px] font-black uppercase tracking-[0.25em] text-white/30">
+              Reps
+            </label>
             <input
               type="number"
               inputMode="numeric"
               value={reps}
               onChange={(e) => setReps(e.target.value)}
-              className="sunken-glass rounded-2xl px-3 py-4 text-4xl font-black text-white text-center w-full bg-transparent border-none outline-none"
+              className="sunken-glass w-full rounded-xl bg-transparent px-3 py-3.5 text-center text-3xl font-black text-white outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
               min={0}
               max={999}
             />
           </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.25em] block">
+          <div className="space-y-1.5">
+            <label className="block text-[10px] font-black uppercase tracking-[0.25em] text-white/30">
               Weight ({weightUnit})
             </label>
             <input
@@ -145,28 +149,28 @@ export function SetInputSheet({
               value={weight}
               onChange={(e) => setWeight(e.target.value)}
               placeholder="—"
-              className="sunken-glass rounded-2xl px-3 py-4 text-4xl font-black text-white text-center w-full bg-transparent border-none outline-none placeholder:text-white/20"
+              className="sunken-glass w-full rounded-xl bg-transparent px-3 py-3.5 text-center text-3xl font-black text-white outline-none placeholder:text-white/15 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
               min={0}
             />
           </div>
         </div>
 
         {/* Actions */}
-        <div className="px-6 pb-10 space-y-2">
+        <div className="space-y-2 px-5 pb-10">
           <button
             onClick={handleConfirm}
             className={cn(
-              'active-glass-btn w-full h-14 rounded-[1.5rem] flex items-center justify-center gap-3',
-              'text-base font-black text-white uppercase tracking-widest transition-all'
+              'active-glass-btn flex h-[3.25rem] w-full items-center justify-center gap-2.5 rounded-2xl',
+              'text-[13px] font-black uppercase tracking-widest text-white transition-all active:scale-[0.98]',
             )}
           >
-            <CheckCircle2 className="w-5 h-5" />
+            <Check className="h-4.5 w-4.5" strokeWidth={2.5} />
             Log Set
           </button>
 
           <button
             onClick={() => onConfirm(parseInt(reps) || targetRepsMax, undefined)}
-            className="w-full h-10 text-sm font-black text-white/30 uppercase tracking-widest hover:text-white/50 transition-colors"
+            className="h-10 w-full text-[11px] font-bold uppercase tracking-widest text-white/30 transition-colors hover:text-white/50"
           >
             Skip weight
           </button>
