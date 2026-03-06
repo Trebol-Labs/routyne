@@ -51,15 +51,23 @@ export function Sheet({ onClose, title, children, height = SHEET_HEIGHT }: Sheet
     firstFocusable?.focus();
 
     // Lock body scroll and prevent rubber-banding on mobile
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
     const originalOverflow = document.body.style.overflow;
     const originalOverscroll = document.body.style.overscrollBehavior;
+    const originalPaddingRight = document.body.style.paddingRight;
+    
     document.body.style.overflow = 'hidden';
     document.body.style.overscrollBehavior = 'none';
+    // Add padding to compensate for removed scrollbar, prevents layout shift
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
 
     return () => {
       previousFocusRef.current?.focus();
       document.body.style.overflow = originalOverflow;
       document.body.style.overscrollBehavior = originalOverscroll;
+      document.body.style.paddingRight = originalPaddingRight;
     };
   }, []);
 
