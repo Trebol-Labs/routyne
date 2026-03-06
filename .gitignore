@@ -63,6 +63,7 @@ gemini.md
 .claude-flow/
 .opencode/
 CLAUDE.md
+TestRoutine.md
 
 # Playwright MCP logs & screenshots
 .playwright-mcp/

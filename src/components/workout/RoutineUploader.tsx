@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, Loader2, Code, Dumbbell, Trash2 } from 'lucide-react';
 import { parseRoutine } from '@/lib/markdown/parser';
@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 export function RoutineUploader() {
   const [text, setText] = useState('');
   const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const {
@@ -98,8 +99,8 @@ export function RoutineUploader() {
         <div className="absolute inset-0 bg-blue-600/10 blur-[80px] rounded-[2.2rem] opacity-40 group-hover:opacity-55 transition-opacity pointer-events-none" />
 
         <div className="relative glass-panel rounded-[2rem] p-4 sm:p-6 overflow-hidden">
-          <div className="absolute -top-16 -right-16 w-48 h-48 bg-blue-600/10 blur-[80px] rounded-full" />
-          <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-indigo-600/10 blur-[80px] rounded-full" />
+          <div className="absolute -top-16 -right-16 w-48 h-48 bg-blue-600/10 blur-[80px] rounded-full pointer-events-none" />
+          <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-indigo-600/10 blur-[80px] rounded-full pointer-events-none" />
 
           <AnimatePresence mode="wait">
             {isLoading ? (
@@ -139,28 +140,36 @@ export function RoutineUploader() {
                 </div>
 
                 {/* Action buttons — always side by side */}
+                {/* Hidden file input — triggered programmatically to avoid label/pointer-event issues */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".md,text/markdown"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        const content = event.target?.result as string;
+                        setText(content);
+                        handleParse(content);
+                      };
+                      reader.readAsText(file);
+                      // Reset so the same file can be re-selected
+                      e.target.value = '';
+                    }
+                  }}
+                />
                 <div className="flex items-stretch gap-3">
-                  <label className="flex items-center justify-center gap-2.5 px-5 py-4 glass-btn rounded-[1.5rem] cursor-pointer flex-1">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center justify-center gap-2.5 px-5 py-4 glass-btn rounded-[1.5rem] cursor-pointer flex-1"
+                  >
                     <Upload className="w-4 h-4 text-blue-400 shrink-0" />
                     <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.18em] leading-none whitespace-nowrap font-display">Select .md</span>
-                    <input
-                      type="file"
-                      accept=".md,text/markdown"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onload = (event) => {
-                            const content = event.target?.result as string;
-                            setText(content);
-                            handleParse(content);
-                          };
-                          reader.readAsText(file);
-                        }
-                      }}
-                    />
-                  </label>
+                  </button>
 
                   <Button
                     variant="glass-primary"
