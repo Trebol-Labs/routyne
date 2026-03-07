@@ -69,7 +69,7 @@ export function SetRow({
 
   useEffect(() => {
     animate(x, isArmed ? PREVIEW_OFFSET : 0, isArmed ? { duration: 0.35, ease: EASE } : SNAP_SPRING);
-  }, [isArmed, x]);
+  }, [isArmed, isCompleted, x]);
 
   useEffect(() => {
     if (isCompleted && cardRef.current) {
@@ -92,12 +92,14 @@ export function SetRow({
 
     if (shouldEdit) {
       if ('vibrate' in navigator) navigator.vibrate(30);
+      animate(x, 0, SNAP_SPRING);
       onTap();
       return;
     }
 
     if (shouldConfirm) {
       if ('vibrate' in navigator) navigator.vibrate(50);
+      animate(x, 0, SNAP_SPRING);
       onSwipe();
       return;
     }

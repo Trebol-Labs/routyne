@@ -10,7 +10,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
 import { useWakeLock } from '@/hooks/useWakeLock';
 import type { HistoryEntry, WorkoutState } from '@/types/workout';
-import { ChevronLeft, Clock, Zap, CheckCircle2 } from 'lucide-react';
+import { ChevronLeft, Clock, Zap, CheckCircle2, MousePointerClick, ChevronsRight, X } from 'lucide-react';
 
 interface PendingSet {
   exerciseId: string;
@@ -117,6 +117,59 @@ function getAutoSetSuggestion(params: {
   );
 }
 
+const HINT_KEY = 'routyne-gesture-hint-v1';
+
+function GestureHintBanner({ onDismiss }: { onDismiss: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -6, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -6, scale: 0.97 }}
+      transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
+    >
+      <div className="relative overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.03] px-4 py-3 backdrop-blur-xl">
+        {/* Top accent line */}
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+
+        <div className="flex items-center gap-3">
+          {/* Tap */}
+          <div className="flex min-w-0 flex-1 items-center gap-2.5">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-sky-400/15 bg-sky-500/[0.07]">
+              <MousePointerClick className="h-3.5 w-3.5 text-sky-400/70" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[9px] font-black uppercase tracking-[0.25em] text-white/30">Tap</p>
+              <p className="truncate text-[11px] font-semibold leading-tight text-white/50">Log manually</p>
+            </div>
+          </div>
+
+          <div className="h-7 w-px shrink-0 bg-white/[0.06]" />
+
+          {/* Swipe */}
+          <div className="flex min-w-0 flex-1 items-center gap-2.5">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-emerald-400/15 bg-emerald-500/[0.07]">
+              <ChevronsRight className="h-3.5 w-3.5 text-emerald-400/70" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[9px] font-black uppercase tracking-[0.25em] text-white/30">Swipe →</p>
+              <p className="truncate text-[11px] font-semibold leading-tight text-white/50">Auto-fill last</p>
+            </div>
+          </div>
+
+          {/* Dismiss */}
+          <button
+            onClick={onDismiss}
+            className="ml-1 flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-white/[0.06] bg-white/[0.03] text-white/25 transition-colors hover:text-white/50"
+            aria-label="Dismiss gesture hint"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 export function ActiveSessionView() {
   const {
     currentRoutine,
@@ -138,6 +191,14 @@ export function ActiveSessionView() {
   const [showAbandon, setShowAbandon] = useState(false);
   const [pendingSet, setPendingSet] = useState<PendingSet | null>(null);
   const [armedPreview, setArmedPreview] = useState<ArmedPreview | null>(null);
+  const [hintVisible, setHintVisible] = useState(
+    () => typeof window !== 'undefined' && !localStorage.getItem(HINT_KEY)
+  );
+
+  const dismissHint = () => {
+    localStorage.setItem(HINT_KEY, '1');
+    setHintVisible(false);
+  };
 
   const activeSession = currentRoutine?.sessions[activeSessionIdx ?? 0];
   if (!activeSession) return null;
@@ -159,6 +220,7 @@ export function ActiveSessionView() {
     toggleSetCompletion(activeSessionIdx, exerciseId, setIdx, repsDone, weight);
     clearArmedPreview();
     setPendingSet(null);
+    dismissHint();
     setRestDuration(restSeconds || profile.defaultRestSeconds);
     setRestTimerKey((prev) => prev + 1);
     setShowRestTimer(true);
@@ -342,6 +404,10 @@ export function ActiveSessionView() {
           <Clock className="h-6 w-6 text-blue-400" />
         </Button>
       </div>
+
+      <AnimatePresence>
+        {hintVisible && <GestureHintBanner onDismiss={dismissHint} />}
+      </AnimatePresence>
 
       <div className="grid gap-7">
         {activeSession.exercises.map((exercise) => (
