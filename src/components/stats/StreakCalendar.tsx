@@ -5,41 +5,29 @@ import { Flame } from 'lucide-react';
 import { HistoryEntry } from '@/types/workout';
 import { cn } from '@/lib/utils';
 
-function computeStreak(workoutDays: Set<string>): number {
+function computeStreak(workoutDays: Set<string>, restDays: number[]): number {
+  const isFulfilled = (d: Date) => workoutDays.has(d.toDateString()) || restDays.includes(d.getDay());
   const today = new Date();
-  const todayStr = today.toDateString();
-
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
-  const yesterdayStr = yesterday.toDateString();
-
-  let check: Date | null = null;
-  if (workoutDays.has(todayStr)) {
-    check = new Date(today);
-  } else if (workoutDays.has(yesterdayStr)) {
-    check = new Date(yesterday);
-  }
-
-  if (!check) {
-    return 0;
-  }
-
+  let check: Date | null = isFulfilled(today) ? new Date(today) : isFulfilled(yesterday) ? new Date(yesterday) : null;
+  if (!check) return 0;
   let streak = 0;
-  while (workoutDays.has(check.toDateString())) {
-    streak += 1;
+  while (isFulfilled(check)) {
+    streak++;
     check.setDate(check.getDate() - 1);
   }
-
   return streak;
 }
 
 interface StreakCalendarProps {
   history: HistoryEntry[];
+  restDays?: number[];
 }
 
-export function StreakCalendar({ history }: StreakCalendarProps) {
+export function StreakCalendar({ history, restDays = [] }: StreakCalendarProps) {
   const workoutDays = new Set(history.map((e) => new Date(e.completedAt).toDateString()));
-  const streak = computeStreak(workoutDays);
+  const streak = computeStreak(workoutDays, restDays);
   const today = new Date();
   const todayStr = today.toDateString();
 
@@ -73,6 +61,7 @@ export function StreakCalendar({ history }: StreakCalendarProps) {
         {allCells.map((day, i) => {
           if (!day) return <div key={`pad-${i}`} />;
           const isWorkout = workoutDays.has(day.toDateString());
+          const isRestDay = !isWorkout && restDays.includes(day.getDay());
           const isToday = day.toDateString() === todayStr;
           return (
             <motion.div
@@ -84,7 +73,9 @@ export function StreakCalendar({ history }: StreakCalendarProps) {
                 'aspect-square rounded-lg',
                 isWorkout
                   ? 'bg-blue-500/60 border border-blue-500/30'
-                  : 'bg-white/5 border border-white/5',
+                  : isRestDay
+                    ? 'bg-purple-500/25 border border-purple-500/20'
+                    : 'bg-white/5 border border-white/5',
                 isToday && 'ring-1 ring-white/30'
               )}
             />

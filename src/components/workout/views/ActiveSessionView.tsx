@@ -10,7 +10,8 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
 import { useWakeLock } from '@/hooks/useWakeLock';
 import type { HistoryEntry, WorkoutState } from '@/types/workout';
-import { ChevronLeft, Clock, Zap, CheckCircle2, MousePointerClick, ChevronsRight, X, CheckCheck } from 'lucide-react';
+import { ChevronLeft, Clock, Zap, CheckCircle2, MousePointerClick, ChevronsRight, X, CheckCheck, Pencil } from 'lucide-react';
+import { EditSessionSheet } from '@/components/workout/overlays/EditSessionSheet';
 
 interface PendingSet {
   exerciseId: string;
@@ -181,6 +182,7 @@ export function ActiveSessionView() {
     finishSession,
     abandonSession,
     profile,
+    updateActiveSessionExercises,
   } = useWorkoutStore();
 
   const { isLocked } = useWakeLock(true);
@@ -194,6 +196,7 @@ export function ActiveSessionView() {
   const [hintVisible, setHintVisible] = useState(
     () => typeof window !== 'undefined' && !localStorage.getItem(HINT_KEY)
   );
+  const [showEditSession, setShowEditSession] = useState(false);
 
   const dismissHint = () => {
     localStorage.setItem(HINT_KEY, '1');
@@ -419,9 +422,19 @@ export function ActiveSessionView() {
             <ChevronLeft className="h-6 w-6 text-white" />
           </Button>
           <div>
-            <h2 className="font-display text-2xl font-black uppercase leading-none tracking-tighter text-white">
-              {activeSession.title}
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="font-display text-2xl font-black uppercase leading-none tracking-tighter text-white">
+                {activeSession.title}
+              </h2>
+              <Button
+                variant="glass-icon"
+                size="icon-lg"
+                onClick={() => setShowEditSession(true)}
+                aria-label="Edit session"
+              >
+                <Pencil className="h-5 w-5 text-white/60" />
+              </Button>
+            </div>
             <div className="mt-2 flex items-center gap-2">
               {isLocked && (
                 <div className="flex items-center gap-1.5 rounded-full border border-blue-500/20 bg-blue-500/10 px-2 py-0.5">
@@ -466,9 +479,6 @@ export function ActiveSessionView() {
                   </button>
                 )}
               </div>
-              <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-white/35">
-                {exercise.sets}×{exercise.repsMin}{exercise.repsMin !== exercise.repsMax ? `-${exercise.repsMax}` : ''}
-              </span>
             </div>
 
             <div className="grid grid-cols-1 gap-2">
@@ -563,6 +573,19 @@ export function ActiveSessionView() {
             targetRepsMax={pendingSet.targetRepsMax}
             lastWeight={pendingSet.lastWeight}
             weightUnit={profile.weightUnit}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showEditSession && (
+          <EditSessionSheet
+            exercises={activeSession.exercises}
+            onClose={() => setShowEditSession(false)}
+            onSave={(updated) => {
+              updateActiveSessionExercises(updated);
+              setShowEditSession(false);
+            }}
           />
         )}
       </AnimatePresence>
