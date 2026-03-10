@@ -7,20 +7,20 @@ Agent instructions for **Routyne**, a mobile-first Next.js PWA workout tracker. 
 ## Commands
 
 ```bash
-npm run dev            # Start dev server (Turbopack, PWA disabled in dev)
-npm run build          # Production build
-npm run lint           # ESLint (flat config v9)
-npm run test           # Run all tests with Vitest
-npm run test:coverage  # Coverage report (v8 provider — text + lcov)
+pnpm dev               # Start dev server (Turbopack, PWA disabled in dev)
+pnpm build             # Production build
+pnpm lint              # ESLint (flat config v9)
+pnpm test              # Run all tests with Vitest
+pnpm test:coverage     # Coverage report (v8 provider — text + lcov)
 ```
 
-**Run a single test file:**
+**Run a single test file or pattern:**
 ```bash
-npx vitest run src/lib/markdown/parser.test.ts
-npx vitest run -t "pattern name"  # Run tests matching pattern
+pnpm test src/lib/markdown/parser.test.ts
+pnpm test -t "pattern name"  # Run tests matching pattern
 ```
 
-Package manager: **pnpm**. Node: **20** (`.nvmrc`). CI order: lint → test → build.
+**Package manager:** pnpm. **Node:** 20 (`.nvmrc`). **CI order:** lint → test → build.
 
 ---
 
@@ -150,6 +150,19 @@ All animations use Framer Motion with cubic-bezier `[0.23, 1, 0.32, 1]` for orga
   rm -f /Users/sierra/Code/routyne/*.png
   ```
   Never commit screenshots — they're temporary verification artifacts only.
+
+---
+
+## Git & Commits
+
+- **Commit only when explicitly requested** by user — never auto-commit
+- **Commit hooks:** Pre-commit hooks may auto-modify files; amend only if:
+  1. User explicitly requested amend, OR
+  2. Hook succeeded but auto-modified files that need including
+  3. HEAD was created by this session
+  4. Commit hasn't been pushed to remote
+- **Never use destructive git commands** (force push, hard reset) without explicit user approval
+- **No skip hooks** (--no-verify) unless user explicitly requests it
 
 ---
 

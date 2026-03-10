@@ -47,6 +47,7 @@ export interface UserProfile {
   weightUnit: 'kg' | 'lbs';
   heightCm: number | null;
   defaultRestSeconds: number;
+  restDays: number[];   // JS day-of-week: 0=Sun, 1=Mon … 6=Sat
 }
 
 export interface ExerciseBrowseItem {
@@ -111,6 +112,7 @@ export interface WorkoutState {
   loadMoreHistory: () => Promise<void>;
   updateProfile: (patch: Partial<UserProfile>) => Promise<void>;
   resetAll: () => Promise<void>;
+  updateActiveSessionExercises: (exercises: ParsedExercise[]) => Promise<void>;
 
   // ── Sync actions ─────────────────────────────────────────────────────────
   /** Sync Zustand update + fire-and-forget IDB write. */

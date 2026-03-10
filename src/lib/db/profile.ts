@@ -11,6 +11,7 @@ const DEFAULT_PROFILE: ProfileRecord = {
   weightUnit: 'kg',
   heightCm: null,
   defaultRestSeconds: 90,
+  restDays: [],
 };
 
 export async function loadProfile(): Promise<UserProfile> {
@@ -18,7 +19,7 @@ export async function loadProfile(): Promise<UserProfile> {
   const record = await db.get('profile', PROFILE_KEY);
   if (!record) return { ...DEFAULT_PROFILE };
   const { id: _id, ...profile } = record;
-  return profile as UserProfile;
+  return { restDays: [], ...profile } as UserProfile;  // default merge for old records
 }
 
 export async function saveProfile(profile: UserProfile): Promise<void> {
