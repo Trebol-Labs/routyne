@@ -10,7 +10,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
 import { useWakeLock } from '@/hooks/useWakeLock';
 import type { HistoryEntry, WorkoutState } from '@/types/workout';
-import { ChevronLeft, Clock, Zap, CheckCircle2, MousePointerClick, ChevronsRight, X } from 'lucide-react';
+import { ChevronLeft, Clock, Zap, CheckCircle2, MousePointerClick, ChevronsRight, X, CheckCheck } from 'lucide-react';
 
 interface PendingSet {
   exerciseId: string;
@@ -325,6 +325,44 @@ export function ActiveSessionView() {
     openManualEntry(exerciseId, exerciseName, setIdx, repsMax, restSeconds, suggestion);
   };
 
+  const handleAutoFillExercise = (
+    exerciseId: string,
+    exerciseName: string,
+    sets: number,
+    repsMax: number
+  ) => {
+    if (activeSessionIdx === null) return;
+
+    let anyCompleted = false;
+
+    for (let setIdx = 0; setIdx < sets; setIdx++) {
+      const key = `${activeSessionIdx}-${exerciseId}-${setIdx}`;
+      const currentStatus = setCompletion[key];
+      if (currentStatus?.completed) continue;
+
+      const suggestion = getAutoSetSuggestion({
+        setCompletion,
+        history,
+        sessionIdx: activeSessionIdx,
+        exerciseId,
+        exerciseName,
+        setIdx,
+      });
+
+      const repsDone = suggestion?.repsDone ?? repsMax;
+      const weight = suggestion?.weight;
+
+      toggleSetCompletion(activeSessionIdx, exerciseId, setIdx, repsDone, weight);
+      anyCompleted = true;
+    }
+
+    if (anyCompleted) {
+      clearArmedPreview();
+      setPendingSet(null);
+      if ('vibrate' in navigator) navigator.vibrate([30, 50, 30]);
+    }
+  };
+
   const handleConfirmSet = (repsDone: number, weight: number | undefined) => {
     if (pendingSet === null) return;
 
@@ -412,10 +450,22 @@ export function ActiveSessionView() {
       <div className="grid gap-7">
         {activeSession.exercises.map((exercise) => (
           <div key={exercise.id} className="space-y-2.5">
-            <div className="flex items-end justify-between gap-3 px-1">
-              <h3 className="font-display text-lg font-black uppercase tracking-tight text-white/90">
-                {exercise.cleanName}
-              </h3>
+            <div className="flex items-center justify-between gap-3 px-1">
+              <div className="flex flex-1 items-center gap-2.5 min-w-0">
+                <h3 className="truncate font-display text-lg font-black uppercase tracking-tight text-white/90">
+                  {exercise.cleanName}
+                </h3>
+                {Array.from({ length: exercise.sets }).some((_, i) => !setCompletion[`${activeSessionIdx}-${exercise.id}-${i}`]?.completed) && (
+                  <button
+                    onClick={() => handleAutoFillExercise(exercise.id, exercise.cleanName, exercise.sets, exercise.repsMax)}
+                    className="shrink-0 flex items-center gap-1.5 rounded-md border border-sky-400/20 bg-sky-500/10 px-2 py-1 text-sky-300 transition-colors hover:bg-sky-500/20 active:scale-95"
+                    aria-label={`Log all remaining sets for ${exercise.cleanName}`}
+                  >
+                    <CheckCheck className="h-3 w-3" />
+                    <span className="text-[9px] font-black uppercase tracking-widest">All</span>
+                  </button>
+                )}
+              </div>
               <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-white/35">
                 {exercise.sets}×{exercise.repsMin}{exercise.repsMin !== exercise.repsMax ? `-${exercise.repsMax}` : ''}
               </span>
@@ -425,6 +475,14 @@ export function ActiveSessionView() {
               {Array.from({ length: exercise.sets }).map((_, setIdx) => {
                 const key = `${activeSessionIdx}-${exercise.id}-${setIdx}`;
                 const currentStatus = setCompletion[key];
+                const latestSuggestion = getAutoSetSuggestion({
+                  setCompletion,
+                  history,
+                  sessionIdx: activeSessionIdx ?? 0,
+                  exerciseId: exercise.id,
+                  exerciseName: exercise.cleanName,
+                  setIdx,
+                });
                 const phase: SetRowState = currentStatus?.completed
                   ? 'completed'
                   : armedPreview?.key === key
@@ -439,6 +497,7 @@ export function ActiveSessionView() {
                     setStatus={currentStatus}
                     weightUnit={profile.weightUnit}
                     phase={phase}
+                    latestSuggestion={latestSuggestion}
                     preview={armedPreview?.key === key ? armedPreview.suggestion : null}
                     onSwipe={() => handleRowSwipe(
                       exercise.id,

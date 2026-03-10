@@ -90,7 +90,7 @@ export function StatsView() {
           {/* Streak Calendar */}
           <div className="glass-panel rounded-[var(--radius-lg)] p-5 border-white/5 space-y-3">
             <p className={sectionLabelClassName}>Activity</p>
-            <StreakCalendar history={history} restDays={profile.restDays ?? []} />
+            <StreakCalendar history={history} />
           </div>
 
           {/* Volume Chart */}
