@@ -12,11 +12,15 @@ const BODY_PARTS = ['All', 'Chest', 'Back', 'Shoulders', 'Arms', 'Legs', 'Core']
 
 interface SearchSheetProps {
   onClose: () => void;
+  onSelectExercise?: (exercise: ExerciseBrowseItem) => void;
 }
 
-function ExerciseBrowseCard({ item }: { item: ExerciseBrowseItem }) {
+function ExerciseBrowseCard({ item, onClick }: { item: ExerciseBrowseItem; onClick?: () => void }) {
   return (
-    <div className="flex items-center gap-2.5 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] transition-colors cursor-pointer">
+    <div 
+      onClick={onClick}
+      className="flex items-center gap-2.5 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] transition-colors cursor-pointer"
+    >
       <div className="w-11 h-11 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shrink-0 overflow-hidden">
         {item.gifUrl ? (
           <img src={item.gifUrl} alt="" className="w-full h-full object-cover" />
@@ -32,7 +36,7 @@ function ExerciseBrowseCard({ item }: { item: ExerciseBrowseItem }) {
   );
 }
 
-export function SearchSheet({ onClose }: SearchSheetProps) {
+export function SearchSheet({ onClose, onSelectExercise }: SearchSheetProps) {
   const { history, profile } = useWorkoutStore();
   const [tab, setTab] = useState<'exercises' | 'history'>('exercises');
   const [query, setQuery] = useState('');
@@ -143,7 +147,18 @@ export function SearchSheet({ onClose }: SearchSheetProps) {
                   <p className="text-[10px] font-black text-white/25 uppercase tracking-widest">No exercises found</p>
                 </div>
               ) : (
-                results.map((item) => <ExerciseBrowseCard key={item.id} item={item} />)
+                results.map((item) => (
+                  <ExerciseBrowseCard 
+                    key={item.id} 
+                    item={item} 
+                    onClick={() => {
+                      if (onSelectExercise) {
+                        onSelectExercise(item);
+                        onClose();
+                      }
+                    }} 
+                  />
+                ))
               )}
             </div>
           </>

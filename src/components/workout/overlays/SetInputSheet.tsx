@@ -32,6 +32,7 @@ export function SetInputSheet({
   const [weight, setWeight] = useState(lastWeight != null ? String(lastWeight) : '');
   const panelRef = useRef<HTMLDivElement>(null);
   const panOffset = useMotionValue(0);
+  const hasLastWeight = lastWeight != null && lastWeight > 0;
 
   // Lock background scroll while sheet is open
   useEffect(() => {
@@ -93,10 +94,10 @@ export function SetInputSheet({
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ duration: 0.4, ease: EASE }}
-        style={{ position: 'fixed', marginTop: panOffset }}
+        style={{ position: 'fixed', bottom: 0, left: 0, right: 0, y: panOffset }}
         onPan={handlePan}
         onPanEnd={handlePanEnd}
-        className="inset-x-0 bottom-0 z-[var(--z-overlay)] glass-panel rounded-t-3xl border-white/10 overscroll-none touch-pan-x cursor-grab active:cursor-grabbing"
+        className="z-[var(--z-overlay)] glass-panel rounded-t-3xl border-white/10 overscroll-none touch-pan-x cursor-grab active:cursor-grabbing"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Drag handle */}
@@ -113,6 +114,16 @@ export function SetInputSheet({
             <h3 className="truncate font-display text-lg font-black uppercase leading-tight tracking-tight text-white">
               {exerciseName}
             </h3>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <div className="rounded-full border border-white/8 bg-white/[0.04] px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-white/55">
+                {targetRepsMax} reps
+              </div>
+              {hasLastWeight && (
+                <div className="rounded-full border border-sky-400/15 bg-sky-500/[0.08] px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-sky-200/85">
+                  {lastWeight} {weightUnit} last
+                </div>
+              )}
+            </div>
           </div>
           <button
             onClick={onClose}

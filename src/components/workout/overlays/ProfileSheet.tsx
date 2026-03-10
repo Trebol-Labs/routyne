@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
 import { Sheet } from '@/components/ui/Sheet';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
 import type { HistoryEntry } from '@/types/workout';
@@ -14,15 +13,22 @@ import { cn } from '@/lib/utils';
 const SPORT_EMOJIS = ['💪','🏋️','🔥','⚡','🎯','🏃','🥊','🧗','🚴','🤸','🏊','🎽','🦾','⚔️','🛡️','🌟','💎','🎖️','🔱','🦁'];
 const REST_OPTIONS = [{ label: '60s', value: 60 }, { label: '90s', value: 90 }, { label: '2m', value: 120 }];
 const UNIT_OPTIONS: Array<'kg' | 'lbs'> = ['kg', 'lbs'];
+const REST_DAY_OPTIONS = [
+  { label: 'M', value: 1 }, { label: 'T', value: 2 }, { label: 'W', value: 3 },
+  { label: 'T', value: 4 }, { label: 'F', value: 5 }, { label: 'S', value: 6 },
+  { label: 'S', value: 0 },
+];
 
-function computeStreak(history: HistoryEntry[]): number {
-  const days = new Set(history.map((e) => new Date(e.completedAt).toDateString()));
+function computeStreak(history: HistoryEntry[], restDays: number[]): number {
+  const workoutDays = new Set(history.map((e) => new Date(e.completedAt).toDateString()));
+  const isFulfilled = (d: Date) => workoutDays.has(d.toDateString()) || restDays.includes(d.getDay());
+  const today = new Date();
+  const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
+  const startDate = isFulfilled(today) ? new Date(today) : isFulfilled(yesterday) ? new Date(yesterday) : null;
+  if (!startDate) return 0;
   let streak = 0;
-  const check = new Date();
-  while (days.has(check.toDateString())) {
-    streak++;
-    check.setDate(check.getDate() - 1);
-  }
+  const check = new Date(startDate);
+  while (isFulfilled(check)) { streak++; check.setDate(check.getDate() - 1); }
   return streak;
 }
 
@@ -40,7 +46,12 @@ export function ProfileSheet({ onClose }: ProfileSheetProps) {
 
   const totalSessions = history.length;
   const totalVolume = history.reduce((sum, e) => sum + e.totalVolume, 0);
-  const streak = computeStreak(history);
+  const streak = computeStreak(history, profile.restDays ?? []);
+
+  const toggleRestDay = (dow: number) => {
+    const current = profile.restDays ?? [];
+    updateProfile({ restDays: current.includes(dow) ? current.filter((d) => d !== dow) : [...current, dow] });
+  };
 
   return (
     <Sheet onClose={onClose} title="Profile">
@@ -138,6 +149,32 @@ export function ProfileSheet({ onClose }: ProfileSheetProps) {
                 </button>
               ))}
             </div>
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div className="shrink-0 border-t border-white/[0.06]" />
+
+        {/* Row — Rest Days */}
+        <div className="shrink-0 space-y-1">
+          <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.25em]">Rest Days</span>
+          <div className="flex gap-1">
+            {REST_DAY_OPTIONS.map(({ label, value }) => (
+              <button
+                key={value}
+                onClick={() => toggleRestDay(value)}
+                className={cn(
+                  'flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all',
+                  (profile.restDays ?? []).includes(value)
+                    ? 'bg-purple-500/30 border border-purple-500/50 text-purple-300'
+                    : 'bg-white/5 border border-white/10 text-white/40 hover:text-white/60'
+                )}
+                aria-label={`Toggle ${label} rest day`}
+                aria-pressed={(profile.restDays ?? []).includes(value)}
+              >
+                {label}
+              </button>
+            ))}
           </div>
         </div>
 

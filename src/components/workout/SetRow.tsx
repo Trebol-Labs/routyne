@@ -20,6 +20,7 @@ interface SetRowProps {
   setStatus?: SetStatus;
   weightUnit: 'kg' | 'lbs';
   phase: SetRowState;
+  latestSuggestion?: AutoSuggestion | null;
   preview?: AutoSuggestion | null;
   onSwipe: () => void;
   onTap: () => void;
@@ -50,12 +51,28 @@ function formatSetDetails(
   return `${repsDone} reps — bodyweight`;
 }
 
+function formatIdleDetails(
+  exercise: ParsedExercise,
+  latestSuggestion?: AutoSuggestion | null,
+  weightUnit?: 'kg' | 'lbs'
+): string {
+  const targetRange = formatTargetRange(exercise);
+  const latestWeight = latestSuggestion?.weight;
+
+  if ((latestWeight ?? 0) > 0 && weightUnit) {
+    return `${targetRange} • last ${latestWeight} ${weightUnit}`;
+  }
+
+  return targetRange;
+}
+
 export function SetRow({
   setIdx,
   exercise,
   setStatus,
   weightUnit,
   phase,
+  latestSuggestion,
   preview,
   onSwipe,
   onTap,
@@ -112,7 +129,7 @@ export function SetRow({
     ? formatSetDetails(setStatus?.repsDone, setStatus?.weight, weightUnit)
     : isArmed
       ? formatSetDetails(preview?.repsDone, preview?.weight, weightUnit)
-      : formatTargetRange(exercise);
+      : formatIdleDetails(exercise, latestSuggestion, weightUnit);
 
   return (
     <div className="relative overflow-hidden rounded-2xl">
