@@ -25,6 +25,7 @@ const DEFAULT_PROFILE: UserProfile = {
   weightUnit: 'kg',
   heightCm: null,
   defaultRestSeconds: 90,
+  restDays: [],
 };
 
 // ── Volume helper ─────────────────────────────────────────────────────────────
@@ -52,7 +53,7 @@ function buildVolumeData(
         totalReps,
         totalVolume,
         setDetails: completedSets.map(([key, s]) => ({
-          setIdx: parseInt(key.split('-')[2] ?? '0', 10),
+          setIdx: parseInt(key.split('-').at(-1) ?? '0', 10),
           repsDone: s.repsDone ?? 0,
           weight: s.weight ?? null,
           timestamp: s.timestamp ?? null,
@@ -299,6 +300,22 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
   updateProfile: async (patch: Partial<UserProfile>) => {
     set((s) => ({ profile: { ...s.profile, ...patch } }));
     saveProfile(get().profile).catch(console.error);
+  },
+
+  // ── Active Session ─────────────────────────────────────────────────────────
+  updateActiveSessionExercises: async (exercises) => {
+    const { currentRoutine, activeSessionIdx } = get();
+    if (!currentRoutine || activeSessionIdx === null) return;
+
+    const updatedRoutine = {
+      ...currentRoutine,
+      sessions: currentRoutine.sessions.map((s, i) =>
+        i === activeSessionIdx ? { ...s, exercises } : s
+      ),
+    };
+
+    set({ currentRoutine: updatedRoutine });
+    saveRoutine(updatedRoutine).catch(console.error);
   },
 
   // ── Misc sync ──────────────────────────────────────────────────────────────

@@ -82,6 +82,7 @@ export interface ProfileRecord {
   weightUnit: 'kg' | 'lbs';
   heightCm: number | null;
   defaultRestSeconds: number;
+  restDays?: number[];   // optional for backward compat with stored records missing the field
 }
 
 export interface MetaRecord {

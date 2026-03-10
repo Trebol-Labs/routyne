@@ -43,3 +43,12 @@ it('counts only completed sets', () => {
   useWorkoutStore.getState().finishSession();
   expect(useWorkoutStore.getState().history[0].volumeData[0].setsCompleted).toBe(2);
 });
+
+it('records correct setIdx values in setDetails', () => {
+  useWorkoutStore.getState().toggleSetCompletion(0, 'ex-1', 0, 10, 60);
+  useWorkoutStore.getState().toggleSetCompletion(0, 'ex-1', 1, 10, 65);
+  useWorkoutStore.getState().finishSession();
+  const details = useWorkoutStore.getState().history[0].volumeData[0].setDetails ?? [];
+  const idxValues = details.map((d) => d.setIdx).sort((a, b) => a - b);
+  expect(idxValues).toEqual([0, 1]);
+});
