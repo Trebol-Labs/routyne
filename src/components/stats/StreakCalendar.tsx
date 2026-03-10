@@ -10,7 +10,7 @@ function computeStreak(workoutDays: Set<string>, restDays: number[]): number {
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
-  let check: Date | null = isFulfilled(today) ? new Date(today) : isFulfilled(yesterday) ? new Date(yesterday) : null;
+  const check: Date | null = isFulfilled(today) ? new Date(today) : isFulfilled(yesterday) ? new Date(yesterday) : null;
   if (!check) return 0;
   let streak = 0;
   while (isFulfilled(check)) {
