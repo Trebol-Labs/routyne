@@ -379,7 +379,7 @@ export function ActiveSessionView() {
     );
   };
 
-  return (
+  const mainContent = (
     <motion.div
       key="active-session"
       initial={{ opacity: 0, x: 20 }}
@@ -399,7 +399,7 @@ export function ActiveSessionView() {
           role="progressbar"
           aria-valuenow={completedSets}
           aria-valuemin={0}
-          aria-valuemax={totalSets}
+          aria-valuemax={totalSets > 0 ? totalSets : 1}
           aria-label={`Workout progress: ${completedSets} of ${totalSets} sets completed`}
         >
           <motion.div
@@ -422,19 +422,9 @@ export function ActiveSessionView() {
             <ChevronLeft className="h-6 w-6 text-white" />
           </Button>
           <div>
-            <div className="flex items-center gap-2">
-              <h2 className="font-display text-2xl font-black uppercase leading-none tracking-tighter text-white">
-                {activeSession.title}
-              </h2>
-              <Button
-                variant="glass-icon"
-                size="icon-lg"
-                onClick={() => setShowEditSession(true)}
-                aria-label="Edit session"
-              >
-                <Pencil className="h-5 w-5 text-white/60" />
-              </Button>
-            </div>
+            <h2 className="font-display text-2xl font-black uppercase leading-none tracking-tighter text-white">
+              {activeSession.title}
+            </h2>
             <div className="mt-2 flex items-center gap-2">
               {isLocked && (
                 <div className="flex items-center gap-1.5 rounded-full border border-blue-500/20 bg-blue-500/10 px-2 py-0.5">
@@ -446,14 +436,23 @@ export function ActiveSessionView() {
           </div>
         </div>
 
-        <Button
-          variant="glass-icon"
-          size="icon-lg"
-          onClick={() => setShowRestTimer(true)}
-          aria-label="Open rest timer"
-        >
-          <Clock className="h-6 w-6 text-blue-400" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowEditSession(true)}
+            className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] text-white/50 transition-colors hover:bg-white/10 hover:text-white/80"
+            aria-label="Edit session"
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+          <Button
+            variant="glass-icon"
+            size="icon-lg"
+            onClick={() => setShowRestTimer(true)}
+            aria-label="Open rest timer"
+          >
+            <Clock className="h-6 w-6 text-blue-400" />
+          </Button>
+        </div>
       </div>
 
       <AnimatePresence>
@@ -548,6 +547,12 @@ export function ActiveSessionView() {
           Abandon Workout
         </button>
       </div>
+    </motion.div>
+  );
+
+  return (
+    <>
+      {mainContent}
 
       <AnimatePresence>
         {showRestTimer && (
@@ -603,6 +608,6 @@ export function ActiveSessionView() {
         }}
         onCancel={() => setShowAbandon(false)}
       />
-    </motion.div>
+    </>
   );
 }
