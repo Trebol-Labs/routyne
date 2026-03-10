@@ -17,7 +17,7 @@ const DEFAULT_PROFILE: ProfileRecord = {
 export async function loadProfile(): Promise<UserProfile> {
   const db = await getDB();
   const record = await db.get('profile', PROFILE_KEY);
-  if (!record) return { ...DEFAULT_PROFILE };
+  if (!record) { const { id: _id, ...defaults } = DEFAULT_PROFILE; return { restDays: [], ...defaults } as UserProfile; }
   const { id: _id, ...profile } = record;
   return { restDays: [], ...profile } as UserProfile;  // default merge for old records
 }
