@@ -101,6 +101,11 @@ export interface MetaRecord {
   value: string;
 }
 
+export interface AchievementRecord {
+  id: string;      // achievement definition ID
+  earnedAt: string; // ISO 8601
+}
+
 export interface BodyweightRecord {
   id: string;       // uuidv4
   date: string;     // YYYY-MM-DD
@@ -147,5 +152,9 @@ export interface RoutineDB extends DBSchema {
     key: string;
     value: BodyweightRecord;
     indexes: { 'by-date': string };
+  };
+  achievements: {
+    key: string;
+    value: AchievementRecord;
   };
 }

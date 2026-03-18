@@ -60,7 +60,8 @@ export type WorkoutView =
   | 'workout-summary'   // ← NEW: post-workout summary screen
   | 'history'
   | 'stats'
-  | 'routine-builder';  // ← NEW: visual routine editor
+  | 'routine-builder'   // ← visual routine editor
+  | 'routine-manager';  // ← routine library manager
 
 // ── User profile ──────────────────────────────────────────────────────────────
 
@@ -173,6 +174,16 @@ export interface Bodyweight {
   unit: 'kg' | 'lbs';
 }
 
+// ── Achievements ──────────────────────────────────────────────────────────────
+
+export interface AchievementDefinition {
+  id: string;
+  name: string;
+  description: string;
+  emoji: string;
+  category: 'sessions' | 'volume' | 'prs' | 'variety' | 'streak' | 'special';
+}
+
 // ── Store state interface ─────────────────────────────────────────────────────
 
 export interface WorkoutState {
@@ -195,6 +206,9 @@ export interface WorkoutState {
 
   // Post-workout summary (populated by finishSession)
   lastWorkoutSummary: WorkoutSummary | null; // ← NEW
+
+  // Newly-unlocked achievement IDs (for toast display)
+  pendingAchievements: string[];
 
   // ── Async actions ─────────────────────────────────────────────────────────
   hydrate: () => Promise<void>;
@@ -224,6 +238,8 @@ export interface WorkoutState {
   setCurrentView: (view: WorkoutView) => void;
   setIsLoading: (loading: boolean) => void;
   resetProgress: () => void;
+  clearPendingAchievements: () => void;
+  duplicateRoutine: (routineId: string) => Promise<void>;
 
   /** Backward-compat alias for importRoutine (sourceMarkdown='', used in tests). */
   setCurrentRoutine: (routine: RoutineData) => void;

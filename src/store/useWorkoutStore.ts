@@ -11,6 +11,7 @@ import { migrateLegacyData } from '@/lib/db/migrate-legacy';
 import {
   saveRoutine, loadRoutine, listRoutines, deleteRoutine,
 } from '@/lib/db/routines';
+import { loadEarnedAchievementIds, saveAchievement } from '@/lib/db/achievements';
 import { saveHistoryEntry, loadHistory } from '@/lib/db/history';
 import {
   saveActiveSession, loadActiveSession, clearActiveSession,
@@ -83,6 +84,7 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
   routineLibrary: [],
   sessionStartTime: null,
   lastWorkoutSummary: null,
+  pendingAchievements: [],
 
   // ── hydrate ────────────────────────────────────────────────────────────────
   hydrate: async () => {
@@ -257,6 +259,10 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
 
       return { setCompletion: next };
     });
+    // Haptic feedback on set complete
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate(15);
+    }
   },
 
   finishSession: async () => {
@@ -304,6 +310,26 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
         durationSeconds,
       );
       set({ lastWorkoutSummary: summary });
+
+      // ── Evaluate achievements ─────────────────────────────────────────────
+      try {
+        const { evaluateAchievements } = await import('@/lib/achievements/evaluator');
+        const earnedIds = await loadEarnedAchievementIds();
+        const newAchievements = evaluateAchievements({
+          history: get().history,
+          summary,
+          earnedIds,
+        });
+        if (newAchievements.length > 0) {
+          await Promise.all(newAchievements.map((a) => saveAchievement(a.id)));
+          set({ pendingAchievements: newAchievements.map((a) => a.id) });
+          if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+            navigator.vibrate([50, 30, 50, 30, 100]);
+          }
+        }
+      } catch (err) {
+        console.error('[useWorkoutStore] achievement evaluation failed', err);
+      }
     } catch (err) {
       console.error('[useWorkoutStore] buildWorkoutSummary failed', err);
     }
@@ -369,6 +395,32 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
   setCurrentView: (view: WorkoutView) => set({ currentView: view }),
   setIsLoading: (isLoading: boolean) => set({ isLoading }),
   resetProgress: () => set({ setCompletion: {} }),
+  clearPendingAchievements: () => set({ pendingAchievements: [] }),
+
+  // ── duplicateRoutine ───────────────────────────────────────────────────────
+  duplicateRoutine: async (routineId: string) => {
+    const source = await loadRoutine(routineId);
+    if (!source) return;
+    const { v4: newUuid } = await import('uuid');
+    const copy = {
+      ...source,
+      id: newUuid(),
+      title: `${source.title} (Copy)`,
+      createdAt: new Date(),
+    };
+    const summary: RoutineSummary = {
+      id: copy.id,
+      title: copy.title,
+      createdAt: copy.createdAt.toISOString(),
+      updatedAt: new Date().toISOString(),
+      sessionCount: copy.sessions.length,
+      exerciseCount: copy.sessions.reduce((s, sess) => s + sess.exercises.length, 0),
+    };
+    set((state) => ({
+      routineLibrary: [summary, ...state.routineLibrary],
+    }));
+    await saveRoutine(copy, '');
+  },
 
   // ── resetAll ───────────────────────────────────────────────────────────────
   resetAll: async () => {
