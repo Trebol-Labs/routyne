@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence, useMotionValue, animate, type PanInfo } from 'framer-motion';
-import { Check, X, ChevronDown, ChevronUp, TrendingUp } from 'lucide-react';
+import { Check, X, ChevronDown, ChevronUp, TrendingUp, Scale } from 'lucide-react';
+import { PlateCalculator } from '@/components/workout/overlays/PlateCalculator';
 import { cn } from '@/lib/utils';
 
 interface ProgressionSuggestion {
@@ -52,6 +53,7 @@ export function SetInputSheet({
   const [rpeExpanded, setRpeExpanded] = useState(false);
   const [rpe, setRpe] = useState<number | null>(null);
   const [rir, setRir] = useState<RirOption | null>(null);
+  const [showPlateCalc, setShowPlateCalc] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const panOffset = useMotionValue(0);
   const hasLastWeight = lastWeight != null && lastWeight > 0;
@@ -279,9 +281,19 @@ export function SetInputSheet({
             />
           </div>
           <div className="space-y-1.5">
-            <label className="block text-[10px] font-black uppercase tracking-[0.25em] text-white/30">
-              Weight ({weightUnit})
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="block text-[10px] font-black uppercase tracking-[0.25em] text-white/30">
+                Weight ({weightUnit})
+              </label>
+              <button
+                onClick={() => setShowPlateCalc(true)}
+                className="flex items-center gap-1 rounded-lg border border-white/8 bg-white/[0.04] px-2 py-1 text-[9px] font-black uppercase tracking-widest text-white/30 hover:bg-white/[0.07] hover:text-white/50 transition-colors"
+                aria-label="Open plate calculator"
+              >
+                <Scale className="w-2.5 h-2.5" />
+                Plates
+              </button>
+            </div>
             <input
               type="number"
               inputMode="decimal"
@@ -429,6 +441,17 @@ export function SetInputSheet({
           </button>
         </div>
       </motion.div>
+
+      <AnimatePresence>
+        {showPlateCalc && (
+          <PlateCalculator
+            targetWeight={parseFloat(weight) || 0}
+            unit={weightUnit}
+            onClose={() => setShowPlateCalc(false)}
+            onApply={(w) => setWeight(String(w))}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }
