@@ -2,7 +2,7 @@ import { openDB, IDBPDatabase } from 'idb';
 import type { RoutineDB } from './schema';
 
 const DB_NAME = 'routyne-db';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let _db: IDBPDatabase<RoutineDB> | null = null;
 
@@ -10,36 +10,44 @@ export async function getDB(): Promise<IDBPDatabase<RoutineDB>> {
   if (_db) return _db;
 
   _db = await openDB<RoutineDB>(DB_NAME, DB_VERSION, {
-    upgrade(db) {
-      // routines
-      const routinesStore = db.createObjectStore('routines', { keyPath: 'id' });
-      routinesStore.createIndex('by-updated', 'updatedAt');
-      routinesStore.createIndex('by-title', 'title');
+    upgrade(db, oldVersion) {
+      if (oldVersion < 1) {
+        // routines
+        const routinesStore = db.createObjectStore('routines', { keyPath: 'id' });
+        routinesStore.createIndex('by-updated', 'updatedAt');
+        routinesStore.createIndex('by-title', 'title');
 
-      // sessions
-      const sessionsStore = db.createObjectStore('sessions', { keyPath: 'id' });
-      sessionsStore.createIndex('by-routine', 'routineId');
+        // sessions
+        const sessionsStore = db.createObjectStore('sessions', { keyPath: 'id' });
+        sessionsStore.createIndex('by-routine', 'routineId');
 
-      // exercises
-      const exercisesStore = db.createObjectStore('exercises', { keyPath: 'id' });
-      exercisesStore.createIndex('by-session', 'sessionId');
-      exercisesStore.createIndex('by-routine', 'routineId');
-      exercisesStore.createIndex('by-name', 'cleanName');
+        // exercises
+        const exercisesStore = db.createObjectStore('exercises', { keyPath: 'id' });
+        exercisesStore.createIndex('by-session', 'sessionId');
+        exercisesStore.createIndex('by-routine', 'routineId');
+        exercisesStore.createIndex('by-name', 'cleanName');
 
-      // history
-      const historyStore = db.createObjectStore('history', { keyPath: 'id' });
-      historyStore.createIndex('by-date', 'completedAt');
-      historyStore.createIndex('by-routine', 'routineId');
-      historyStore.createIndex('by-session', 'sessionId');
+        // history
+        const historyStore = db.createObjectStore('history', { keyPath: 'id' });
+        historyStore.createIndex('by-date', 'completedAt');
+        historyStore.createIndex('by-routine', 'routineId');
+        historyStore.createIndex('by-session', 'sessionId');
 
-      // activeSession (singleton — key is always 'current')
-      db.createObjectStore('activeSession', { keyPath: 'id' });
+        // activeSession (singleton — key is always 'current')
+        db.createObjectStore('activeSession', { keyPath: 'id' });
 
-      // profile (singleton — key is always 'profile')
-      db.createObjectStore('profile', { keyPath: 'id' });
+        // profile (singleton — key is always 'profile')
+        db.createObjectStore('profile', { keyPath: 'id' });
 
-      // meta flags
-      db.createObjectStore('meta', { keyPath: 'key' });
+        // meta flags
+        db.createObjectStore('meta', { keyPath: 'key' });
+      }
+
+      if (oldVersion < 2) {
+        // bodyweight tracking (v2)
+        const bwStore = db.createObjectStore('bodyweight', { keyPath: 'id' });
+        bwStore.createIndex('by-date', 'date');
+      }
     },
   });
 

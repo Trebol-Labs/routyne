@@ -164,6 +164,15 @@ export interface ExerciseProgressData {
   recentTrend: 'up' | 'down' | 'flat';
 }
 
+// ── Body weight ───────────────────────────────────────────────────────────────
+
+export interface Bodyweight {
+  id: string;
+  date: string;     // YYYY-MM-DD
+  weight: number;
+  unit: 'kg' | 'lbs';
+}
+
 // ── Store state interface ─────────────────────────────────────────────────────
 
 export interface WorkoutState {

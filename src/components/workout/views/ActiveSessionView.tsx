@@ -12,6 +12,7 @@ import { useWakeLock } from '@/hooks/useWakeLock';
 import type { HistoryEntry, WorkoutState } from '@/types/workout';
 import { ChevronLeft, Clock, Zap, CheckCircle2, MousePointerClick, ChevronsRight, X, CheckCheck, Pencil } from 'lucide-react';
 import { EditSessionSheet } from '@/components/workout/overlays/EditSessionSheet';
+import { ExerciseDetailSheet } from '@/components/workout/overlays/ExerciseDetailSheet';
 
 interface PendingSet {
   exerciseId: string;
@@ -197,6 +198,7 @@ export function ActiveSessionView() {
     () => typeof window !== 'undefined' && !localStorage.getItem(HINT_KEY)
   );
   const [showEditSession, setShowEditSession] = useState(false);
+  const [detailExercise, setDetailExercise] = useState<string | null>(null);
 
   const dismissHint = () => {
     localStorage.setItem(HINT_KEY, '1');
@@ -464,9 +466,12 @@ export function ActiveSessionView() {
           <div key={exercise.id} className="space-y-2.5">
             <div className="flex items-center justify-between gap-3 px-1">
               <div className="flex flex-1 items-center gap-2.5 min-w-0">
-                <h3 className="truncate font-display text-lg font-black uppercase tracking-tight text-white/90">
+                <button
+                  onClick={() => setDetailExercise(exercise.cleanName)}
+                  className="truncate font-display text-lg font-black uppercase tracking-tight text-white/90 hover:text-blue-300 transition-colors text-left cursor-pointer"
+                >
                   {exercise.cleanName}
-                </h3>
+                </button>
                 {Array.from({ length: exercise.sets }).some((_, i) => !setCompletion[`${activeSessionIdx}-${exercise.id}-${i}`]?.completed) && (
                   <button
                     onClick={() => handleAutoFillExercise(exercise.id, exercise.cleanName, exercise.sets, exercise.repsMax)}
@@ -591,6 +596,17 @@ export function ActiveSessionView() {
               updateActiveSessionExercises(updated);
               setShowEditSession(false);
             }}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {detailExercise && (
+          <ExerciseDetailSheet
+            exerciseName={detailExercise}
+            history={history}
+            weightUnit={profile.weightUnit}
+            onClose={() => setDetailExercise(null)}
           />
         )}
       </AnimatePresence>

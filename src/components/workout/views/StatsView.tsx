@@ -1,17 +1,36 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp } from 'lucide-react';
+import { TrendingUp, Scale } from 'lucide-react';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
 import { ToggleGroup } from '@/components/ui/ToggleGroup';
 import { VolumeBarChart } from '@/components/stats/VolumeBarChart';
 import { StreakCalendar } from '@/components/stats/StreakCalendar';
 import { PersonalRecordsTable } from '@/components/stats/PersonalRecordsTable';
+import { BodyWeightChart } from '@/components/stats/BodyWeightChart';
+import { MuscleGroupChart } from '@/components/stats/MuscleGroupChart';
+import { RecoveryIndicator } from '@/components/stats/RecoveryIndicator';
+import { BodyWeightSheet } from '@/components/workout/overlays/BodyWeightSheet';
+import { loadBodyweightHistory } from '@/lib/db/bodyweight';
+import { getMuscleGroupVolume } from '@/lib/analytics/muscle-map';
+import type { Bodyweight } from '@/types/workout';
 
 export function StatsView() {
   const { history, profile } = useWorkoutStore();
   const [limit, setLimit] = useState<7 | 30>(7);
+  const [showBodyWeightSheet, setShowBodyWeightSheet] = useState(false);
+  const [bodyweightEntries, setBodyweightEntries] = useState<Bodyweight[]>([]);
+
+  useEffect(() => {
+    loadBodyweightHistory(30).then(setBodyweightEntries);
+  }, []);
+
+  const refreshBodyweight = () => {
+    loadBodyweightHistory(30).then(setBodyweightEntries);
+  };
+
+  const muscleData = useMemo(() => getMuscleGroupVolume(history, 7), [history]);
 
   const totalSessions = history.length;
   const totalVolume = history.reduce((sum, e) => sum + e.totalVolume, 0);
@@ -45,6 +64,7 @@ export function StatsView() {
   ];
 
   return (
+    <>
     <motion.div
       key="stats"
       initial={{ opacity: 0, scale: 0.95 }}
@@ -113,6 +133,36 @@ export function StatsView() {
             <PersonalRecordsTable history={history} weightUnit={profile.weightUnit} />
           </div>
 
+          {/* Body Weight */}
+          <div className="glass-panel rounded-[var(--radius-lg)] p-5 border-white/5 space-y-4">
+            <div className="flex items-center justify-between">
+              <p className={sectionLabelClassName}>Body Weight</p>
+              <button
+                onClick={() => setShowBodyWeightSheet(true)}
+                className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-white/50 hover:bg-white/[0.07] hover:text-white/70 transition-colors"
+              >
+                <Scale className="w-3 h-3" />
+                Log
+              </button>
+            </div>
+            <BodyWeightChart entries={bodyweightEntries} unit={profile.weightUnit} />
+          </div>
+
+          {/* Muscle Groups */}
+          <div className="glass-panel rounded-[var(--radius-lg)] p-5 border-white/5 space-y-4">
+            <div className="flex items-center justify-between">
+              <p className={sectionLabelClassName}>Weekly Muscle Volume</p>
+              <span className="text-[9px] font-black uppercase tracking-widest text-white/25">Last 7 days</span>
+            </div>
+            <MuscleGroupChart data={muscleData} />
+          </div>
+
+          {/* Recovery */}
+          <div className="glass-panel rounded-[var(--radius-lg)] p-5 border-white/5 space-y-4">
+            <p className={sectionLabelClassName}>Recovery Status</p>
+            <RecoveryIndicator data={muscleData} />
+          </div>
+
           {/* Recent sessions */}
           <div className="glass-panel rounded-[var(--radius-lg)] p-5 border-white/5 space-y-3">
             <p className={sectionLabelClassName}>Recent Sessions</p>
@@ -131,5 +181,13 @@ export function StatsView() {
         </div>
       )}
     </motion.div>
+
+    {showBodyWeightSheet && (
+      <BodyWeightSheet
+        onClose={() => setShowBodyWeightSheet(false)}
+        onSaved={refreshBodyweight}
+      />
+    )}
+  </>
   );
 }
