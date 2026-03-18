@@ -1,4 +1,5 @@
 import type { DBSchema } from 'idb';
+import type { SetType } from '@/types/workout';
 
 // ── Record types stored in IndexedDB ────────────────────────────────────────
 
@@ -32,6 +33,8 @@ export interface ExerciseRecord {
   mediaUrl: string | null;
   notes: string | null;
   sortOrder: number;
+  setType?: SetType;       // ← NEW
+  supersetId?: string;     // ← NEW
 }
 
 export interface SetDetailRecord {
@@ -39,6 +42,9 @@ export interface SetDetailRecord {
   repsDone: number;
   weight: number | null;
   timestamp: string;    // ISO 8601
+  rpe?: number;         // ← NEW: 1–10
+  rir?: number;         // ← NEW: 0–5
+  setType?: SetType;    // ← NEW
 }
 
 export interface ExerciseVolumeRecord {
@@ -56,9 +62,11 @@ export interface HistoryRecord {
   sessionId: string;
   sessionIdx?: number;
   sessionTitle: string;
-  completedAt: string;  // ISO 8601
+  completedAt: string;      // ISO 8601
   totalVolume: number;
   volumeData: ExerciseVolumeRecord[];
+  durationSeconds?: number; // ← NEW
+  notes?: string;           // ← NEW
 }
 
 export interface ActiveSessionRecord {
@@ -72,6 +80,9 @@ export interface ActiveSessionRecord {
     repsDone?: number;
     weight?: number;
     timestamp?: string;
+    rpe?: number;       // ← NEW
+    rir?: number;       // ← NEW
+    setType?: SetType;  // ← NEW
   }>;
 }
 
@@ -82,7 +93,7 @@ export interface ProfileRecord {
   weightUnit: 'kg' | 'lbs';
   heightCm: number | null;
   defaultRestSeconds: number;
-  restDays?: number[];   // optional for backward compat with stored records missing the field
+  restDays?: number[];   // optional for backward compat
 }
 
 export interface MetaRecord {
