@@ -1,14 +1,23 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
 import { TrendingUp, Scale } from 'lucide-react';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
 import { ToggleGroup } from '@/components/ui/ToggleGroup';
-import { VolumeBarChart } from '@/components/stats/VolumeBarChart';
 import { StreakCalendar } from '@/components/stats/StreakCalendar';
 import { PersonalRecordsTable } from '@/components/stats/PersonalRecordsTable';
-import { BodyWeightChart } from '@/components/stats/BodyWeightChart';
+
+const VolumeBarChart = dynamic(
+  () => import('@/components/stats/VolumeBarChart').then((m) => ({ default: m.VolumeBarChart })),
+  { ssr: false, loading: () => <div className="h-32 animate-pulse rounded-xl bg-white/[0.04]" /> },
+);
+
+const BodyWeightChart = dynamic(
+  () => import('@/components/stats/BodyWeightChart').then((m) => ({ default: m.BodyWeightChart })),
+  { ssr: false, loading: () => <div className="h-28 animate-pulse rounded-xl bg-white/[0.04]" /> },
+);
 import { MuscleGroupChart } from '@/components/stats/MuscleGroupChart';
 import { RecoveryIndicator } from '@/components/stats/RecoveryIndicator';
 import { BodyWeightSheet } from '@/components/workout/overlays/BodyWeightSheet';

@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { Trophy, Clock, Dumbbell, CheckCircle2, BarChart2, Share2, History, ChevronLeft, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
+import { ShareCardSheet } from '@/components/workout/overlays/ShareCardSheet';
 import type { ExerciseVolume, SetDetail, WorkoutSummary } from '@/types/workout';
 
 // ── Duration formatter ────────────────────────────────────────────────────────
@@ -113,6 +114,7 @@ function VolumeDeltaBadge({ pct }: { pct: number | null }) {
 
 export function WorkoutSummaryView() {
   const { lastWorkoutSummary, setCurrentView, profile } = useWorkoutStore();
+  const [showShareCard, setShowShareCard] = useState(false);
 
   // Guard: no summary — redirect to history
   useEffect(() => {
@@ -142,26 +144,9 @@ export function WorkoutSummaryView() {
   const unit = profile.weightUnit;
   const hasPRs = newPRs.length > 0;
 
-  const handleShare = async () => {
-    const prLines = newPRs.map((pr) => `🏆 ${pr.exerciseName} PR!`).join('\n');
-    const text = [
-      `Just crushed ${entry.sessionTitle}! 💪`,
-      `${totalSets} sets · ${entry.totalVolume.toFixed(0)}${unit} total volume`,
-      prLines,
-    ]
-      .filter(Boolean)
-      .join('\n');
-
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: 'Routyne Workout', text });
-      } catch {
-        // User cancelled share or share failed — no-op
-      }
-    }
-  };
 
   return (
+    <>
     <motion.div
       key="workout-summary"
       initial={{ opacity: 0, y: 40 }}
@@ -355,12 +340,23 @@ export function WorkoutSummaryView() {
         <Button
           variant="ghost"
           className="w-full h-12 text-sm font-bold text-white/40 hover:text-white/70 uppercase tracking-widest font-display"
-          onClick={handleShare}
+          onClick={() => setShowShareCard(true)}
         >
           <Share2 className="w-4 h-4 mr-2" />
           Share Workout
         </Button>
       </motion.div>
     </motion.div>
+
+    <AnimatePresence>
+      {showShareCard && (
+        <ShareCardSheet
+          summary={summary}
+          weightUnit={unit}
+          onClose={() => setShowShareCard(false)}
+        />
+      )}
+    </AnimatePresence>
+    </>
   );
 }

@@ -4,6 +4,11 @@ import { useMemo, useCallback, useRef, useState } from 'react';
 import { motion, useMotionValue, animate, type PanInfo } from 'framer-motion';
 import { X, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
+import type { TooltipContentProps } from 'recharts';
+import {
   getExerciseProgressData,
   getRecentExerciseSessions,
 } from '@/lib/analytics/exercise-history';
@@ -52,8 +57,29 @@ interface ProgressChartProps {
   weightUnit: 'kg' | 'lbs';
 }
 
+interface ProgressChartPoint {
+  label: string;
+  volume: number;
+  oneRM: number;
+  weightUnit: string;
+  modeLabel: string;
+}
+
+function ProgressTooltip({ active, payload }: TooltipContentProps) {
+  if (!active || !payload?.length) return null;
+  const pt = payload[0].payload as ProgressChartPoint;
+  return (
+    <div className="rounded-xl border border-white/10 bg-black/85 backdrop-blur-sm px-3 py-2">
+      <p className="text-[9px] font-black uppercase tracking-wider text-white/40">{pt.label}</p>
+      <p className="mt-0.5 text-xs font-black text-indigo-300">
+        {Math.round(payload[0].value as number).toLocaleString()} {pt.weightUnit} {pt.modeLabel}
+      </p>
+    </div>
+  );
+}
+
 function ProgressChart({ points, mode, weightUnit }: ProgressChartProps) {
-  const displayed = points.slice(-10);
+  const displayed = points.slice(-12);
 
   if (displayed.length < 2) {
     return (
@@ -65,54 +91,53 @@ function ProgressChart({ points, mode, weightUnit }: ProgressChartProps) {
     );
   }
 
-  const values = displayed.map((p) =>
-    mode === 'volume' ? p.totalVolume : p.estimatedOneRM,
-  );
-  const maxVal = Math.max(...values, 1);
+  const data: ProgressChartPoint[] = displayed.map((p) => ({
+    label: formatChartLabel(p.date),
+    volume: Math.round(p.totalVolume),
+    oneRM: Math.round(p.estimatedOneRM),
+    weightUnit,
+    modeLabel: mode === 'volume' ? '' : 'e1RM',
+  }));
 
-  const barColor =
-    mode === 'volume'
-      ? 'bg-blue-500/60'
-      : 'bg-indigo-500/60';
+  const dataKey = mode === 'volume' ? 'volume' : 'oneRM';
+  const color = mode === 'volume' ? '#60a5fa' : '#818cf8';
+  const gradientId = `progress-fill-${mode}`;
+
+  const values = data.map((d) => (mode === 'volume' ? d.volume : d.oneRM));
+  const minV = Math.min(...values);
+  const maxV = Math.max(...values, 1);
+  const padding = Math.max((maxV - minV) * 0.25, 1);
 
   return (
-    <div className="space-y-2">
-      {/* Bars */}
-      <div className="flex h-28 items-end gap-1.5">
-        {displayed.map((p, i) => {
-          const val = values[i];
-          const heightPct = Math.max(4, Math.round((val / maxVal) * 100));
-          return (
-            <div
-              key={p.date.getTime()}
-              className="flex flex-1 flex-col items-center justify-end gap-0.5"
-            >
-              <div
-                className={`w-full rounded-t-sm ${barColor} transition-all duration-500`}
-                style={{ height: `${heightPct}%` }}
-                title={`${val} ${mode === 'volume' ? weightUnit : weightUnit + ' e1RM'}`}
-              />
-            </div>
-          );
-        })}
-      </div>
-
-      {/* X-axis labels */}
-      <div className="flex items-start gap-1.5">
-        {displayed.map((p, i) => {
-          const showLabel = i === 0 || i === Math.floor(displayed.length / 2) || i === displayed.length - 1;
-          return (
-            <div key={p.date.getTime()} className="flex-1 text-center">
-              {showLabel && (
-                <span className="text-[8px] font-bold text-white/25 leading-none">
-                  {formatChartLabel(p.date)}
-                </span>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
+    <ResponsiveContainer width="100%" height={112}>
+      <AreaChart data={data} margin={{ top: 4, right: 2, left: 2, bottom: 0 }}>
+        <defs>
+          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor={color} stopOpacity={0.3} />
+            <stop offset="95%" stopColor={color} stopOpacity={0.01} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.04)" vertical={false} />
+        <XAxis
+          dataKey="label"
+          tick={{ fontSize: 8, fill: 'rgba(255,255,255,0.25)', fontWeight: 900 }}
+          axisLine={false}
+          tickLine={false}
+          interval={Math.max(0, Math.floor(displayed.length / 4) - 1)}
+        />
+        <YAxis hide domain={[minV - padding, maxV + padding]} />
+        <Tooltip content={ProgressTooltip} cursor={{ stroke: color, strokeWidth: 1, strokeOpacity: 0.3 }} />
+        <Area
+          type="monotone"
+          dataKey={dataKey}
+          stroke={color}
+          strokeWidth={2}
+          fill={`url(#${gradientId})`}
+          dot={false}
+          activeDot={{ r: 4, fill: color, strokeWidth: 0 }}
+        />
+      </AreaChart>
+    </ResponsiveContainer>
   );
 }
 
