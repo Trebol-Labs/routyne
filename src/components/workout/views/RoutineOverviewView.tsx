@@ -54,6 +54,8 @@ export function RoutineOverviewView() {
               <button
                 key={session.id}
                 onClick={() => setSessionPickerIdx(idx)}
+                aria-label={`Session ${idx + 1}: ${session.title}`}
+                aria-pressed={sessionPickerIdx === idx}
                 className={cn(
                   "shrink-0 relative flex flex-col items-center justify-center min-w-[100px] h-[110px] rounded-[var(--radius-xl)] border transition-colors transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]",
                   sessionPickerIdx === idx

@@ -182,19 +182,19 @@ export function ProfileSheet({ onClose }: ProfileSheetProps) {
         <div className="shrink-0 grid grid-cols-3 gap-2">
           <div className="flex flex-col items-center gap-0.5 py-2.5 bg-blue-500/10 border border-blue-500/20 rounded-xl">
             <span className="text-base font-black text-blue-400 font-display leading-none">{totalSessions}</span>
-            <span className="text-[7px] font-black text-blue-400/50 uppercase tracking-widest mt-0.5">Sessions</span>
+            <span className="text-[10px] font-black text-blue-400/70 uppercase tracking-widest mt-0.5">Sessions</span>
           </div>
           <div className="flex flex-col items-center gap-0.5 py-2.5 bg-indigo-500/10 border border-indigo-500/20 rounded-xl">
             <span className="text-base font-black text-indigo-400 font-display leading-none">
               {totalVolume > 0 ? Math.round(totalVolume).toLocaleString() : '—'}
             </span>
-            <span className="text-[7px] font-black text-indigo-400/50 uppercase tracking-widest mt-0.5">{profile.weightUnit}</span>
+            <span className="text-[10px] font-black text-indigo-400/70 uppercase tracking-widest mt-0.5">{profile.weightUnit}</span>
           </div>
           <div className="flex flex-col items-center gap-0.5 py-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
             <span className="text-base font-black text-emerald-400 font-display leading-none flex items-center gap-0.5">
               {streak}<Flame className="w-3 h-3" />
             </span>
-            <span className="text-[7px] font-black text-emerald-400/50 uppercase tracking-widest mt-0.5">Streak</span>
+            <span className="text-[10px] font-black text-emerald-400/70 uppercase tracking-widest mt-0.5">Streak</span>
           </div>
         </div>
 

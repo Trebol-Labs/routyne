@@ -30,7 +30,7 @@ export function VolumeBarChart({ history, limit, weightUnit }: VolumeBarChartPro
   if (entries.length === 0) {
     return (
       <div className="h-32 flex items-center justify-center">
-        <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">No data yet</p>
+        <p className="text-[10px] font-black text-white/35 uppercase tracking-widest">No data yet</p>
       </div>
     );
   }
@@ -63,7 +63,7 @@ export function VolumeBarChart({ history, limit, weightUnit }: VolumeBarChartPro
           return (
             <div key={entry.id} className="flex-1 text-center">
               {showLabel ? (
-                <span className="text-[8px] font-black text-white/20 uppercase">
+                <span className="text-[10px] font-black text-white/35 uppercase">
                   {new Date(entry.completedAt).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}
                 </span>
               ) : (
@@ -74,7 +74,7 @@ export function VolumeBarChart({ history, limit, weightUnit }: VolumeBarChartPro
         })}
       </div>
       {maxV > 0 && (
-        <p className="text-[9px] font-black text-white/20 uppercase tracking-widest text-right">
+        <p className="text-[9px] font-black text-white/35 uppercase tracking-widest text-right">
           Peak: {Math.round(maxV).toLocaleString()} {weightUnit}
         </p>
       )}
