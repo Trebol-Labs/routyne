@@ -21,6 +21,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Claude Code local helpers (gitignored, not part of the project source):
+    ".claude/**",
+    // PWA service worker build artifacts (gitignored, regenerated on each build):
+    "public/sw.js",
+    "public/workbox-*.js",
   ]),
 ]);
 

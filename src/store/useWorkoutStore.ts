@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import {
   RoutineData, WorkoutState, WorkoutView,
   HistoryEntry, ExerciseVolume, UserProfile, RoutineSummary,
-  SetType, WorkoutSummary,
+  WorkoutSummary,
 } from '@/types/workout';
 
 // ── IDB imports (lazy-safe: only used in async actions) ──────────────────────

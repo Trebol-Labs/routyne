@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { Trophy, Clock, Dumbbell, CheckCircle2, BarChart2, Share2, History, ChevronLeft, TrendingUp, TrendingDown, Minus } from 'lucide-react';
@@ -121,9 +121,11 @@ export function WorkoutSummaryView() {
     }
   }, [lastWorkoutSummary, setCurrentView]);
 
-  // Confetti on mount if PRs exist
+  // Confetti on mount if PRs exist — capture value at mount time via ref so the
+  // effect truly runs once and React Compiler can optimize this component.
+  const hasPRsOnMount = useRef(!!lastWorkoutSummary && lastWorkoutSummary.newPRs.length > 0);
   useEffect(() => {
-    if (lastWorkoutSummary && lastWorkoutSummary.newPRs.length > 0) {
+    if (hasPRsOnMount.current) {
       confetti({
         particleCount: 120,
         spread: 70,
@@ -131,7 +133,6 @@ export function WorkoutSummaryView() {
         colors: ['#FFD700', '#FFA500', '#FF6B6B', '#4FC3F7'],
       });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (!lastWorkoutSummary) return null;

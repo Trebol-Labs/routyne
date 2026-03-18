@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { it, expect, beforeEach } from 'vitest';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
 
 const mockRoutine = {

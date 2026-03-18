@@ -23,6 +23,7 @@ function ExerciseBrowseCard({ item, onClick }: { item: ExerciseBrowseItem; onCli
     >
       <div className="w-11 h-11 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shrink-0 overflow-hidden">
         {item.gifUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img src={item.gifUrl} alt="" className="w-full h-full object-cover" />
         ) : (
           <Dumbbell className="w-4 h-4 text-white/20" />
