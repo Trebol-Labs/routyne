@@ -25,7 +25,7 @@ export function StatsView() {
     return uniqueNames.size;
   }, [history]);
 
-  const sectionLabelClassName = 'text-[10px] font-black text-white/25 uppercase tracking-[0.4em]';
+  const sectionLabelClassName = 'text-[10px] font-black text-white/40 uppercase tracking-[0.4em]';
   const summaryCards = [
     {
       label: 'Sessions',
@@ -69,7 +69,7 @@ export function StatsView() {
               {summaryCards.map((card) => (
                 <div key={card.label} className="space-y-1.5 rounded-[var(--radius-md)] bg-white/[0.03] border border-white/5 px-2 py-3 sm:px-3 sm:py-4 text-center">
                   <p className="text-lg sm:text-xl font-black tracking-tighter font-display text-white/15">—</p>
-                  <p className="text-[8px] sm:text-[10px] font-black text-white/20 uppercase tracking-widest line-clamp-2">{card.label}</p>
+                  <p className="text-[8px] sm:text-[10px] font-black text-white/35 uppercase tracking-widest line-clamp-2">{card.label}</p>
                 </div>
               ))}
             </div>
@@ -82,7 +82,7 @@ export function StatsView() {
             {summaryCards.map((card) => (
               <div key={card.label} className="glass-panel rounded-[var(--radius-lg)] p-3 sm:p-4 md:p-5 border-white/5 text-center space-y-1.5 sm:space-y-2">
                 <p className={`text-lg sm:text-xl md:text-2xl font-black tracking-tighter font-display truncate ${card.valueClassName}`}>{card.value}</p>
-                <p className="text-[8px] sm:text-[10px] font-black text-white/20 uppercase tracking-widest line-clamp-2">{card.label}</p>
+                <p className="text-[8px] sm:text-[10px] font-black text-white/35 uppercase tracking-widest line-clamp-2">{card.label}</p>
               </div>
             ))}
           </div>
@@ -120,9 +120,9 @@ export function StatsView() {
                <div key={entry.id} className="rounded-[var(--radius-md)] bg-white/[0.03] border border-white/[0.05] px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between gap-2 sm:gap-3">
                  <div className="min-w-0">
                    <p className="text-xs sm:text-sm font-black text-white/70 uppercase tracking-tighter truncate">{entry.sessionTitle}</p>
-                   <p className="text-[8px] sm:text-[10px] font-black text-white/25 uppercase tracking-[0.2em] mt-0.5">{entry.volumeData.length} ex.</p>
+                   <p className="text-[8px] sm:text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mt-0.5">{entry.volumeData.length} ex.</p>
                  </div>
-                 <span className={`text-[8px] sm:text-[10px] font-black uppercase tracking-widest shrink-0 whitespace-nowrap ${entry.totalVolume > 0 ? 'text-blue-400/60' : 'text-white/25'}`}>
+                 <span className={`text-[8px] sm:text-[10px] font-black uppercase tracking-widest shrink-0 whitespace-nowrap ${entry.totalVolume > 0 ? 'text-blue-400/60' : 'text-white/40'}`}>
                    {entry.totalVolume > 0 ? `${entry.totalVolume.toLocaleString()}${profile.weightUnit}` : 'BW'}
                  </span>
                </div>

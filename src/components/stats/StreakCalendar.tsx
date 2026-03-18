@@ -56,7 +56,7 @@ export function StreakCalendar({ history, restDays = [] }: StreakCalendarProps) 
        </div>
        <div className="grid grid-cols-7 gap-0.5 sm:gap-1">
          {['M','T','W','T','F','S','S'].map((d, i) => (
-           <div key={i} className="text-center text-[7px] sm:text-[8px] font-black text-white/20 uppercase pb-0.5 sm:pb-1">{d}</div>
+           <div key={i} className="text-center text-[9px] sm:text-[10px] font-black text-white/35 uppercase pb-0.5 sm:pb-1">{d}</div>
          ))}
         {allCells.map((day, i) => {
           if (!day) return <div key={`pad-${i}`} />;

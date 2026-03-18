@@ -366,7 +366,7 @@ export function ActiveSessionView() {
     }
   };
 
-  const handleConfirmSet = (repsDone: number, weight: number | undefined) => {
+  const handleConfirmSet = (repsDone: number, weight: number | undefined, _rpe?: number, _rir?: number) => {
     if (pendingSet === null) return;
 
     const exercise = activeSession.exercises.find((item) => item.id === pendingSet.exerciseId);
