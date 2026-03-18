@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Plus, Calendar, Dumbbell, TrendingUp, Library } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { WorkoutView } from '@/types/workout';

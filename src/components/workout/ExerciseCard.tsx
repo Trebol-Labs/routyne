@@ -43,13 +43,13 @@ export function ExerciseCard({ exercise, index }: ExerciseCardProps) {
         setMediaError(true);
         setFetchDone(true);
       });
-  }, [exercise.mediaUrl]);
+  }, [exercise.mediaUrl, exercise.cleanName]);
 
   React.useEffect(() => {
     if (DEV && fetchDone) {
       console.log(`[EC:${exercise.cleanName.slice(0,10)}] FD=${fetchDone} M=${JSON.stringify(media)} ML=${mediaLoaded} ME=${mediaError}`);
     }
-  }, [fetchDone, media, mediaLoaded, mediaError]);
+  }, [fetchDone, media, mediaLoaded, mediaError, exercise.cleanName]);
 
   // fetchDone + no media = API returned null/404 → show fallback
   const showFallback = mediaError || !exercise.mediaUrl || (fetchDone && !media);
@@ -99,6 +99,7 @@ export function ExerciseCard({ exercise, index }: ExerciseCardProps) {
           )}
 
           {isGif && media && (
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={media.url}
               alt={`${exercise.cleanName} form demonstration`}

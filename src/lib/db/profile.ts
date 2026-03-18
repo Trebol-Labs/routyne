@@ -17,7 +17,9 @@ const DEFAULT_PROFILE: ProfileRecord = {
 export async function loadProfile(): Promise<UserProfile> {
   const db = await getDB();
   const record = await db.get('profile', PROFILE_KEY);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   if (!record) { const { id: _id, ...defaults } = DEFAULT_PROFILE; return { restDays: [], ...defaults } as UserProfile; }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { id: _id, ...profile } = record;
   return { restDays: [], ...profile } as UserProfile;  // default merge for old records
 }

@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { RoutineData, WorkoutSession, ParsedExercise } from '@/types/workout';
+import { RoutineData, WorkoutSession } from '@/types/workout';
 import { resolveExerciseMedia } from '@/lib/media/resolver';
 
 /**
