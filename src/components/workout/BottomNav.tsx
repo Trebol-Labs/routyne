@@ -70,11 +70,11 @@ export const BottomNav = memo(({ currentView, onNavigate, hasRoutine }: BottomNa
     ];
 
     const importItem = {
-      id: 'uploader',
-      view: 'uploader' as WorkoutView,
+      id: 'library',
+      view: (hasRoutine ? 'routine-manager' : 'uploader') as WorkoutView,
       icon: hasRoutine ? Library : Plus,
       label: hasRoutine ? 'Routines' : 'Add Routine',
-      matchViews: ['uploader'],
+      matchViews: ['uploader', 'routine-manager'],
       isPrimary: !hasRoutine,
     };
 

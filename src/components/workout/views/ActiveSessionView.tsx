@@ -463,7 +463,7 @@ export function ActiveSessionView() {
 
       <div className="grid gap-7">
         {activeSession.exercises.map((exercise) => (
-          <div key={exercise.id} className="space-y-2.5">
+          <div key={exercise.id} className={`space-y-2.5 ${exercise.supersetId ? 'border-l-2 border-purple-500/30 pl-3 -ml-1' : ''}`}>
             <div className="flex items-center justify-between gap-3 px-1">
               <div className="flex flex-1 items-center gap-2.5 min-w-0">
                 <button
@@ -472,6 +472,11 @@ export function ActiveSessionView() {
                 >
                   {exercise.cleanName}
                 </button>
+                {exercise.supersetId && (
+                  <span className="shrink-0 text-[8px] font-black uppercase tracking-widest text-purple-400 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-full">
+                    Superset
+                  </span>
+                )}
                 {Array.from({ length: exercise.sets }).some((_, i) => !setCompletion[`${activeSessionIdx}-${exercise.id}-${i}`]?.completed) && (
                   <button
                     onClick={() => handleAutoFillExercise(exercise.id, exercise.cleanName, exercise.sets, exercise.repsMax)}

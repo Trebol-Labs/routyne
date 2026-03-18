@@ -12,6 +12,7 @@ import { HistoryView } from '@/components/workout/views/HistoryView';
 import { StatsView } from '@/components/workout/views/StatsView';
 import { WorkoutSummaryView } from '@/components/workout/views/WorkoutSummaryView';
 import { RoutineBuilderView } from '@/components/workout/views/RoutineBuilderView';
+import { RoutineManagerView } from '@/components/workout/views/RoutineManagerView';
 import { ProfileSheet } from '@/components/workout/overlays/ProfileSheet';
 import { SearchSheet } from '@/components/workout/overlays/SearchSheet';
 import { TopHeader } from '@/components/workout/TopHeader';
@@ -20,6 +21,7 @@ import { WorkoutView } from '@/types/workout';
 import { useHydration } from '@/hooks/useHydration';
 import { useStoragePersist } from '@/hooks/useStoragePersist';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { AchievementToast } from '@/components/workout/AchievementToast';
 
 export default function Home() {
   const isReady = useHydration();
@@ -29,6 +31,8 @@ export default function Home() {
     currentView,
     setCurrentView,
     resetAll,
+    pendingAchievements,
+    clearPendingAchievements,
   } = useWorkoutStore();
 
   const [showProfile, setShowProfile] = useState(false);
@@ -114,6 +118,19 @@ export default function Home() {
                 <RoutineBuilderView />
               </motion.div>
 
+            ) : currentView === 'routine-manager' ? (
+              <motion.div
+                key="routine-manager"
+                initial={{ opacity: 0, x: 30 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -30 }}
+                transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
+                className="flex-1 flex flex-col overflow-y-auto"
+                id="main-content"
+              >
+                <RoutineManagerView />
+              </motion.div>
+
             ) : currentView === 'routine-overview' && currentRoutine ? (
               <RoutineOverviewView />
 
@@ -172,6 +189,11 @@ export default function Home() {
         cancelLabel="Cancel"
         onConfirm={() => { resetAll(); setConfirmNewRoutine(false); }}
         onCancel={() => setConfirmNewRoutine(false)}
+      />
+
+      <AchievementToast
+        achievementIds={pendingAchievements}
+        onDismiss={clearPendingAchievements}
       />
     </main>
   );

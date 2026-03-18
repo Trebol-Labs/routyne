@@ -30,6 +30,8 @@ export function parseRoutine(markdown: string): RoutineData {
     flipped: /^(?:\*|-|\d+\.)?\s*(\d+)\s*[xX]\s*(\d+)(?:-(\d+))?\s*(?:\*\*)?(.+?)(?:\*\*)?$/
   };
 
+  let currentSupersetId: string | null = null;
+
   for (const line of lines) {
     const trimmedLine = line.trim();
     if (!trimmedLine) continue;
@@ -45,6 +47,7 @@ export function parseRoutine(markdown: string): RoutineData {
     const h2Match = trimmedLine.match(h2Regex);
     if (h2Match) {
       if (currentSession) sessions.push(currentSession);
+      currentSupersetId = null;
       currentSession = {
         id: uuidv4(),
         title: h2Match[1].trim(),
@@ -55,6 +58,16 @@ export function parseRoutine(markdown: string): RoutineData {
 
     // 3. Capture Exercises
     if (currentSession) {
+      // 3a. Superset markers
+      if (trimmedLine.match(/^\[Superset/i)) {
+        currentSupersetId = uuidv4();
+        continue;
+      }
+      if (trimmedLine.match(/^\[\/Superset/i)) {
+        currentSupersetId = null;
+        continue;
+      }
+
       // Try standard pattern
       let match = trimmedLine.match(exercisePattern.standard);
       if (match) {
@@ -75,6 +88,7 @@ export function parseRoutine(markdown: string): RoutineData {
           repsMax,
           restSeconds,
           mediaUrl: resolveExerciseMedia(cleanName),
+          supersetId: currentSupersetId ?? undefined,
         });
         continue;
       }
@@ -98,6 +112,7 @@ export function parseRoutine(markdown: string): RoutineData {
           repsMax,
           restSeconds: 90,
           mediaUrl: resolveExerciseMedia(cleanName),
+          supersetId: currentSupersetId ?? undefined,
         });
       }
     }

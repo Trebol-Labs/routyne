@@ -14,16 +14,24 @@ import { RecoveryIndicator } from '@/components/stats/RecoveryIndicator';
 import { BodyWeightSheet } from '@/components/workout/overlays/BodyWeightSheet';
 import { loadBodyweightHistory } from '@/lib/db/bodyweight';
 import { getMuscleGroupVolume } from '@/lib/analytics/muscle-map';
+import { loadEarnedAchievements } from '@/lib/db/achievements';
+import { ACHIEVEMENTS } from '@/lib/achievements/definitions';
 import type { Bodyweight } from '@/types/workout';
+import type { AchievementRecord } from '@/lib/db/schema';
 
 export function StatsView() {
   const { history, profile } = useWorkoutStore();
   const [limit, setLimit] = useState<7 | 30>(7);
   const [showBodyWeightSheet, setShowBodyWeightSheet] = useState(false);
   const [bodyweightEntries, setBodyweightEntries] = useState<Bodyweight[]>([]);
+  const [earnedAchievements, setEarnedAchievements] = useState<AchievementRecord[]>([]);
 
   useEffect(() => {
     loadBodyweightHistory(30).then(setBodyweightEntries);
+  }, []);
+
+  useEffect(() => {
+    loadEarnedAchievements().then(setEarnedAchievements);
   }, []);
 
   const refreshBodyweight = () => {
@@ -161,6 +169,39 @@ export function StatsView() {
           <div className="glass-panel rounded-[var(--radius-lg)] p-5 border-white/5 space-y-4">
             <p className={sectionLabelClassName}>Recovery Status</p>
             <RecoveryIndicator data={muscleData} />
+          </div>
+
+          {/* Achievements */}
+          <div className="glass-panel rounded-[var(--radius-lg)] p-5 border-white/5 space-y-4">
+            <div className="flex items-center justify-between">
+              <p className={sectionLabelClassName}>Achievements</p>
+              <span className="text-[9px] font-black uppercase tracking-widest text-white/25">
+                {earnedAchievements.length}/{ACHIEVEMENTS.length}
+              </span>
+            </div>
+            <div className="grid grid-cols-5 gap-2">
+              {ACHIEVEMENTS.map((def) => {
+                const earned = earnedAchievements.some((e) => e.id === def.id);
+                return (
+                  <div
+                    key={def.id}
+                    title={`${def.name}: ${def.description}`}
+                    className={`flex flex-col items-center gap-1 rounded-xl p-2 transition-all ${
+                      earned
+                        ? 'bg-white/[0.05] border border-white/10'
+                        : 'bg-white/[0.02] border border-white/[0.04] opacity-35'
+                    }`}
+                  >
+                    <span className="text-xl leading-none" style={{ filter: earned ? 'none' : 'grayscale(1)' }}>
+                      {def.emoji}
+                    </span>
+                    <p className="text-[7px] font-black uppercase tracking-wide text-white/40 text-center leading-tight line-clamp-2">
+                      {def.name}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           {/* Recent sessions */}

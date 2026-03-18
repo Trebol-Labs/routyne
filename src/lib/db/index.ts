@@ -2,7 +2,7 @@ import { openDB, IDBPDatabase } from 'idb';
 import type { RoutineDB } from './schema';
 
 const DB_NAME = 'routyne-db';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 let _db: IDBPDatabase<RoutineDB> | null = null;
 
@@ -47,6 +47,11 @@ export async function getDB(): Promise<IDBPDatabase<RoutineDB>> {
         // bodyweight tracking (v2)
         const bwStore = db.createObjectStore('bodyweight', { keyPath: 'id' });
         bwStore.createIndex('by-date', 'date');
+      }
+
+      if (oldVersion < 3) {
+        // achievements (v3)
+        db.createObjectStore('achievements', { keyPath: 'id' });
       }
     },
   });
