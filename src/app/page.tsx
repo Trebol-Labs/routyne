@@ -10,6 +10,8 @@ import { RoutineOverviewView } from '@/components/workout/views/RoutineOverviewV
 import { ActiveSessionView } from '@/components/workout/views/ActiveSessionView';
 import { HistoryView } from '@/components/workout/views/HistoryView';
 import { StatsView } from '@/components/workout/views/StatsView';
+import { WorkoutSummaryView } from '@/components/workout/views/WorkoutSummaryView';
+import { RoutineBuilderView } from '@/components/workout/views/RoutineBuilderView';
 import { ProfileSheet } from '@/components/workout/overlays/ProfileSheet';
 import { SearchSheet } from '@/components/workout/overlays/SearchSheet';
 import { TopHeader } from '@/components/workout/TopHeader';
@@ -69,13 +71,14 @@ export default function Home() {
     <main className="min-h-[100dvh] liquid-bg-dark text-zinc-100 selection:bg-blue-500/40 font-sans">
       <div className="max-w-screen-md mx-auto h-dvh flex flex-col relative px-4">
 
-        {/* Top Header with Brand and Actions */}
+        {/* Top Header */}
         <TopHeader onSearchClick={() => setShowSearch(true)} onProfileClick={() => setShowProfile(true)} />
 
         <div className="flex-grow pt-4 pb-[var(--space-nav-clear)] flex flex-col">
           <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:p-4 focus:bg-black focus:text-white focus:rounded-lg">
             Skip to content
           </a>
+
           <AnimatePresence mode="wait">
             {currentView === 'uploader' ? (
               <motion.div
@@ -84,7 +87,7 @@ export default function Home() {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 1.1, y: -40 }}
                 transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
-                className="flex-1 flex flex-col justify-center"
+                className="flex-1 flex flex-col justify-center overflow-y-auto"
                 id="main-content"
               >
                 <ErrorBoundary
@@ -97,14 +100,45 @@ export default function Home() {
                   <RoutineUploader />
                 </ErrorBoundary>
               </motion.div>
+
+            ) : currentView === 'routine-builder' ? (
+              <motion.div
+                key="routine-builder"
+                initial={{ opacity: 0, x: 40 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -40 }}
+                transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
+                className="flex-1 flex flex-col overflow-y-auto"
+                id="main-content"
+              >
+                <RoutineBuilderView />
+              </motion.div>
+
             ) : currentView === 'routine-overview' && currentRoutine ? (
               <RoutineOverviewView />
+
             ) : currentView === 'active-session' ? (
               <ActiveSessionView />
+
+            ) : currentView === 'workout-summary' ? (
+              <motion.div
+                key="workout-summary"
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -30 }}
+                transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
+                className="flex-1 flex flex-col overflow-y-auto"
+                id="main-content"
+              >
+                <WorkoutSummaryView />
+              </motion.div>
+
             ) : currentView === 'history' ? (
               <HistoryView />
+
             ) : currentView === 'stats' ? (
               <StatsView />
+
             ) : (
               <motion.div
                 key="unknown"
@@ -118,7 +152,7 @@ export default function Home() {
           </AnimatePresence>
         </div>
 
-        {/* Bottom Navigation with Floating Action Button */}
+        {/* Bottom Navigation */}
         <BottomNav currentView={currentView} onNavigate={handleNavClick} hasRoutine={!!currentRoutine} />
       </div>
 
