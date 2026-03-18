@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import {
   RoutineData, WorkoutState, WorkoutView,
   HistoryEntry, ExerciseVolume, UserProfile, RoutineSummary,
+  SetType, WorkoutSummary,
 } from '@/types/workout';
 
 // ── IDB imports (lazy-safe: only used in async actions) ──────────────────────
@@ -57,6 +58,9 @@ function buildVolumeData(
           repsDone: s.repsDone ?? 0,
           weight: s.weight ?? null,
           timestamp: s.timestamp ?? null,
+          rpe: s.rpe,
+          rir: s.rir,
+          setType: s.setType,
         })),
       };
     })
@@ -77,6 +81,8 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
   historyHasMore: false,
   profile: { ...DEFAULT_PROFILE },
   routineLibrary: [],
+  sessionStartTime: null,
+  lastWorkoutSummary: null,
 
   // ── hydrate ────────────────────────────────────────────────────────────────
   hydrate: async () => {
@@ -110,12 +116,16 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
               repsDone: val.repsDone,
               weight: val.weight,
               timestamp: val.timestamp ? new Date(val.timestamp) : undefined,
+              rpe: val.rpe,
+              rir: val.rir,
+              setType: val.setType,
             };
           }
           set({
             currentRoutine: routine,
             activeSessionIdx: activeSession.sessionIdx,
             setCompletion,
+            sessionStartTime: new Date(activeSession.startedAt),
             currentView: 'active-session',
           });
           return;
@@ -200,7 +210,8 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
   // ── Session lifecycle ──────────────────────────────────────────────────────
   startSession: async (sessionIdx: number) => {
     const { currentRoutine } = get();
-    set({ currentView: 'active-session', activeSessionIdx: sessionIdx });
+    const now = new Date();
+    set({ currentView: 'active-session', activeSessionIdx: sessionIdx, sessionStartTime: now });
 
     if (currentRoutine) {
       const session = currentRoutine.sessions[sessionIdx];
@@ -210,7 +221,10 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
     }
   },
 
-  toggleSetCompletion: (sessionIdx, exerciseId, setIdx, repsDone?, weight?) => {
+  toggleSetCompletion: (
+    sessionIdx, exerciseId, setIdx,
+    repsDone?, weight?, rpe?, rir?, setType?
+  ) => {
     set((state) => {
       const key = `${sessionIdx}-${exerciseId}-${setIdx}`;
       const current = state.setCompletion[key];
@@ -221,6 +235,9 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
           repsDone: repsDone ?? current?.repsDone,
           weight: weight ?? current?.weight,
           timestamp: new Date(),
+          rpe: rpe ?? current?.rpe,
+          rir: rir ?? current?.rir,
+          setType: setType ?? current?.setType,
         },
       };
 
@@ -249,24 +266,49 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
     const activeSession = state.currentRoutine.sessions[state.activeSessionIdx];
     const volumeData = buildVolumeData(activeSession, state.setCompletion, state.activeSessionIdx);
 
+    const now = new Date();
+    const durationSeconds = state.sessionStartTime
+      ? Math.round((now.getTime() - state.sessionStartTime.getTime()) / 1000)
+      : 0;
+
+    const totalSets = Object.values(state.setCompletion).filter((s) => s.completed).length;
+
     const newEntry: HistoryEntry = {
       id: uuidv4(),
       sessionIdx: state.activeSessionIdx,
       sessionTitle: activeSession.title,
-      completedAt: new Date(),
+      completedAt: now,
       completedExercises: volumeData.map((ev) => ev.exerciseId),
       volumeData,
       totalVolume: volumeData.reduce((sum, ev) => sum + ev.totalVolume, 0),
+      durationSeconds,
     };
 
-    // Sync Zustand update
+    // ── Sync Zustand update first (history always updated synchronously) ──
     set((s) => ({
-      currentView: 'history',
+      currentView: 'workout-summary',
       history: [newEntry, ...s.history],
       setCompletion: {},
+      sessionStartTime: null,
+      lastWorkoutSummary: null, // will be populated below
     }));
 
-    // IDB writes
+    // ── Build summary asynchronously (doesn't block history update) ──────
+    try {
+      const priorHistory = get().history.slice(1); // history without the new entry
+      const { buildWorkoutSummary } = await import('@/lib/analytics/session-compare');
+      const summary: WorkoutSummary = buildWorkoutSummary(
+        newEntry,
+        priorHistory,
+        totalSets,
+        durationSeconds,
+      );
+      set({ lastWorkoutSummary: summary });
+    } catch (err) {
+      console.error('[useWorkoutStore] buildWorkoutSummary failed', err);
+    }
+
+    // ── IDB writes ────────────────────────────────────────────────────────
     try {
       await saveHistoryEntry(newEntry, state.currentRoutine.id, activeSession.id);
       await clearActiveSession();
@@ -276,7 +318,12 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
   },
 
   abandonSession: async () => {
-    set({ currentView: 'routine-overview', setCompletion: {}, activeSessionIdx: null });
+    set({
+      currentView: 'routine-overview',
+      setCompletion: {},
+      activeSessionIdx: null,
+      sessionStartTime: null,
+    });
     clearActiveSession().catch(console.error);
   },
 
@@ -332,6 +379,8 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
       setCompletion: {},
       history: [],
       routineLibrary: [],
+      sessionStartTime: null,
+      lastWorkoutSummary: null,
     });
     // Clear workout data in background, preserving profile
     clearWorkoutData().catch(console.error);
