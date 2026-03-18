@@ -101,6 +101,13 @@ export interface MetaRecord {
   value: string;
 }
 
+export interface BodyweightRecord {
+  id: string;       // uuidv4
+  date: string;     // YYYY-MM-DD
+  weight: number;
+  unit: 'kg' | 'lbs';
+}
+
 // ── DBSchema for idb ─────────────────────────────────────────────────────────
 
 export interface RoutineDB extends DBSchema {
@@ -135,5 +142,10 @@ export interface RoutineDB extends DBSchema {
   meta: {
     key: string;
     value: MetaRecord;
+  };
+  bodyweight: {
+    key: string;
+    value: BodyweightRecord;
+    indexes: { 'by-date': string };
   };
 }
