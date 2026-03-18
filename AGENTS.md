@@ -1,8 +1,6 @@
 # AGENTS.md
 
-Agent instructions for **Routyne**, a mobile-first Next.js PWA workout tracker. This is the authoritative reference for agentic coding assistants operating in this codebase.
-
----
+Agent instructions for **Routyne**, a mobile-first Next.js PWA workout tracker. This is the authoritative guide for coding agents working in this repo.
 
 ## Commands
 
@@ -10,167 +8,147 @@ Agent instructions for **Routyne**, a mobile-first Next.js PWA workout tracker. 
 pnpm dev               # Start dev server (Turbopack, PWA disabled in dev)
 pnpm build             # Production build
 pnpm lint              # ESLint (flat config v9)
-pnpm test              # Run all tests with Vitest
-pnpm test:coverage     # Coverage report (v8 provider — text + lcov)
+pnpm test              # Run all Vitest tests
+pnpm test:coverage     # Coverage report (v8 provider)
 ```
 
-**Run a single test file or pattern:**
+**Single-test workflows:**
 ```bash
 pnpm test src/lib/markdown/parser.test.ts
-pnpm test -t "pattern name"  # Run tests matching pattern
+pnpm test -t "pattern name"
 ```
 
-**Package manager:** pnpm. **Node:** 20 (`.nvmrc`). **CI order:** lint → test → build.
+**Environment:**
+- Package manager: `pnpm`
+- Node: `20` from `.nvmrc`
+- CI order: `pnpm lint` → `pnpm test` → `pnpm build`
+- Production build expects `RAPIDAPI_KEY`
 
----
+## Repo Rules
+
+- No `.cursorrules`, `.cursor/rules/`, or `.github/copilot-instructions.md` files currently exist in this repo.
+- Treat this file as the main agent policy unless new rule files are added later.
 
 ## Architecture
 
-- **App Router:** Single-page PWA in `src/app/page.tsx` with Zustand view state machine (`currentView`)
-- **State:** `src/store/useWorkoutStore.ts` (Zustand) is the single source of truth
-- **Persistence:** IndexedDB (via `idb` v8) as durable backing; Zustand as reactive cache
-- **No persistence middleware** — IDB writes are explicit in `src/lib/db/` modules
-- **Hydration:** `useHydration()` hook gates UI behind `isReady` flag; `hydrate()` called once on mount
+- App Router app with a single main shell in `src/app/page.tsx`
+- Zustand store in `src/store/useWorkoutStore.ts` is the source of truth
+- IndexedDB via `idb` is the durable data layer; Zustand is the reactive cache
+- Persistence is explicit in `src/lib/db/*`; there is no Zustand persistence middleware
+- Hydration is gated through `useHydration()` and store `hydrate()`
 
-**View state machine:** `uploader` → `routine-overview` → `active-session` → `history` | `stats`
+**Primary flow:** `uploader` → `routine-overview` → `active-session` → `history` | `stats`
 
-**Key files:**
-| Path | Purpose |
-|------|---------|
-| `src/app/page.tsx` | View orchestrator, header, bottom nav |
-| `src/store/useWorkoutStore.ts` | Zustand store (source of truth) |
-| `src/types/workout.ts` | All shared TypeScript domain types |
-| `src/lib/db/` | Thin functional IDB access layer (one module per store) |
-| `src/lib/markdown/parser.ts` | Markdown → `RoutineData` (supports 2 formats) |
-| `src/lib/media/resolver.ts` | Exercise name → `/api/media/{slug}` via Fuse.js fuzzy search |
-| `src/app/globals.css` | Design tokens, Liquid Glass utility classes |
-| `src/test/setup.ts` | Vitest global setup (IDB patching) |
+**Important files:**
+- `src/app/page.tsx` - main view orchestration
+- `src/store/useWorkoutStore.ts` - store state and async actions
+- `src/types/workout.ts` - shared domain types
+- `src/lib/db/` - IndexedDB access modules
+- `src/lib/markdown/parser.ts` - markdown to `RoutineData`
+- `src/lib/media/resolver.ts` - fuzzy media resolution
+- `src/app/globals.css` - design tokens and glass utilities
+- `src/test/setup.ts` - Vitest global setup
 
----
+## Code Style
 
-## Code Style & TypeScript
-
-### Imports & Naming
-- **Import order:** Framework (`react`, `framer-motion`) → `@/` aliases → relative imports
-- **Components:** `PascalCase.tsx`, named exports only
-- **Hooks:** `useHookName.ts` (camelCase)
-- **DB types:** End with `Record` (e.g., `RoutineRecord`, `HistoryRecord`)
-- **Domain types:** Plain nouns (e.g., `ParsedExercise`, `WorkoutSession`, `SetStatus`)
-- **Constants:** `SCREAMING_SNAKE_CASE`
-- **Always use `import type { ... }`** for type-only imports
-- **Path alias `@/`** maps to `src/` — always use it for cross-directory imports
+### Imports
+- Order imports as: framework/library → `@/` aliases → relative imports
+- Use `import type { ... }` for type-only imports
+- Prefer `@/` over long relative paths for cross-folder imports
 
 ### Formatting
-- **Strict TypeScript:** No `any` escapes. Prefer `unknown` + narrowing
-- Semicolons: yes. Quotes: single. Indentation: 2 spaces
-- Trailing commas in multi-line structures
+- TypeScript is strict; do not introduce `any`
+- Use semicolons, single quotes, and 2-space indentation
+- Keep trailing commas in multiline objects/arrays/params
+- Prefer named exports; avoid default exports for internal components and lib modules
 
-### Interfaces vs Types
-- **Interface:** Object shapes and domain models
-- **Type:** Unions, aliases, and variants only
+### Types and Naming
+- Use `interface` for object/domain shapes
+- Use `type` for unions, aliases, and discriminated variants
+- Components: `PascalCase.tsx`
+- Hooks: `useThing.ts`
+- Store actions: clear verb-based names
+- DB persistence shapes end in `Record`
+- Domain models use plain nouns like `ParsedExercise`, `WorkoutSession`, `SetStatus`
+- Constants use `SCREAMING_SNAKE_CASE`
 
----
+### React and Next.js
+- Mark client components with `'use client';` only when required
+- Prefer small focused components over large branching JSX blocks
+- Keep overlays/sheets accessible: dialog roles, close affordances, keyboard escape when appropriate
+- Preserve the current Liquid Glass visual language unless the user asks for a redesign
+
+## Store and Persistence Rules
+
+- `useWorkoutStore` is the canonical app state; do not duplicate business state elsewhere
+- Async store actions should update Zustand predictably and persist to IDB deliberately
+- Fire-and-forget writes should use `.catch(console.error)` or equivalent logged handling
+- `saveRoutine()` can be called with or without `sourceMarkdown`; when omitted it preserves the existing markdown
+- `updateActiveSessionExercises()` is the store action for live session editing
+- Keep IDB modules thin and functional; do not bury app logic in DB helpers
 
 ## Error Handling
 
-- **Store async actions** (`finishSession`, `hydrate`): `try/catch` with `console.error('[useWorkoutStore] <action> failed', err)`
-- **Fire-and-forget IDB writes** (e.g., `toggleSetCompletion`): inline `.catch(err => console.error(...))`
-- **Hydration failure:** Fall back to `set({ isHydrated: true })` to unblock UI rather than crashing
-- **UI components:** Early `return null` when data missing; use optional chaining (`?.`) pervasively
-- **No `throw` in UI** — log or swallow with graceful fallbacks
-- **Parser invalid input:** NaN-guard with `isNaN(sets) || sets <= 0`; silently skip malformed lines
-- **React error boundaries:** `ErrorBoundary` wraps app at layout level and key views
+- Store async actions use `try/catch` with namespaced logging like `console.error('[useWorkoutStore] hydrate failed', err)`
+- UI should fail soft: return `null`, use optional chaining, and avoid throwing in render paths
+- Hydration failures should unblock the UI instead of bricking the app
+- Parser errors should skip malformed lines rather than crash the import flow
+- Background persistence failures should be logged, not ignored silently
 
----
+## Testing
 
-## Testing (Vitest v4 + jsdom)
+- Tests are colocated with source files when practical
+- Test runner: Vitest with `jsdom`
+- Always keep `import 'fake-indexeddb/auto';` as the **first import** in `src/test/setup.ts`
+- That import patches all IndexedDB globals; partial setup is not enough
 
-**Test location:** Collocated with source (`src/lib/markdown/parser.test.ts` alongside `parser.ts`).
-
-### Critical IDB Setup
-`src/test/setup.ts` **must** have `import 'fake-indexeddb/auto'` as the **first import**. This patches ALL IDB globals (`IDBRequest`, `IDBKeyRange`, `IDBCursor`, `IDBTransaction`, etc.). Using only `new IDBFactory()` will fail with `ReferenceError: IDBRequest is not defined`.
-
-### Isolation Patterns
+**Useful patterns:**
 ```ts
-// Standard IDB tests: cleanup in beforeEach/afterEach
 beforeEach(() => deleteDatabase('routyne-db'));
 afterEach(() => resetDBSingleton());
 
-// Store persistence tests: full isolation
-vi.resetModules(); resetDBSingleton(); new IDBFactory();
+vi.resetModules();
+resetDBSingleton();
+vi.stubGlobal('indexedDB', new IDBFactory());
 
-// Zustand store: reset state
 useWorkoutStore.getState().resetAll();
-
-// Mocking
-vi.mock('@/lib/media/providers', () => ({ mediaProvider: { resolve: vi.fn() } }));
-vi.stubEnv('RAPIDAPI_KEY', 'test-key');
 vi.spyOn(console, 'error').mockImplementation(() => {});
 ```
 
-Use accessible queries: `screen.getByRole('button', { name: /reload/i })`.
+**Testing guidance:**
+- Prefer accessible queries like `screen.getByRole(...)`
+- Mock media/provider integrations rather than hitting external APIs
+- When changing persistence behavior, run the full test suite, not just one file
 
----
+## Lint, Build, and Verification Notes
 
-## Design System & Animations
+- ESLint uses Next core-web-vitals + TypeScript configs plus `react-compiler/react-compiler: error`
+- `pnpm build` runs a real production compile and can catch stricter type issues than isolated edits
+- If you touch UI, verify both mobile and desktop layouts
+- Delete temporary Playwright screenshots from the repo root after verification: `rm -f /Users/sierra/Code/routyne/*.png`
 
-**Liquid Glass aesthetic** via `.glass-panel`, `.active-glass-btn`, `.liquid-bg-dark`, `.text-liquid`, `.sunken-glass` in `src/app/globals.css`.
+## Design System and Motion
 
-All animations use Framer Motion with cubic-bezier `[0.23, 1, 0.32, 1]` for organic feel. Gesture interactions (swipe, drag) use:
-- `dragConstraints` for boundaries
-- `useMotionValue` + `useTransform` for real-time feedback
-- Spring physics (`stiffness: 480, damping: 32`) for natural snapping
+- Reuse existing utility classes such as `.glass-panel`, `.sunken-glass`, `.active-glass-btn`, `.liquid-bg-dark`
+- Motion uses Framer Motion with the easing `[0.23, 1, 0.32, 1]`
+- Gesture-driven UI uses `useMotionValue`, transforms, and spring/snapping behavior
+- Keep mobile-first spacing and avoid horizontal overflow
+- Preserve the current blue/liquid-glass aesthetic when extending workout UI
 
----
+## Git and Agent Workflow
 
-## Performance & PWA
+- Commit only when the user explicitly asks
+- Never commit secrets or files like `.env`
+- Do not use destructive git commands unless explicitly requested
+- Avoid `--no-verify` and force pushes unless the user explicitly asks
+- Prefer small focused commits that explain why the change exists
 
-- **React Compiler + Turbopack** enabled; `react-compiler: "error"` ESLint rule enforces correctness
-- **PWA disabled in dev** (`npm run dev`); service worker generated in `public/` at build time
-- **Code splitting:** Use `import()` for route-specific components
-- **Bundle size:** Prefer tree-shakeable libraries; avoid default exports in lib code
+## Planning Artifacts
 
----
+- Save plans in `.claude/plans/`
+- Do not commit scratch files, local debug scripts, or screenshots
+- Clean up temporary artifacts before finishing work
 
-## Deployment & Vercel
+## External Docs
 
-- **Production URL**: https://routyne-nu.vercel.app
-- **Host**: Vercel Hobby tier (free) — auto-deploys from `main` via GitHub
-- **CI**: `.github/workflows/ci.yml` — lint + test + build on every push/PR
-- **Env vars**: `RAPIDAPI_KEY` set in Vercel dashboard (see `.env.example`)
-- **Node version**: Pinned to 20 via `.nvmrc` (read by Vercel and GitHub Actions)
-
----
-
-## Artifacts & Planning
-
-- **Plans:** Save to `.claude/plans/` (gitignored) — NOT `~/.claude/plans/`
-- **Screenshots:** Delete all `*.png` from project root after Playwright verification:
-  ```bash
-  rm -f /Users/sierra/Code/routyne/*.png
-  ```
-  Never commit screenshots — they're temporary verification artifacts only.
-
----
-
-## Git & Commits
-
-- **Commit only when explicitly requested** by user — never auto-commit
-- **Commit hooks:** Pre-commit hooks may auto-modify files; amend only if:
-  1. User explicitly requested amend, OR
-  2. Hook succeeded but auto-modified files that need including
-  3. HEAD was created by this session
-  4. Commit hasn't been pushed to remote
-- **Never use destructive git commands** (force push, hard reset) without explicit user approval
-- **No skip hooks** (--no-verify) unless user explicitly requests it
-
----
-
-## Context7 MCP
-
-Always use the **Context7 MCP** (`resolve-library-id` → `query-docs`) when the task involves:
-- Library or API documentation lookups
-- Code generation using third-party APIs or frameworks
-- Setup or configuration steps for any dependency
-
-Do this proactively — do not wait for the user to ask.
+Use Context7 proactively when work depends on third-party library or framework documentation, setup, or API details.
