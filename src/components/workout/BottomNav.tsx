@@ -2,7 +2,7 @@
 
 import { memo, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Calendar, Dumbbell, TrendingUp, Library } from 'lucide-react';
+import { Plus, Calendar, Dumbbell, TrendingUp, Library, Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { WorkoutView } from '@/types/workout';
 
@@ -10,6 +10,7 @@ interface BottomNavProps {
   currentView: WorkoutView;
   onNavigate: (view: WorkoutView) => void;
   hasRoutine: boolean;
+  onCoachClick?: () => void;
 }
 
 const NavButton = memo(({ 
@@ -61,7 +62,7 @@ const NavButton = memo(({
 
 NavButton.displayName = 'NavButton';
 
-export const BottomNav = memo(({ currentView, onNavigate, hasRoutine }: BottomNavProps) => {
+export const BottomNav = memo(({ currentView, onNavigate, hasRoutine, onCoachClick }: BottomNavProps) => {
   const navItems = useMemo(() => {
     const baseItems = [
       { id: 'overview', view: 'routine-overview' as WorkoutView, icon: Dumbbell, label: 'Overview', matchViews: ['routine-overview', 'active-session'], isPrimary: false },
@@ -117,6 +118,14 @@ export const BottomNav = memo(({ currentView, onNavigate, hasRoutine }: BottomNa
               onClick={() => onNavigate(item.view)}
             />
           ))}
+          {onCoachClick && (
+            <NavButton
+              icon={Bot}
+              label="AI Coach"
+              isActive={false}
+              onClick={onCoachClick}
+            />
+          )}
         </nav>
       </div>
     </>

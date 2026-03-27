@@ -16,11 +16,29 @@ Do this proactively — do not wait for the user to ask.
 - **Production URL**: https://routyne-nu.vercel.app
 - **Host**: Vercel Hobby tier (free) — auto-deploys from `main` via GitHub integration
 - **CI**: `.github/workflows/ci.yml` — lint + test + build on every push/PR
-- **Env vars**: `RAPIDAPI_KEY` set in Vercel dashboard (see `.env.example`)
+- **Env vars**: see `.env.example` — `RAPIDAPI_KEY` always required; others are optional feature gates
 - **PWA install (Android)**: open production URL in Chrome → ⋮ menu → "Add to Home Screen"
 - **Preview deploys**: every PR gets a unique `*.vercel.app` URL automatically
-- **SW build artifacts** (`public/sw.js`, `workbox-*.js`) are gitignored — regenerated on each build
+- **SW build artifacts** (`public/sw.js`, `workbox-*.js`, `public/worker-*.js`) are gitignored — regenerated on each build
 - **Node version**: pinned to 20 via `.nvmrc` (read by Vercel and GitHub Actions)
+
+## Environment Variables
+
+| Variable | Required | Purpose |
+|---|---|---|
+| `RAPIDAPI_KEY` | ✅ Always | ExerciseDB media (GIFs, exercise search) |
+| `NEXT_PUBLIC_SUPABASE_URL` | Optional | Enables cloud sync + auth features |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Optional | Supabase anonymous client key |
+| `NEXT_PUBLIC_COACH_ENABLED` | Optional | Shows AI Coach button in UI (`=true`) |
+| `VERCEL_OIDC_TOKEN` | Optional | AI Gateway auth — run `vercel env pull` |
+| `COACH_DAILY_LIMIT_FREE` | Optional | Free tier rate limit, default `5` |
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | Optional | Push notification public key (browser) |
+| `VAPID_PUBLIC_KEY` | Optional | Push notification public key (server) |
+| `VAPID_PRIVATE_KEY` | Optional | Push notification private key (server) |
+| `VAPID_SUBJECT` | Optional | VAPID contact email (`mailto:...`) |
+
+Generate VAPID keys: `node scripts/generate-vapid-keys.mjs`
+Get AI Gateway token: `vercel link && vercel env pull`
 
 ## Commands
 
@@ -45,8 +63,12 @@ npx vitest run src/lib/markdown/parser.test.ts
 
 Navigation is driven by `currentView` in the Zustand store (`src/store/useWorkoutStore.ts`):
 
-- `uploader` → `routine-overview` → `active-session` → `history`
-- `stats` — summary dashboard (shows session count, volume, exercises from history)
+```
+uploader → routine-overview → active-session → workout-summary → history
+routine-builder → routine-overview (via importRoutine)
+routine-manager  (Library icon in bottom nav when routine active)
+stats            (bottom nav)
+```
 
 Views are extracted into standalone components under `src/components/workout/views/`.
 
@@ -55,11 +77,11 @@ Views are extracted into standalone components under `src/components/workout/vie
 1. User uploads a `.md` file → `RoutineUploader` reads it → `parseRoutine()` converts it to `RoutineData`
 2. `RoutineData` is stored in Zustand (`setCurrentRoutine`), which transitions to `routine-overview`
 3. During an active session, set completions are tracked as `Record<"sessionIdx-exerciseId-setIdx", SetStatus>`
-4. `finishSession()` writes a `HistoryEntry` (with volume tracking per exercise) and transitions to `history`
+4. `finishSession()` writes a `HistoryEntry` (with volume tracking per exercise), builds `WorkoutSummary`, enqueues cloud sync mutation, transitions to `workout-summary`
 
 ### Persistence
 
-**Implemented**: `idb` v8 + Zustand hybrid — IndexedDB as durable source of truth, Zustand as reactive in-memory cache. No `persist` middleware.
+`idb` v8 + Zustand hybrid — IndexedDB as durable source of truth, Zustand as reactive in-memory cache. No `persist` middleware.
 
 | IndexedDB Store | Purpose |
 |----------------|---------|
@@ -70,61 +92,114 @@ Views are extracted into standalone components under `src/components/workout/vie
 | `activeSession` | In-progress workout state (survives refresh/crash) |
 | `profile` | User preferences (name, unit, rest default) |
 | `meta` | Schema version flags, migration state |
+| `bodyweight` | Body weight log entries |
+| `achievements` | Unlocked achievement IDs |
+| `syncQueue` | Pending cloud mutations (drained by useSync) |
 
 Key patterns:
-- `toggleSetCompletion` — sync Zustand update + fire-and-forget IDB write (stays responsive)
-- `finishSession()` — awaits IDB writes (data integrity)
-- `importRoutine(routine, sourceMarkdown)` — sync Zustand + background `saveRoutine()`; `setCurrentRoutine` is a backward-compat alias for tests
-- `hydrate()` is explicit, called once by `useHydration()` hook; `page.tsx` gates render behind `isReady`
+- `toggleSetCompletion` — sync Zustand update + fire-and-forget IDB write
+- `finishSession()` — awaits IDB writes, then enqueues sync mutation if Supabase configured
+- `importRoutine(routine, sourceMarkdown)` — sync Zustand + background `saveRoutine()`
+- `hydrate()` — explicit, called once by `useHydration()` hook; `page.tsx` gates render behind `isReady`
 - Legacy migration: one-time idempotent (`migrateLegacyData()`), reads `routyne-storage` → IDB → deletes LS key
 - Cursor-based pagination for history via `loadMoreHistory()` + `historyHasMore` flag
 
-Data access layer lives in `src/lib/db/` — thin functional modules, one per store.
+### Cloud Sync (optional — Supabase)
+
+Architecture: IDB is always local source of truth. Supabase is eventually consistent remote copy.
+
+- `src/lib/supabase/client.ts` — typed singleton Supabase client
+- `src/lib/supabase/schema.sql` — DDL to run in Supabase SQL Editor
+- `src/lib/sync/queue.ts` — IDB-backed mutation queue (enqueue/dequeue/prune)
+- `src/lib/sync/merge.ts` — last-write-wins by `completed_at`, `historyEntryToRemote`
+- `src/lib/sync/syncEngine.ts` — `pushToCloud`, `pullFromCloud`, `pushProfileToCloud`
+- `src/hooks/useAuth.ts` — Supabase session state
+- `src/hooks/useSync.ts` — triggers on auth/visibilitychange, polls every 30s
+- `TopHeader` — cloud icon: idle/syncing/synced/offline/error + pending badge
+- `AuthSheet` — magic-link email auth (3-step flow)
+- `ProfileSheet` — sync status row with "Gestionar/Activar" button
+
+**One-time DB setup:** run `src/lib/supabase/schema.sql` in Supabase SQL Editor.
+Add missing column: `alter table public.history add column if not exists deleted_at timestamptz;`
+
+### AI Coach (optional — Vercel AI Gateway)
+
+- `src/lib/coach/context-builder.ts` — `buildUserContext(history, profile)` → `UserCoachContext`
+- `src/lib/coach/prompts.ts` — `buildSystemPrompt(ctx)` → Spanish system prompt with real data
+- `src/app/api/coach/route.ts` — POST; model `'anthropic/claude-haiku-4.5'` via AI Gateway; in-memory rate limiter 5/day/IP; requires `VERCEL_OIDC_TOKEN`
+- `CoachSheet` — chat UI with suggestions, typing indicator, basic markdown rendering
+- Accessible from bottom nav Bot icon + WorkoutSummaryView "Ask AI Coach" button
+- Gated by `NEXT_PUBLIC_COACH_ENABLED=true`
+
+### Push Notifications (optional — VAPID)
+
+- `worker/push.ts` — SW push handler (injected via `@ducanh2912/next-pwa` `customWorkerSrc`)
+  - Handles `push` event (server-sent notifications)
+  - Handles `notificationclick` (focus/open window)
+  - Handles `SCHEDULE_NOTIFICATION` message — rest-timer alerts without server round-trip
+- `src/lib/push/client.ts` — `subscribeToPush`, `registerSubscription`, `unsubscribeFromPush`, `isPushActive`
+- `src/app/api/push/subscribe/route.ts` — stores push subscriptions in memory (Hobby tier)
+- `src/app/api/push/notify/route.ts` — sends immediate push to all subscribers
+- `src/hooks/usePushNotifications.ts` — state: idle/active/denied/unsupported; `enable`, `disable`, `scheduleLocal`
+- `worker/` is excluded from main `tsconfig.json` (uses SW globals, bundled separately)
+
+### Web Workers
+
+- `src/workers/search.worker.ts` — Fuse.js history fuzzy search; `INIT` / `SEARCH` messages
+- `src/workers/analytics.worker.ts` — PRs + 8-week volume trends; `COMPUTE` message
+- `src/hooks/useSearchWorker.ts` — spawns worker, re-indexes when history changes
+- `src/hooks/useAnalyticsWorker.ts` — spawns worker, recomputes when history changes
+- Pattern: `new Worker(new URL('../workers/x.worker.ts', import.meta.url), { type: 'module' })`
+- Hooks exist but not yet wired into `SearchSheet` / `PersonalRecordsTable` (optional Phase D optimization)
 
 ### Key Files
 
 | File | Purpose |
 |------|---------|
-| `src/app/page.tsx` | View orchestrator + header + bottom nav + loading skeleton |
+| `src/app/page.tsx` | View orchestrator + header + bottom nav + overlay sheets |
 | `src/store/useWorkoutStore.ts` | Zustand store — single source of truth for UI + data cache |
 | `src/types/workout.ts` | All shared TypeScript interfaces |
-| `src/lib/markdown/parser.ts` | Markdown → `RoutineData` parser (NaN guard on both formats) |
+| `src/lib/markdown/parser.ts` | Markdown → `RoutineData` parser |
+| `src/lib/markdown/generator.ts` | `RoutineData` → Markdown (round-trip safe) |
 | `src/lib/media/resolver.ts` | Resolves exercise names to `/api/media/{slug}` URLs |
-| `src/lib/media/providers.ts` | `MediaProvider` interface + ExerciseDB provider |
-| `src/lib/data/exercises.json` | Exercise library with aliases, `media_id`, and `exercisedb_name` |
-| `src/lib/db/schema.ts` | RoutineDB DBSchema type definitions |
+| `src/lib/data/exercises.json` | Exercise library (99 entries) with aliases + media IDs |
+| `src/lib/data/programs/index.ts` | 5 built-in program templates |
+| `src/lib/progression/engine.ts` | 1RM estimation, linear/double/RPE progression |
+| `src/lib/analytics/index.ts` | getExerciseProgressData, buildWorkoutSummary |
+| `src/lib/analytics/muscle-map.ts` | Exercise → muscle group mappings + weekly volume |
+| `src/lib/achievements/` | 30 badge definitions + post-session evaluator |
+| `src/lib/db/schema.ts` | RoutineDB DBSchema type definitions (v4) |
 | `src/lib/db/index.ts` | `getDB()` singleton, `resetDBSingleton()`, `deleteDatabase()` |
-| `src/lib/db/routines.ts` | `saveRoutine`, `loadRoutine`, `listRoutines`, `deleteRoutine` |
-| `src/lib/db/history.ts` | `saveHistoryEntry`, `loadHistory` (paginated), `loadAllHistory` |
-| `src/lib/db/activeSession.ts` | `saveActiveSession`, `loadActiveSession`, `clearActiveSession` |
-| `src/lib/db/profile.ts` | `loadProfile`, `saveProfile` |
-| `src/lib/db/export.ts` | `exportAllData`, `downloadExportFile`, `importAllData` |
-| `src/lib/db/migrate-legacy.ts` | One-time localStorage → IDB migration |
-| `src/hooks/useHydration.ts` | Runs `hydrate()` once on mount, returns `isHydrated` boolean |
-| `src/hooks/useWakeLock.ts` | Screen Wake Lock API wrapper (active during sessions) |
-| `src/components/workout/RoutineUploader.tsx` | Markdown upload + saved routine library cards |
-| `src/components/workout/ExerciseCard.tsx` | Exercise card with media cascade (video → GIF → image → fallback) |
-| `src/components/workout/SetRow.tsx` | Swipe-to-complete set card (velocity + position threshold) |
-| `src/components/workout/RestTimer.tsx` | Floating rest timer (requestAnimationFrame + Date.now()) |
-| `src/components/workout/views/RoutineOverviewView.tsx` | Session picker + exercise sequence |
-| `src/components/workout/views/ActiveSessionView.tsx` | Live workout with progress bar + set tracking + abandon |
-| `src/components/workout/views/HistoryView.tsx` | Workout history with volume chips + load more |
-| `src/components/workout/views/StatsView.tsx` | Stats dashboard composition |
-| `src/components/workout/overlays/ProfileSheet.tsx` | Profile + export/import + storage usage |
-| `src/components/workout/overlays/SetInputSheet.tsx` | Reps + weight input before logging a set |
-| `src/components/workout/overlays/SearchSheet.tsx` | Exercise browser + history search |
-| `src/components/stats/VolumeBarChart.tsx` | Div-based weekly volume chart |
-| `src/components/stats/StreakCalendar.tsx` | 28-day workout heatmap |
-| `src/components/stats/PersonalRecordsTable.tsx` | PRs computed from history |
-| `src/components/ui/button.tsx` | shadcn/ui Button with CVA variants |
+| `src/lib/supabase/client.ts` | Typed Supabase singleton |
+| `src/lib/supabase/schema.sql` | Full Supabase DDL (run once) |
+| `src/lib/sync/` | queue.ts, merge.ts, syncEngine.ts |
+| `src/lib/coach/` | context-builder.ts, prompts.ts |
+| `src/lib/push/client.ts` | Browser push subscription utilities |
+| `src/workers/` | search.worker.ts, analytics.worker.ts |
+| `src/hooks/useHydration.ts` | Migration + IDB hydration, returns `isReady` |
+| `src/hooks/useSync.ts` | Cloud sync trigger hook |
+| `src/hooks/useAuth.ts` | Supabase auth state |
+| `src/hooks/usePushNotifications.ts` | Push subscription state machine |
+| `src/hooks/useSearchWorker.ts` | Fuse.js search via Web Worker |
+| `src/hooks/useAnalyticsWorker.ts` | Analytics computation via Web Worker |
+| `src/components/workout/views/WorkoutSummaryView.tsx` | Post-workout summary, PRs, coach CTA |
+| `src/components/workout/overlays/CoachSheet.tsx` | AI Coach chat UI |
+| `src/components/workout/overlays/AuthSheet.tsx` | Supabase magic-link auth UI |
+| `src/components/workout/overlays/ProfileSheet.tsx` | Profile + sync status + export/import |
+| `src/components/workout/TopHeader.tsx` | App header with cloud sync icon |
+| `src/components/workout/BottomNav.tsx` | Bottom navigation with coach bot icon |
+| `src/app/landing/page.tsx` | SSG marketing landing page (Spanish) |
 | `src/app/globals.css` | Design tokens and Liquid Glass utility classes |
-| `src/components/ErrorBoundary.tsx` | React error boundary wrapper |
+| `worker/push.ts` | Service worker push handler (bundled by next-pwa) |
+| `scripts/generate-vapid-keys.mjs` | One-time VAPID key generation |
+| `scripts/import-exercises.mjs` | Import exercises from ExerciseDB API |
 
 ### Markdown Parser
 
 `parseRoutine()` handles two exercise line formats:
 - **Standard**: `* **Exercise Name**: 3x8-10 90s`
 - **Flipped**: `3x10 Bicep Curls`
+- **Superset**: wrap exercises in `[Superset]` / `[/Superset]` blocks
 
 Sessions are delimited by `##` headings; the overall routine title is the `#` heading. Default rest is 90s if not specified. Invalid lines (NaN sets/reps) are silently skipped.
 
@@ -145,7 +220,7 @@ Design tokens are CSS variables defined in the `@theme` block. All animations us
 
 ### PWA
 
-Configured via `@ducanh2912/next-pwa` in `next.config.ts`. PWA is disabled in development. Service worker output goes to `public/`. The React Compiler (`reactCompiler: true`) and Turbopack are both enabled.
+Configured via `@ducanh2912/next-pwa` in `next.config.ts`. PWA is disabled in development. Service worker output goes to `public/`. Custom worker code in `worker/` is bundled and injected via `importScripts`. The React Compiler (`reactCompiler: true`) and Turbopack are both enabled.
 
 ### Path Alias
 
@@ -158,43 +233,28 @@ Configured via `@ducanh2912/next-pwa` in `next.config.ts`. PWA is disabled in de
 Per-test isolation pattern:
 - `setup.ts` `beforeEach`: `resetDBSingleton()` + `vi.stubGlobal('indexedDB', new IDBFactory())`
 - `db.test.ts`: `deleteDatabase()` in `beforeEach`, `resetDBSingleton()` in `afterEach`
-- Persist tests: `vi.resetModules()` + `resetDBSingleton()` + fresh `IDBFactory` per test (avoids `deleteDB` hanging on in-flight transactions from fire-and-forget writes)
+- Persist tests: `vi.resetModules()` + `resetDBSingleton()` + fresh `IDBFactory` per test
+
+### Known Pre-existing TypeScript Errors (test files only, don't affect builds)
+
+These exist in test files and pre-date Phase B/C work. They do not block `npm run build` or Vitest:
+- `route.test.ts` — `Request` not assignable to `NextRequest` (test uses bare `Request`)
+- `ErrorBoundary.test.tsx` — `toBeInTheDocument` type missing from Vitest matchers
+- `db.test.ts` — `restDays` missing from test fixture (was added later to `UserProfile`)
 
 ### Playwright Testing Cleanup
 
-After any Playwright browser session used to verify an implementation, delete all screenshot `.png` files saved to the project root before finishing:
-
+After any Playwright browser session, delete all `.png` files from the project root before finishing:
 ```bash
 rm -f /Users/sierra/Code/routyne/*.png
 ```
 
-Never commit screenshots. They are temporary verification artifacts only.
-
 ### Plans
 
-All implementation plans live in the project-local `.claude/plans/` directory (gitignored via `.claude/`). New plans should always be created here — **not** in the global `~/.claude/plans/`.
-
-To execute a plan in a new session:
-```
-Execute the plan at .claude/plans/<plan-file>.md
-```
+All implementation plans live in `.claude/plans/` (gitignored via `.claude/`).
 
 Current plans:
-- `2026-03-03-ui-ux-audit.md` — UI/UX audit findings and polish tasks
-
-*** Future Implementation Notes
-
-- **Routine Manager:** Implement a full routine management view (accessible via the `Library` icon in the bottom nav when a routine is active). This should allow users to view, manage, and switch between multiple saved routines seamlessly.
-
-### Future Considerations
-
-**Deployment readiness:**
-- Request `navigator.storage.persist()` on first use to prevent browser eviction of IndexedDB
-- Add error boundaries around all IDB operations (IndexedDB throws in some private browsing modes)
-- Export/import is the user's only data recovery path — implement early (before cloud sync)
-
-**Post-launch priorities:**
-- Cloud sync (Supabase or similar) — requires conflict resolution strategy beyond current merge-on-import
-- Offline queue for API calls (media resolution) when network returns
-- Per-set `weightUnit` storage (currently unit is display-only; switching kg↔lbs reinterprets stored numbers)
-- `navigator.storage.persist()` — request on first use to prevent browser eviction of IDB data
+- `roadmap.md` — full product roadmap with phase completion status
+- `phase-a-foundation.md` — A1 (exercise library 500+), A2 (storage.persist), A3/A4 mostly done
+- `phase-d-growth.md` — share cards v2, challenges, referral, app store
+- `phase-e-monetization.md` — Stripe, subscription gate, pro themes, analytics

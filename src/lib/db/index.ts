@@ -2,7 +2,7 @@ import { openDB, IDBPDatabase } from 'idb';
 import type { RoutineDB } from './schema';
 
 const DB_NAME = 'routyne-db';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 let _db: IDBPDatabase<RoutineDB> | null = null;
 
@@ -52,6 +52,12 @@ export async function getDB(): Promise<IDBPDatabase<RoutineDB>> {
       if (oldVersion < 3) {
         // achievements (v3)
         db.createObjectStore('achievements', { keyPath: 'id' });
+      }
+
+      if (oldVersion < 4) {
+        // syncQueue (v4) — IDB-backed offline mutation queue for cloud sync
+        const syncStore = db.createObjectStore('syncQueue', { keyPath: 'id' });
+        syncStore.createIndex('by-timestamp', 'timestamp');
       }
     },
   });

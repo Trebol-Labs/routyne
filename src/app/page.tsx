@@ -15,11 +15,14 @@ import { RoutineBuilderView } from '@/components/workout/views/RoutineBuilderVie
 import { RoutineManagerView } from '@/components/workout/views/RoutineManagerView';
 import { ProfileSheet } from '@/components/workout/overlays/ProfileSheet';
 import { SearchSheet } from '@/components/workout/overlays/SearchSheet';
+import { AuthSheet } from '@/components/workout/overlays/AuthSheet';
+import { CoachSheet } from '@/components/workout/overlays/CoachSheet';
 import { TopHeader } from '@/components/workout/TopHeader';
 import { BottomNav } from '@/components/workout/BottomNav';
 import { WorkoutView } from '@/types/workout';
 import { useHydration } from '@/hooks/useHydration';
 import { useStoragePersist } from '@/hooks/useStoragePersist';
+import { useSync } from '@/hooks/useSync';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { AchievementToast } from '@/components/workout/AchievementToast';
 
@@ -37,9 +40,12 @@ export default function Home() {
 
   const [showProfile, setShowProfile] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
+  const [showCoach, setShowCoach] = useState(false);
   const [confirmNewRoutine, setConfirmNewRoutine] = useState(false);
 
   useStoragePersist();
+  const { status: syncStatus, pendingCount } = useSync();
 
   if (!isReady) {
     return (
@@ -76,7 +82,13 @@ export default function Home() {
       <div className="max-w-screen-md mx-auto h-dvh flex flex-col relative px-4">
 
         {/* Top Header */}
-        <TopHeader onSearchClick={() => setShowSearch(true)} onProfileClick={() => setShowProfile(true)} />
+        <TopHeader
+          onSearchClick={() => setShowSearch(true)}
+          onProfileClick={() => setShowProfile(true)}
+          onCloudClick={process.env.NEXT_PUBLIC_SUPABASE_URL ? () => setShowAuth(true) : undefined}
+          syncStatus={syncStatus}
+          pendingCount={pendingCount}
+        />
 
         <div className="flex-grow pt-4 pb-[var(--space-nav-clear)] flex flex-col">
           <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:p-4 focus:bg-black focus:text-white focus:rounded-lg">
@@ -170,15 +182,31 @@ export default function Home() {
         </div>
 
         {/* Bottom Navigation */}
-        <BottomNav currentView={currentView} onNavigate={handleNavClick} hasRoutine={!!currentRoutine} />
+        <BottomNav
+          currentView={currentView}
+          onNavigate={handleNavClick}
+          hasRoutine={!!currentRoutine}
+          onCoachClick={process.env.NEXT_PUBLIC_COACH_ENABLED ? () => setShowCoach(true) : undefined}
+        />
       </div>
 
       {/* Overlay sheets */}
       <AnimatePresence>
-        {showProfile && <ProfileSheet onClose={() => setShowProfile(false)} />}
+        {showProfile && (
+          <ProfileSheet
+            onClose={() => setShowProfile(false)}
+            onOpenSync={process.env.NEXT_PUBLIC_SUPABASE_URL ? () => { setShowProfile(false); setShowAuth(true); } : undefined}
+          />
+        )}
       </AnimatePresence>
       <AnimatePresence>
         {showSearch && <SearchSheet onClose={() => setShowSearch(false)} />}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showAuth && <AuthSheet onClose={() => setShowAuth(false)} />}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showCoach && <CoachSheet onClose={() => setShowCoach(false)} />}
       </AnimatePresence>
 
       <ConfirmDialog

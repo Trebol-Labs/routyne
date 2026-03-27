@@ -106,6 +106,15 @@ export interface AchievementRecord {
   earnedAt: string; // ISO 8601
 }
 
+export interface SyncMutationRecord {
+  id: string;       // uuidv4
+  table: 'history' | 'routines' | 'bodyweight' | 'profile';
+  operation: 'upsert' | 'delete';
+  payload: unknown;
+  timestamp: number; // Date.now() — for ordering
+  retries: number;
+}
+
 export interface BodyweightRecord {
   id: string;       // uuidv4
   date: string;     // YYYY-MM-DD
@@ -156,5 +165,10 @@ export interface RoutineDB extends DBSchema {
   achievements: {
     key: string;
     value: AchievementRecord;
+  };
+  syncQueue: {
+    key: string;
+    value: SyncMutationRecord;
+    indexes: { 'by-timestamp': number };
   };
 }

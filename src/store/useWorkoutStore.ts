@@ -338,6 +338,17 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
     try {
       await saveHistoryEntry(newEntry, state.currentRoutine.id, activeSession.id);
       await clearActiveSession();
+
+      // ── Enqueue cloud sync mutation (fire-and-forget) ──────────────────
+      if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
+        const [{ enqueue }, { historyEntryToRemote }] = await Promise.all([
+          import('@/lib/sync/queue'),
+          import('@/lib/sync/merge'),
+        ]);
+        // user_id placeholder — overwritten at push time by syncEngine
+        enqueue({ table: 'history', operation: 'upsert', payload: historyEntryToRemote(newEntry, '') })
+          .catch((e) => console.error('[useWorkoutStore] enqueue failed', e));
+      }
     } catch (err) {
       console.error('[useWorkoutStore] finishSession IDB write failed', err);
     }
