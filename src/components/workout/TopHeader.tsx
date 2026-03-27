@@ -1,12 +1,17 @@
 'use client';
 
 import { memo } from 'react';
-import { Search, User, Dumbbell } from 'lucide-react';
+import { Search, User, Dumbbell, Cloud, CloudOff, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+type SyncStatus = 'idle' | 'syncing' | 'synced' | 'error' | 'offline';
 
 interface TopHeaderProps {
   onSearchClick: () => void;
   onProfileClick: () => void;
+  onCloudClick?: () => void;
+  syncStatus?: SyncStatus;
+  pendingCount?: number;
 }
 
 const BrandLogo = memo(() => (
@@ -66,7 +71,21 @@ const ActionButton = memo(({
 
 ActionButton.displayName = 'ActionButton';
 
-export const TopHeader = memo(({ onSearchClick, onProfileClick }: TopHeaderProps) => {
+function CloudSyncIcon({ status }: { status: SyncStatus }) {
+  if (status === 'syncing') return <Loader2 className="w-4.5 h-4.5 relative z-10 animate-spin text-sky-400" />;
+  if (status === 'offline') return <CloudOff className="w-4.5 h-4.5 relative z-10 text-amber-400" />;
+  if (status === 'error') return <Cloud className="w-4.5 h-4.5 relative z-10 text-red-400" />;
+  if (status === 'synced') return <Cloud className="w-4.5 h-4.5 relative z-10 text-emerald-400" />;
+  return <Cloud className="w-4.5 h-4.5 relative z-10 text-white/40" />;
+}
+
+export const TopHeader = memo(({
+  onSearchClick,
+  onProfileClick,
+  onCloudClick,
+  syncStatus = 'idle',
+  pendingCount = 0,
+}: TopHeaderProps) => {
   return (
     <>
       {/* Gradient backdrop - precisely sized to header height */}
@@ -98,6 +117,23 @@ export const TopHeader = memo(({ onSearchClick, onProfileClick }: TopHeaderProps
               label="Search exercises"
               onClick={onSearchClick}
             />
+            {onCloudClick && (
+              <button
+                onClick={onCloudClick}
+                aria-label="Cloud sync"
+                className={cn(
+                  'relative w-11 h-11 rounded-full flex items-center justify-center',
+                  'transition-all duration-300 cursor-pointer active-glass-btn group overflow-hidden',
+                  'hover:scale-105 hover:shadow-md'
+                )}
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 translate-x-[-100%] group-hover:translate-x-[100%]" />
+                <CloudSyncIcon status={syncStatus} />
+                {pendingCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-amber-400 z-20" />
+                )}
+              </button>
+            )}
             <ActionButton
               icon={User}
               label="Profile settings"

@@ -10,7 +10,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { cn } from '@/lib/utils';
 import { PROGRAM_TEMPLATES, type ProgramTemplate } from '@/lib/data/programs/index';
 
-type Tab = 'import' | 'templates';
+type Tab = 'templates' | 'import';
 
 // ── Level badge ───────────────────────────────────────────────────────────────
 
@@ -75,7 +75,7 @@ function ProgramCard({
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function RoutineUploader() {
-  const [activeTab, setActiveTab] = useState<Tab>('import');
+  const [activeTab, setActiveTab] = useState<Tab>('templates');
   const [text, setText] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -141,7 +141,7 @@ export function RoutineUploader() {
           GET <span className="brightness-125 [-webkit-text-fill-color:#3b82f6]">STARTED</span>
         </h1>
         <p className="text-white/35 font-medium text-sm tracking-tight text-center">
-          Import your own routine or pick a program template
+          Pick a program or import your own routine
         </p>
       </motion.div>
 
@@ -153,8 +153,8 @@ export function RoutineUploader() {
         className="flex items-center gap-1 p-1 glass-panel rounded-2xl border-white/10"
       >
         {([
+          { id: 'templates', label: 'Programs', icon: LayoutTemplate },
           { id: 'import', label: 'Import', icon: Code },
-          { id: 'templates', label: 'Templates', icon: LayoutTemplate },
         ] as const).map(({ id, label, icon: Icon }) => (
           <button
             key={id}
@@ -178,9 +178,9 @@ export function RoutineUploader() {
         {activeTab === 'import' ? (
           <motion.div
             key="import-tab"
-            initial={{ opacity: 0, x: -12 }}
+            initial={{ opacity: 0, x: 12 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 12 }}
+            exit={{ opacity: 0, x: -12 }}
             transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
             className="flex flex-col gap-3"
           >
@@ -291,9 +291,9 @@ export function RoutineUploader() {
           // ── Templates tab ──────────────────────────────────────────────────
           <motion.div
             key="templates-tab"
-            initial={{ opacity: 0, x: 12 }}
+            initial={{ opacity: 0, x: -12 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -12 }}
+            exit={{ opacity: 0, x: 12 }}
             transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
             className="flex flex-col gap-2"
           >

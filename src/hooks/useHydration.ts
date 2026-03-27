@@ -3,6 +3,7 @@ import { useWorkoutStore } from '@/store/useWorkoutStore';
 
 /**
  * Runs migration + IDB hydration once on mount.
+ * Also requests persistent storage to prevent iOS/Safari eviction.
  * Returns true when the store is ready.
  */
 export function useHydration(): boolean {

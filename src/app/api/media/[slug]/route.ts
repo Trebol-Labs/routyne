@@ -8,15 +8,25 @@ interface ExerciseEntry {
   id: string;
   aliases: string[];
   exercisedb_name: string;
+  bodyPart?: string;
+  equipment?: string;
+  target?: string;
 }
 
 // In-process cache — avoids redundant API calls within a server lifetime
 const cache = new Map<string, MediaResult | null>();
 
-// Fuse index for looking up exercisedb_name by slug/name
+// Fuse index: search aliases + id + bodyPart + target for robust fuzzy matching
 const fuse = new Fuse(exercisesData as ExerciseEntry[], {
-  keys: ['aliases', 'id'],
+  keys: [
+    { name: 'aliases', weight: 2 },
+    { name: 'id', weight: 1.5 },
+    { name: 'exercisedb_name', weight: 1.5 },
+    { name: 'bodyPart', weight: 0.5 },
+    { name: 'target', weight: 0.5 },
+  ],
   threshold: 0.35,
+  includeScore: false,
 });
 
 function resolveSearchName(slug: string): string {

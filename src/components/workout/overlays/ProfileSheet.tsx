@@ -1,9 +1,12 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { Sheet } from '@/components/ui/Sheet';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
+import { useSync } from '@/hooks/useSync';
+import { useAuth } from '@/hooks/useAuth';
 import type { HistoryEntry } from '@/types/workout';
-import { Flame } from 'lucide-react';
+import { Flame, Cloud, Loader2, CloudOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Commented out — uncomment when export/import needed
@@ -34,15 +37,19 @@ function computeStreak(history: HistoryEntry[], restDays: number[]): number {
 
 interface ProfileSheetProps {
   onClose: () => void;
+  onOpenSync?: () => void;
 }
 
-export function ProfileSheet({ onClose }: ProfileSheetProps) {
+export function ProfileSheet({ onClose, onOpenSync }: ProfileSheetProps) {
   const { profile, updateProfile, history } = useWorkoutStore();
+  const [isPersisted, setIsPersisted] = useState<boolean | null>(null);
+  const supabaseEnabled = !!process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const { status: syncStatus, pendingCount } = useSync();
+  const { user, isAnonymous } = useAuth();
 
-  // Commented out — re-enable when backup features are needed
-  // const fileInputRef = useRef<HTMLInputElement>(null);
-  // const [isExporting, setIsExporting] = useState(false);
-  // const [isImporting, setIsImporting] = useState(false);
+  useEffect(() => {
+    navigator.storage?.persisted?.().then(setIsPersisted).catch(() => {});
+  }, []);
 
   const totalSessions = history.length;
   const totalVolume = history.reduce((sum, e) => sum + e.totalVolume, 0);
@@ -197,6 +204,53 @@ export function ProfileSheet({ onClose }: ProfileSheetProps) {
             <span className="text-[10px] font-black text-emerald-400/70 uppercase tracking-widest mt-0.5">Streak</span>
           </div>
         </div>
+
+        {/* Storage persistence status */}
+        {isPersisted !== null && (
+          <div className={cn(
+            'shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl border text-[10px] font-black uppercase tracking-widest w-fit',
+            isPersisted
+              ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+              : 'bg-amber-500/10 border-amber-500/20 text-amber-400'
+          )}>
+            <span>{isPersisted ? '🔒' : '⚠️'}</span>
+            <span>{isPersisted ? 'Datos protegidos' : 'Proteger datos'}</span>
+          </div>
+        )}
+
+        {/* Cloud sync status */}
+        {supabaseEnabled && (
+          <button
+            onClick={onOpenSync}
+            className="shrink-0 flex items-center justify-between px-3 py-2.5 glass-panel rounded-xl border-white/10 w-full hover:border-white/20 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              {syncStatus === 'syncing' ? (
+                <Loader2 className="w-3.5 h-3.5 text-sky-400 animate-spin" />
+              ) : syncStatus === 'offline' ? (
+                <CloudOff className="w-3.5 h-3.5 text-amber-400" />
+              ) : syncStatus === 'error' ? (
+                <Cloud className="w-3.5 h-3.5 text-red-400" />
+              ) : syncStatus === 'synced' ? (
+                <Cloud className="w-3.5 h-3.5 text-emerald-400" />
+              ) : (
+                <Cloud className="w-3.5 h-3.5 text-white/30" />
+              )}
+              <span className="text-[10px] font-black uppercase tracking-widest text-white/50">
+                {!user ? 'Cloud Sync' :
+                  syncStatus === 'syncing' ? 'Sincronizando…' :
+                  syncStatus === 'offline' ? 'Sin conexión' :
+                  syncStatus === 'error' ? 'Error de sync' :
+                  syncStatus === 'synced' ? (isAnonymous ? 'Cuenta anónima' : (user.email ?? 'Sincronizado')) :
+                  pendingCount > 0 ? `${pendingCount} pendiente${pendingCount !== 1 ? 's' : ''}` :
+                  'No configurado'}
+              </span>
+            </div>
+            <span className="text-[9px] text-white/20 font-black uppercase tracking-widest">
+              {user ? 'Gestionar →' : 'Activar →'}
+            </span>
+          </button>
+        )}
 
         {/* Remaining space filler — keeps layout anchored to top */}
         <div className="flex-1" />

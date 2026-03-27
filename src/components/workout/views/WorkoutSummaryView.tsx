@@ -7,6 +7,7 @@ import { Trophy, Clock, Dumbbell, CheckCircle2, BarChart2, Share2, History, Chev
 import { Button } from '@/components/ui/button';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
 import { ShareCardSheet } from '@/components/workout/overlays/ShareCardSheet';
+import { CoachSheet } from '@/components/workout/overlays/CoachSheet';
 import type { ExerciseVolume, SetDetail, WorkoutSummary } from '@/types/workout';
 
 // ── Duration formatter ────────────────────────────────────────────────────────
@@ -113,8 +114,11 @@ function VolumeDeltaBadge({ pct }: { pct: number | null }) {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function WorkoutSummaryView() {
-  const { lastWorkoutSummary, setCurrentView, profile } = useWorkoutStore();
+  const { lastWorkoutSummary, setCurrentView, profile, history } = useWorkoutStore();
   const [showShareCard, setShowShareCard] = useState(false);
+  const [showCoach, setShowCoach] = useState(false);
+  const coachEnabled = !!process.env.NEXT_PUBLIC_COACH_ENABLED;
+  const isFirstWorkout = history.length === 1;
 
   // Guard: no summary — redirect to history
   useEffect(() => {
@@ -310,7 +314,20 @@ export function WorkoutSummaryView() {
         </motion.div>
       )}
 
-      {/* ── 5. Action buttons ── */}
+      {/* ── 5. First-workout celebration ── */}
+      {isFirstWorkout && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.4, duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
+          className="glass-panel rounded-2xl border-amber-400/20 p-4 text-center space-y-1"
+        >
+          <p className="text-xl font-black tracking-tight text-white font-display">🎉 ¡Primer entrenamiento!</p>
+          <p className="text-sm text-white/50 font-medium">Comparte tu logro con el mundo</p>
+        </motion.div>
+      )}
+
+      {/* ── 6. Action buttons ── */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -345,6 +362,17 @@ export function WorkoutSummaryView() {
           <Share2 className="w-4 h-4 mr-2" />
           Share Workout
         </Button>
+
+        {/* AI Coach CTA — only shown when coach is configured */}
+        {coachEnabled && (
+          <Button
+            variant="ghost"
+            className="w-full h-12 text-sm font-bold text-indigo-400/70 hover:text-indigo-300 uppercase tracking-widest font-display"
+            onClick={() => setShowCoach(true)}
+          >
+            🤖 Ask AI Coach
+          </Button>
+        )}
       </motion.div>
     </motion.div>
 
@@ -356,6 +384,9 @@ export function WorkoutSummaryView() {
           onClose={() => setShowShareCard(false)}
         />
       )}
+    </AnimatePresence>
+    <AnimatePresence>
+      {showCoach && <CoachSheet onClose={() => setShowCoach(false)} />}
     </AnimatePresence>
     </>
   );
