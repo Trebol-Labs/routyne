@@ -184,6 +184,7 @@ describe('profile', () => {
       weightUnit: 'lbs',
       heightCm: 165,
       defaultRestSeconds: 120,
+      restDays: [],
     });
     const p = await loadProfile();
     expect(p.displayName).toBe('Sierra');
