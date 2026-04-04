@@ -6,9 +6,13 @@ on:
   pull_request:
     branches: [main]
 
+# Least-privilege token: read repo content only; no write access needed for CI checks
+permissions:
+  contents: read
+
 jobs:
   ci:
-    name: Lint · Test · Build
+    name: Lint · Typecheck · Test · Build
     runs-on: ubuntu-latest
 
     steps:
@@ -27,10 +31,19 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      - name: Typecheck
+        run: pnpm tsc --noEmit
+
       - name: Test
         run: pnpm test
 
       - name: Build
         run: pnpm build
         env:
+          # RAPIDAPI_KEY is required for ExerciseDB media; falls back gracefully if absent
           RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
+          # Optional vars — provide empty strings so Next.js doesn't complain about missing env at build time
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || '' }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || '' }}
+          NEXT_PUBLIC_COACH_ENABLED: ${{ secrets.NEXT_PUBLIC_COACH_ENABLED || '' }}
+          NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${{ secrets.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '' }}
