@@ -186,13 +186,21 @@ Add missing column: `alter table public.history add column if not exists deleted
 | `src/components/workout/overlays/CoachSheet.tsx` | AI Coach chat UI |
 | `src/components/workout/overlays/AuthSheet.tsx` | Supabase magic-link auth UI |
 | `src/components/workout/overlays/ProfileSheet.tsx` | Profile + sync status + export/import |
-| `src/components/workout/TopHeader.tsx` | App header with cloud sync icon |
+| `src/components/workout/TopHeader.tsx` | App header — props: `onProfileClick`, optional `onCloudClick`, `syncStatus`, `pendingCount` (no search button) |
 | `src/components/workout/BottomNav.tsx` | Bottom navigation with coach bot icon |
 | `src/app/landing/page.tsx` | SSG marketing landing page (Spanish) |
 | `src/app/globals.css` | Design tokens and Liquid Glass utility classes |
 | `worker/push.ts` | Service worker push handler (bundled by next-pwa) |
 | `scripts/generate-vapid-keys.mjs` | One-time VAPID key generation |
 | `scripts/import-exercises.mjs` | Import exercises from ExerciseDB API |
+
+### Stats View
+
+`StatsView.tsx` is self-contained — level thresholds, level names, achievement category config, and chain progress map all live at the top of the file (no separate module). Three tabs: **Overview** (calendar, bodyweight, recent sessions), **Progress** (charts, PRs, muscles, recovery), **Trophies** (achievements grouped by category).
+
+Level system: session-based tiers `[0,5,10,20,35,50,75,100,150,200,300]` → Rookie→Myth. Achievement `category` values (`sessions|volume|prs|variety|streak|special`) map 1:1 to `ACHIEVEMENT_CATEGORIES` keys — match these when adding new achievements in `definitions.ts`.
+
+`SearchSheet` is wired inside `RoutineBuilderView`, not globally in `page.tsx`.
 
 ### Markdown Parser
 
@@ -212,7 +220,7 @@ Sessions are delimited by `##` headings; the overall routine title is the `#` he
 The "Liquid Glass" aesthetic is implemented via utility classes in `globals.css`:
 - `.glass-panel` — frosted glass card (blur 40px, saturate 180%)
 - `.active-glass-btn` — blue/indigo gradient button
-- `.liquid-bg-dark` — radial gradient dark background
+- `.liquid-bg-dark` — `background: transparent` (gradients now live on `html` in `globals.css` with `background-attachment: fixed` — do not add background colors to this class)
 - `.text-liquid` — gradient clip text
 - `.sunken-glass` — inset shadow panel
 
@@ -235,12 +243,12 @@ Per-test isolation pattern:
 - `db.test.ts`: `deleteDatabase()` in `beforeEach`, `resetDBSingleton()` in `afterEach`
 - Persist tests: `vi.resetModules()` + `resetDBSingleton()` + fresh `IDBFactory` per test
 
-### Known Pre-existing TypeScript Errors (test files only, don't affect builds)
+### TypeScript
 
-These exist in test files and pre-date Phase B/C work. They do not block `npm run build` or Vitest:
-- `route.test.ts` — `Request` not assignable to `NextRequest` (test uses bare `Request`)
-- `ErrorBoundary.test.tsx` — `toBeInTheDocument` type missing from Vitest matchers
-- `db.test.ts` — `restDays` missing from test fixture (was added later to `UserProfile`)
+`npx tsc --noEmit` should report **zero errors**. All test-file type errors were fixed 2026-04-04:
+- `route.test.ts` uses `NextRequest` (not bare `Request`)
+- `ErrorBoundary.test.tsx` types covered by `@testing-library/jest-dom` entry in `tsconfig.json` `types`
+- `db.test.ts` fixture includes `restDays: []`
 
 ### Playwright Testing Cleanup
 
