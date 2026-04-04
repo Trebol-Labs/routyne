@@ -1,893 +1,121 @@
 [
   {
-    "id": "bench_press",
-    "aliases": ["bench press", "press de banca", "chest press", "benchpress", "banca", "barbell bench press", "flat bench press"],
-    "exercisedb_name": "barbell bench press",
-    "media_id": "0006",
-    "bodyPart": "chest",
-    "equipment": "barbell",
-    "target": "pectorals"
-  },
-  {
-    "id": "incline_bench_press",
-    "aliases": ["incline bench press", "incline press", "press inclinado", "press de banca inclinado", "incline barbell press"],
-    "exercisedb_name": "barbell incline bench press",
-    "media_id": "0008",
-    "bodyPart": "chest",
-    "equipment": "barbell",
-    "target": "pectorals"
-  },
-  {
-    "id": "decline_bench_press",
-    "aliases": ["decline bench press", "decline press", "press declinado", "press de banca declinado"],
-    "exercisedb_name": "barbell decline bench press",
-    "media_id": "0007",
-    "bodyPart": "chest",
-    "equipment": "barbell",
-    "target": "pectorals"
-  },
-  {
-    "id": "dumbbell_bench_press",
-    "aliases": ["dumbbell bench press", "db bench press", "press con mancuernas", "press de pecho con mancuerna"],
-    "exercisedb_name": "dumbbell bench press",
-    "media_id": "0327",
-    "bodyPart": "chest",
-    "equipment": "dumbbell",
-    "target": "pectorals"
-  },
-  {
-    "id": "dumbbell_fly",
-    "aliases": ["dumbbell fly", "db fly", "dumbbell flye", "aperturas con mancuernas", "aperturas de pecho", "chest fly"],
-    "exercisedb_name": "dumbbell fly",
-    "media_id": "0334",
-    "bodyPart": "chest",
-    "equipment": "dumbbell",
-    "target": "pectorals"
-  },
-  {
-    "id": "cable_crossover",
-    "aliases": ["cable crossover", "cable fly", "cruce de poleas", "aperturas en polea", "cable chest fly"],
-    "exercisedb_name": "cable crossover",
-    "media_id": "0197",
-    "bodyPart": "chest",
-    "equipment": "cable",
-    "target": "pectorals"
-  },
-  {
-    "id": "pec_deck",
-    "aliases": ["pec deck", "machine fly", "chest fly machine", "pec deck machine fly", "pec-deck", "butterfly machine", "mariposa"],
-    "exercisedb_name": "lever seated fly",
-    "media_id": "0484",
-    "bodyPart": "chest",
-    "equipment": "leverage machine",
-    "target": "pectorals"
-  },
-  {
-    "id": "convergent_chest_press",
-    "aliases": ["convergent machine chest press", "convergent chest press", "machine chest press", "lever chest press", "chest press machine", "press de pecho máquina"],
-    "exercisedb_name": "lever chest press",
-    "media_id": "0462",
-    "bodyPart": "chest",
-    "equipment": "leverage machine",
-    "target": "pectorals"
-  },
-  {
-    "id": "push_up",
-    "aliases": ["push up", "pushups", "push-ups", "flexiones", "lagartijas", "floor press", "push ups"],
-    "exercisedb_name": "push-up",
-    "media_id": "0557",
-    "bodyPart": "chest",
-    "equipment": "body weight",
-    "target": "pectorals"
-  },
-  {
-    "id": "dip",
-    "aliases": ["dip", "dips", "fondos", "fondo en paralelas", "parallel bar dip", "chest dip"],
-    "exercisedb_name": "dip",
-    "media_id": "0314",
-    "bodyPart": "chest",
-    "equipment": "body weight",
-    "target": "pectorals"
-  },
-  {
-    "id": "deadlift",
-    "aliases": ["deadlift", "peso muerto", "conventional deadlift", "barbell deadlift", "dl"],
-    "exercisedb_name": "deadlift",
-    "media_id": "0191",
-    "bodyPart": "back",
-    "equipment": "barbell",
-    "target": "glutes"
-  },
-  {
-    "id": "romanian_deadlift",
-    "aliases": ["romanian deadlift", "rdl", "peso muerto rumano", "stiff leg deadlift", "straight leg deadlift"],
-    "exercisedb_name": "barbell romanian deadlift",
-    "media_id": "0085",
-    "bodyPart": "upper legs",
-    "equipment": "barbell",
-    "target": "glutes"
-  },
-  {
-    "id": "sumo_deadlift",
-    "aliases": ["sumo deadlift", "peso muerto sumo", "sumo dl"],
-    "exercisedb_name": "barbell sumo deadlift",
-    "media_id": "0086",
-    "bodyPart": "upper legs",
-    "equipment": "barbell",
-    "target": "glutes"
-  },
-  {
-    "id": "barbell_row",
-    "aliases": ["barbell row", "bent over row", "barbell bent over row", "remo con barra", "remo inclinado"],
-    "exercisedb_name": "barbell bent over row",
-    "media_id": "0030",
-    "bodyPart": "back",
-    "equipment": "barbell",
-    "target": "upper back"
-  },
-  {
-    "id": "dumbbell_row",
-    "aliases": ["dumbbell row", "db row", "one arm row", "single arm row", "remo con mancuerna", "remo a un brazo"],
-    "exercisedb_name": "dumbbell one arm row",
-    "media_id": "0357",
-    "bodyPart": "back",
-    "equipment": "dumbbell",
-    "target": "upper back"
-  },
-  {
-    "id": "cable_row",
-    "aliases": ["cable row", "seated cable row", "cable seated row", "remo en polea", "remo polea baja", "polea baja"],
-    "exercisedb_name": "cable seated row",
-    "media_id": "0227",
-    "bodyPart": "back",
-    "equipment": "cable",
-    "target": "upper back"
-  },
-  {
-    "id": "lat_pulldown",
-    "aliases": ["lat pulldown", "jalón al pecho", "jalón en polea", "pulldown", "lat pull down", "polea alta"],
-    "exercisedb_name": "cable lat pulldown",
-    "media_id": "0211",
-    "bodyPart": "back",
-    "equipment": "cable",
-    "target": "lats"
-  },
-  {
-    "id": "pull_up",
-    "aliases": ["pull up", "chin up", "pullups", "dominadas", "pull-ups", "pull ups", "chinup"],
-    "exercisedb_name": "pull-up",
-    "media_id": "0539",
-    "bodyPart": "back",
-    "equipment": "body weight",
-    "target": "lats"
-  },
-  {
-    "id": "chin_up",
-    "aliases": ["chin up", "chinup", "chin-up", "dominadas supinadas", "supinated pull up"],
-    "exercisedb_name": "chin-up",
-    "media_id": "1369",
-    "bodyPart": "back",
-    "equipment": "body weight",
-    "target": "lats"
-  },
-  {
-    "id": "seated_row_machine",
-    "aliases": ["seated row machine", "machine row", "remo máquina", "lever seated row", "chest supported row"],
-    "exercisedb_name": "lever seated row",
-    "media_id": "0490",
-    "bodyPart": "back",
-    "equipment": "leverage machine",
-    "target": "upper back"
-  },
-  {
-    "id": "hyperextension",
-    "aliases": ["hyperextension", "back extension", "roman chair", "extensión de espalda", "hiperextensión"],
-    "exercisedb_name": "hyperextension",
-    "media_id": "0389",
-    "bodyPart": "back",
-    "equipment": "body weight",
-    "target": "spine"
-  },
-  {
-    "id": "squat",
-    "aliases": ["squat", "squats", "sentadillas", "sentadilla", "back squat", "barbell squat", "cuclillas"],
-    "exercisedb_name": "barbell squat",
-    "media_id": "0047",
-    "bodyPart": "upper legs",
-    "equipment": "barbell",
-    "target": "quads"
-  },
-  {
-    "id": "front_squat",
-    "aliases": ["front squat", "sentadilla frontal", "barbell front squat"],
-    "exercisedb_name": "barbell front squat",
-    "media_id": "0037",
-    "bodyPart": "upper legs",
-    "equipment": "barbell",
-    "target": "quads"
-  },
-  {
-    "id": "goblet_squat",
-    "aliases": ["goblet squat", "squat con mancuerna", "goblet", "sentadilla goblet"],
-    "exercisedb_name": "dumbbell goblet squat",
-    "media_id": "0342",
-    "bodyPart": "upper legs",
-    "equipment": "dumbbell",
-    "target": "quads"
-  },
-  {
-    "id": "hack_squat",
-    "aliases": ["hack squat", "sentadilla hack", "machine squat", "hack squat machine"],
-    "exercisedb_name": "barbell hack squat",
-    "media_id": "0054",
-    "bodyPart": "upper legs",
-    "equipment": "barbell",
-    "target": "quads"
-  },
-  {
-    "id": "leg_press",
-    "aliases": ["leg press", "prensa de piernas", "prensa", "machine leg press"],
-    "exercisedb_name": "leg press",
-    "media_id": "0410",
-    "bodyPart": "upper legs",
-    "equipment": "leverage machine",
-    "target": "quads"
-  },
-  {
-    "id": "leg_extension",
-    "aliases": ["leg extension", "extensión de cuádriceps", "extensión de piernas", "knee extension", "quad extension"],
-    "exercisedb_name": "lever leg extension",
-    "media_id": "0424",
-    "bodyPart": "upper legs",
-    "equipment": "leverage machine",
-    "target": "quads"
-  },
-  {
-    "id": "leg_curl",
-    "aliases": ["leg curl", "curl de piernas", "curl femoral", "hamstring curl", "lying leg curl", "seated leg curl"],
-    "exercisedb_name": "lever lying leg curl",
-    "media_id": "0431",
-    "bodyPart": "upper legs",
-    "equipment": "leverage machine",
-    "target": "hamstrings"
-  },
-  {
-    "id": "lunge",
-    "aliases": ["lunge", "lunges", "estocadas", "walking lunges", "zancadas", "zancada", "estocada"],
-    "exercisedb_name": "lunge",
-    "media_id": "0443",
-    "bodyPart": "upper legs",
-    "equipment": "body weight",
-    "target": "quads"
-  },
-  {
-    "id": "bulgarian_split_squat",
-    "aliases": ["bulgarian split squat", "split squat", "sentadilla búlgara", "rear foot elevated split squat", "rfess"],
-    "exercisedb_name": "barbell bulgarian split squat",
-    "media_id": "1423",
-    "bodyPart": "upper legs",
-    "equipment": "barbell",
-    "target": "quads"
-  },
-  {
-    "id": "hip_thrust",
-    "aliases": ["hip thrust", "empuje de cadera", "barbell hip thrust", "glute bridge barbell", "hip extension"],
-    "exercisedb_name": "barbell hip thrust",
-    "media_id": "1460",
-    "bodyPart": "upper legs",
-    "equipment": "barbell",
-    "target": "glutes"
-  },
-  {
-    "id": "glute_bridge",
-    "aliases": ["glute bridge", "puente de glúteo", "puente de cadera", "glute bridge floor", "hip bridge"],
-    "exercisedb_name": "glute bridge",
-    "media_id": "1496",
-    "bodyPart": "upper legs",
-    "equipment": "body weight",
-    "target": "glutes"
-  },
-  {
-    "id": "calf_raise",
-    "aliases": ["calf raise", "elevación de talones", "pantorrilla", "standing calf raise", "calf raises"],
-    "exercisedb_name": "calf raise",
-    "media_id": "0172",
-    "bodyPart": "lower legs",
-    "equipment": "body weight",
-    "target": "calves"
-  },
-  {
-    "id": "seated_calf_raise",
-    "aliases": ["seated calf raise", "elevación de pantorrilla sentado", "machine calf raise"],
-    "exercisedb_name": "lever seated calf raise",
-    "media_id": "0486",
-    "bodyPart": "lower legs",
-    "equipment": "leverage machine",
-    "target": "calves"
-  },
-  {
-    "id": "overhead_press",
-    "aliases": ["overhead press", "ohp", "military press", "press militar", "shoulder press", "press de hombro", "barbell overhead press", "press sobre cabeza"],
-    "exercisedb_name": "barbell overhead press",
-    "media_id": "0061",
-    "bodyPart": "shoulders",
-    "equipment": "barbell",
-    "target": "delts"
-  },
-  {
-    "id": "dumbbell_shoulder_press",
-    "aliases": ["dumbbell shoulder press", "db shoulder press", "dumbbell overhead press", "arnold press", "press de hombros con mancuerna"],
-    "exercisedb_name": "dumbbell shoulder press",
-    "media_id": "0368",
-    "bodyPart": "shoulders",
-    "equipment": "dumbbell",
-    "target": "delts"
-  },
-  {
-    "id": "lateral_raise",
-    "aliases": ["lateral raise", "dumbbell lateral raise", "elevación lateral", "aperturas laterales", "side lateral raise"],
-    "exercisedb_name": "dumbbell lateral raise",
-    "media_id": "0347",
-    "bodyPart": "shoulders",
-    "equipment": "dumbbell",
-    "target": "delts"
-  },
-  {
-    "id": "front_raise",
-    "aliases": ["front raise", "dumbbell front raise", "elevación frontal", "anterior raise"],
-    "exercisedb_name": "dumbbell front raise",
-    "media_id": "0333",
-    "bodyPart": "shoulders",
-    "equipment": "dumbbell",
-    "target": "delts"
-  },
-  {
-    "id": "rear_delt_fly",
-    "aliases": ["rear delt fly", "rear delt raise", "reverse fly", "face pull dumbbell", "aperturas posteriores", "deltoides posterior"],
-    "exercisedb_name": "dumbbell rear delt row",
-    "media_id": "0360",
-    "bodyPart": "shoulders",
-    "equipment": "dumbbell",
-    "target": "delts"
-  },
-  {
-    "id": "face_pull",
-    "aliases": ["face pull", "cable face pull", "jalón hacia la cara", "rear delt cable pull", "polea facial"],
-    "exercisedb_name": "cable pull to the face",
-    "media_id": "0219",
-    "bodyPart": "shoulders",
-    "equipment": "cable",
-    "target": "delts"
-  },
-  {
-    "id": "upright_row",
-    "aliases": ["upright row", "barbell upright row", "remo al mentón", "remo vertical"],
-    "exercisedb_name": "barbell upright row",
-    "media_id": "0095",
-    "bodyPart": "shoulders",
-    "equipment": "barbell",
-    "target": "delts"
-  },
-  {
-    "id": "shrug",
-    "aliases": ["shrug", "barbell shrug", "dumbbell shrug", "encogimiento de hombros", "trampas"],
-    "exercisedb_name": "barbell shrug",
-    "media_id": "0091",
-    "bodyPart": "back",
-    "equipment": "barbell",
-    "target": "traps"
-  },
-  {
-    "id": "barbell_curl",
-    "aliases": ["barbell curl", "bicep curl", "curl de biceps", "biceps curl", "curl bíceps barra", "curls de biceps"],
-    "exercisedb_name": "barbell curl",
-    "media_id": "0031",
-    "bodyPart": "upper arms",
-    "equipment": "barbell",
-    "target": "biceps"
-  },
-  {
-    "id": "dumbbell_curl",
-    "aliases": ["dumbbell curl", "db curl", "alternating curl", "curl mancuerna", "curl con mancuernas", "alternating dumbbell curl"],
-    "exercisedb_name": "dumbbell alternate bicep curl",
-    "media_id": "0299",
-    "bodyPart": "upper arms",
-    "equipment": "dumbbell",
-    "target": "biceps"
-  },
-  {
-    "id": "hammer_curl",
-    "aliases": ["hammer curl", "neutral grip curl", "curl martillo", "dumbbell hammer curl"],
-    "exercisedb_name": "dumbbell hammer curl",
-    "media_id": "0344",
-    "bodyPart": "upper arms",
-    "equipment": "dumbbell",
-    "target": "biceps"
-  },
-  {
-    "id": "preacher_curl",
-    "aliases": ["preacher curl", "scott curl", "cable curl", "curl en predicador", "predicador"],
-    "exercisedb_name": "cable curl",
-    "media_id": "0199",
-    "bodyPart": "upper arms",
-    "equipment": "cable",
-    "target": "biceps"
-  },
-  {
-    "id": "concentration_curl",
-    "aliases": ["concentration curl", "curl de concentración", "seated dumbbell curl"],
-    "exercisedb_name": "dumbbell concentration curl",
-    "media_id": "0325",
-    "bodyPart": "upper arms",
-    "equipment": "dumbbell",
-    "target": "biceps"
-  },
-  {
-    "id": "tricep_pushdown",
-    "aliases": ["tricep pushdown", "triceps pushdown", "cable tricep pushdown", "extensión de tríceps en polea", "jalón de tríceps"],
-    "exercisedb_name": "cable triceps pushdown",
-    "media_id": "0234",
-    "bodyPart": "upper arms",
-    "equipment": "cable",
-    "target": "triceps"
-  },
-  {
-    "id": "skull_crusher",
-    "aliases": ["skull crusher", "lying tricep extension", "ez bar skull crusher", "rompe cráneos", "extensión de tríceps acostado"],
-    "exercisedb_name": "ez barbell lying triceps extension",
-    "media_id": "0290",
-    "bodyPart": "upper arms",
-    "equipment": "ez barbell",
-    "target": "triceps"
-  },
-  {
-    "id": "tricep_dip",
-    "aliases": ["tricep dip", "bench dip", "chair dip", "fondos en banco", "fondos de tríceps"],
-    "exercisedb_name": "bench dip",
-    "media_id": "1279",
-    "bodyPart": "upper arms",
-    "equipment": "body weight",
-    "target": "triceps"
-  },
-  {
-    "id": "close_grip_bench_press",
-    "aliases": ["close grip bench press", "close grip press", "press agarre cerrado", "cgbp", "close grip"],
-    "exercisedb_name": "barbell close grip bench press",
-    "media_id": "0009",
-    "bodyPart": "upper arms",
-    "equipment": "barbell",
-    "target": "triceps"
-  },
-  {
-    "id": "overhead_tricep_extension",
-    "aliases": ["overhead tricep extension", "dumbbell overhead tricep extension", "extensión de tríceps sobre cabeza", "french press"],
-    "exercisedb_name": "dumbbell triceps extension",
-    "media_id": "0375",
-    "bodyPart": "upper arms",
-    "equipment": "dumbbell",
-    "target": "triceps"
-  },
-  {
-    "id": "plank",
-    "aliases": ["plank", "planks", "plancha", "isometric plank", "core plank", "forearm plank"],
-    "exercisedb_name": "plank",
-    "media_id": "0535",
-    "bodyPart": "waist",
-    "equipment": "body weight",
-    "target": "abs"
-  },
-  {
-    "id": "crunch",
-    "aliases": ["crunch", "crunches", "abdominal crunch", "abdominal", "abdominales", "basic crunch"],
-    "exercisedb_name": "crunch",
-    "media_id": "0230",
-    "bodyPart": "waist",
-    "equipment": "body weight",
-    "target": "abs"
-  },
-  {
-    "id": "bicycle_crunch",
-    "aliases": ["bicycle crunch", "bicycle abs", "crunch bicicleta", "oblique crunch"],
-    "exercisedb_name": "bicycle crunch",
-    "media_id": "0030",
-    "bodyPart": "waist",
-    "equipment": "body weight",
-    "target": "abs"
-  },
-  {
-    "id": "leg_raise",
-    "aliases": ["leg raise", "hanging leg raise", "lying leg raise", "elevación de piernas", "leg raises"],
-    "exercisedb_name": "hanging leg raise",
-    "media_id": "0387",
-    "bodyPart": "waist",
-    "equipment": "body weight",
-    "target": "abs"
-  },
-  {
-    "id": "russian_twist",
-    "aliases": ["russian twist", "giro ruso", "oblique rotation", "seated twist"],
-    "exercisedb_name": "russian twist",
-    "media_id": "0563",
-    "bodyPart": "waist",
-    "equipment": "body weight",
-    "target": "abs"
-  },
-  {
-    "id": "cable_crunch",
-    "aliases": ["cable crunch", "kneeling cable crunch", "crunch en polea", "polea crunch"],
-    "exercisedb_name": "cable crunch",
-    "media_id": "0201",
-    "bodyPart": "waist",
-    "equipment": "cable",
-    "target": "abs"
-  },
-  {
-    "id": "ab_rollout",
-    "aliases": ["ab rollout", "ab wheel", "ab roller", "rueda abdominal", "rollout abdominal"],
-    "exercisedb_name": "ab wheel rollout",
+    "id": "3_4_sit_up",
+    "aliases": [
+      "3/4 sit-up"
+    ],
+    "exercisedb_name": "3/4 sit-up",
     "media_id": "0001",
     "bodyPart": "waist",
-    "equipment": "wheel roller",
+    "equipment": "body weight",
     "target": "abs"
   },
   {
-    "id": "side_plank",
-    "aliases": ["side plank", "lateral plank", "plancha lateral", "oblique plank"],
-    "exercisedb_name": "side plank",
-    "media_id": "0578",
+    "id": "45_side_bend",
+    "aliases": [
+      "45° side bend"
+    ],
+    "exercisedb_name": "45° side bend",
+    "media_id": "0002",
     "bodyPart": "waist",
     "equipment": "body weight",
     "target": "abs"
   },
   {
-    "id": "mountain_climber",
-    "aliases": ["mountain climber", "mountain climbers", "escalador", "escaladores"],
-    "exercisedb_name": "mountain climber",
-    "media_id": "0461",
+    "id": "air_bike",
+    "aliases": [
+      "air bike"
+    ],
+    "exercisedb_name": "air bike",
+    "media_id": "0003",
     "bodyPart": "waist",
     "equipment": "body weight",
     "target": "abs"
   },
   {
-    "id": "deadbug",
-    "aliases": ["dead bug", "deadbug", "bug muerto"],
-    "exercisedb_name": "dead bug",
-    "media_id": "1680",
+    "id": "alternate_heel_touchers",
+    "aliases": [
+      "alternate heel touchers"
+    ],
+    "exercisedb_name": "alternate heel touchers",
+    "media_id": "0006",
     "bodyPart": "waist",
     "equipment": "body weight",
     "target": "abs"
   },
   {
-    "id": "seated_row_cable",
-    "aliases": ["seated cable row", "low row", "remo sentado cable", "cable row seated"],
-    "exercisedb_name": "cable seated row",
-    "media_id": "0227",
-    "bodyPart": "back",
-    "equipment": "cable",
-    "target": "upper back"
-  },
-  {
-    "id": "t_bar_row",
-    "aliases": ["t bar row", "t-bar row", "landmine row", "remo en t", "remo t"],
-    "exercisedb_name": "t-bar row with handle",
-    "media_id": "0597",
-    "bodyPart": "back",
-    "equipment": "barbell",
-    "target": "upper back"
-  },
-  {
-    "id": "good_morning",
-    "aliases": ["good morning", "buenos días", "barbell good morning", "stiff leg bend"],
-    "exercisedb_name": "barbell good morning",
-    "media_id": "0038",
-    "bodyPart": "upper legs",
-    "equipment": "barbell",
-    "target": "hamstrings"
-  },
-  {
-    "id": "step_up",
-    "aliases": ["step up", "box step up", "step ups", "subida al cajón", "dumbbell step up"],
-    "exercisedb_name": "dumbbell step up",
-    "media_id": "0371",
-    "bodyPart": "upper legs",
-    "equipment": "dumbbell",
-    "target": "quads"
-  },
-  {
-    "id": "nordic_curl",
-    "aliases": ["nordic curl", "nordic hamstring curl", "natural glute ham raise", "nórdico"],
-    "exercisedb_name": "body weight leg curl",
-    "media_id": "1694",
-    "bodyPart": "upper legs",
-    "equipment": "body weight",
-    "target": "hamstrings"
-  },
-  {
-    "id": "cable_kickback",
-    "aliases": ["cable kickback", "cable glute kickback", "patada de glúteo polea", "glute kickback"],
-    "exercisedb_name": "cable pull through",
-    "media_id": "0222",
-    "bodyPart": "upper legs",
-    "equipment": "cable",
-    "target": "glutes"
-  },
-  {
-    "id": "sumo_squat",
-    "aliases": ["sumo squat", "wide squat", "sentadilla sumo", "sentadilla amplia"],
-    "exercisedb_name": "barbell sumo squat",
-    "media_id": "0092",
-    "bodyPart": "upper legs",
-    "equipment": "barbell",
-    "target": "glutes"
-  },
-  {
-    "id": "arnold_press",
-    "aliases": ["arnold press", "dumbbell arnold press", "press arnold", "rotating shoulder press"],
-    "exercisedb_name": "dumbbell arnold press",
-    "media_id": "0301",
-    "bodyPart": "shoulders",
-    "equipment": "dumbbell",
-    "target": "delts"
-  },
-  {
-    "id": "cable_lateral_raise",
-    "aliases": ["cable lateral raise", "cable side raise", "elevación lateral cable", "polea lateral"],
-    "exercisedb_name": "cable side lateral raise",
-    "media_id": "0229",
-    "bodyPart": "shoulders",
-    "equipment": "cable",
-    "target": "delts"
-  },
-  {
-    "id": "ez_bar_curl",
-    "aliases": ["ez bar curl", "ez curl", "w-bar curl", "barbell ez curl", "curl barra ez", "curl z"],
-    "exercisedb_name": "ez barbell curl",
-    "media_id": "0286",
-    "bodyPart": "upper arms",
-    "equipment": "ez barbell",
-    "target": "biceps"
-  },
-  {
-    "id": "incline_dumbbell_curl",
-    "aliases": ["incline dumbbell curl", "incline curl", "curl inclinado", "spider curl"],
-    "exercisedb_name": "dumbbell incline curl",
-    "media_id": "0345",
-    "bodyPart": "upper arms",
-    "equipment": "dumbbell",
-    "target": "biceps"
-  },
-  {
-    "id": "cable_overhead_tricep",
-    "aliases": ["cable overhead tricep extension", "overhead cable tricep", "rope overhead tricep", "extensión tríceps cable"],
-    "exercisedb_name": "cable overhead tricep extension",
-    "media_id": "0216",
-    "bodyPart": "upper arms",
-    "equipment": "cable",
-    "target": "triceps"
-  },
-  {
-    "id": "rope_pushdown",
-    "aliases": ["rope pushdown", "cable rope pushdown", "rope tricep pushdown", "jalón cuerda tríceps"],
-    "exercisedb_name": "cable rope triceps pushdown",
-    "media_id": "0214",
-    "bodyPart": "upper arms",
-    "equipment": "cable",
-    "target": "triceps"
-  },
-  {
-    "id": "seated_dip_machine",
-    "aliases": ["seated dip machine", "tricep machine", "máquina fondos", "lever tricep dip"],
-    "exercisedb_name": "lever tricep dip",
-    "media_id": "0494",
-    "bodyPart": "upper arms",
-    "equipment": "leverage machine",
-    "target": "triceps"
-  },
-  {
-    "id": "wrist_curl",
-    "aliases": ["wrist curl", "forearm curl", "curl de muñeca", "curl antebrazo"],
-    "exercisedb_name": "barbell wrist curl",
-    "media_id": "0100",
-    "bodyPart": "lower arms",
-    "equipment": "barbell",
-    "target": "forearms"
-  },
-  {
-    "id": "reverse_curl",
-    "aliases": ["reverse curl", "overhand curl", "curl inverso", "pronated curl"],
-    "exercisedb_name": "dumbbell reverse curl",
-    "media_id": "0363",
-    "bodyPart": "lower arms",
-    "equipment": "dumbbell",
-    "target": "forearms"
-  },
-  {
-    "id": "pull_over",
-    "aliases": ["pullover", "dumbbell pullover", "barbell pullover", "pullover con mancuerna", "jalón sobre cabeza"],
-    "exercisedb_name": "dumbbell pullover",
-    "media_id": "0358",
-    "bodyPart": "chest",
-    "equipment": "dumbbell",
-    "target": "pectorals"
-  },
-  {
-    "id": "chest_supported_row",
-    "aliases": ["chest supported row", "incline dumbbell row", "incline row", "remo inclinado mancuerna"],
-    "exercisedb_name": "dumbbell incline row",
-    "media_id": "1674",
-    "bodyPart": "back",
-    "equipment": "dumbbell",
-    "target": "upper back"
-  },
-  {
-    "id": "seated_machine_press",
-    "aliases": ["shoulder press machine", "seated shoulder press machine", "máquina press hombros", "lever shoulder press"],
-    "exercisedb_name": "lever shoulder press",
-    "media_id": "0491",
-    "bodyPart": "shoulders",
-    "equipment": "leverage machine",
-    "target": "delts"
-  },
-  {
-    "id": "inverted_row",
-    "aliases": ["inverted row", "body row", "australian pull up", "remo invertido", "remo australiano"],
-    "exercisedb_name": "body weight inverted row",
-    "media_id": "1345",
-    "bodyPart": "back",
-    "equipment": "body weight",
-    "target": "upper back"
-  },
-  {
-    "id": "landmine_press",
-    "aliases": ["landmine press", "kneeling landmine press", "press mina tierra", "landmine shoulder press"],
-    "exercisedb_name": "barbell landmine press",
-    "media_id": "1443",
-    "bodyPart": "shoulders",
-    "equipment": "barbell",
-    "target": "delts"
-  },
-  {
-    "id": "farmers_walk",
-    "aliases": ["farmer's walk", "farmers walk", "farmer carry", "caminata del granjero", "loaded carry"],
-    "exercisedb_name": "farmer's walk",
-    "media_id": "1712",
-    "bodyPart": "upper legs",
-    "equipment": "dumbbell",
-    "target": "glutes"
-  },
-  {
-    "id": "box_jump",
-    "aliases": ["box jump", "plyometric box jump", "jump squat", "salto al cajón", "saltos pliométricos"],
-    "exercisedb_name": "box jump",
-    "media_id": "1661",
-    "bodyPart": "upper legs",
-    "equipment": "body weight",
-    "target": "quads"
-  },
-  {
-    "id": "battle_ropes",
-    "aliases": ["battle ropes", "battle rope", "rope waves", "cuerdas de batida", "battle rope waves"],
-    "exercisedb_name": "battle rope in and out waves",
-    "media_id": "1639",
-    "bodyPart": "cardio",
-    "equipment": "rope",
-    "target": "cardiovascular system"
-  },
-  {
-    "id": "burpee",
-    "aliases": ["burpee", "burpees", "burpee jump", "jumping burpee"],
-    "exercisedb_name": "burpee",
-    "media_id": "1683",
-    "bodyPart": "cardio",
-    "equipment": "body weight",
-    "target": "cardiovascular system"
-  },
-  {
-    "id": "jump_rope",
-    "aliases": ["jump rope", "skipping", "comba", "saltar la cuerda", "rope jump"],
-    "exercisedb_name": "jump rope",
-    "media_id": "1796",
-    "bodyPart": "cardio",
-    "equipment": "rope",
-    "target": "cardiovascular system"
-  },
-  {
-    "id": "treadmill",
-    "aliases": ["treadmill", "treadmill run", "cinta", "caminadora", "correr cinta"],
-    "exercisedb_name": "run on treadmill",
-    "media_id": "2315",
-    "bodyPart": "cardio",
-    "equipment": "body weight",
-    "target": "cardiovascular system"
-  },
-  {
-    "id": "low_bar_squat",
-    "aliases": ["low bar squat", "low bar back squat", "squat barra baja", "sentadilla barra baja", "powerlifting squat"],
-    "exercisedb_name": "barbell low bar squat",
-    "media_id": "0058",
-    "bodyPart": "upper legs",
-    "equipment": "barbell",
-    "target": "quads"
-  },
-  {
-    "id": "jefferson_squat",
-    "aliases": ["jefferson squat", "jefferson deadlift", "straddle squat"],
-    "exercisedb_name": "barbell jefferson squat",
-    "media_id": "1714",
-    "bodyPart": "upper legs",
-    "equipment": "barbell",
-    "target": "quads"
-  },
-  {
-    "id": "seal_row",
-    "aliases": ["seal row", "prone row", "chest supported barbell row", "remo prono"],
-    "exercisedb_name": "barbell seal row",
-    "media_id": "1638",
-    "bodyPart": "back",
-    "equipment": "barbell",
-    "target": "upper back"
-  },
-  {
-    "id": "rack_pull",
-    "aliases": ["rack pull", "partial deadlift", "rack deadlift", "jalón de rack"],
-    "exercisedb_name": "barbell rack pull",
-    "media_id": "1449",
-    "bodyPart": "back",
-    "equipment": "barbell",
-    "target": "glutes"
-  },
-  {
-    "id": "trap_bar_deadlift",
-    "aliases": ["trap bar deadlift", "hex bar deadlift", "trap bar", "hex bar"],
-    "exercisedb_name": "trap bar deadlift",
-    "media_id": "1789",
-    "bodyPart": "upper legs",
-    "equipment": "trap bar",
-    "target": "glutes"
-  },
-  {
-    "id": "cable_flye",
-    "aliases": ["cable fly", "cable flye", "high cable fly", "low cable fly", "aperturas en polea"],
-    "exercisedb_name": "cable fly",
-    "media_id": "0206",
-    "bodyPart": "chest",
-    "equipment": "cable",
-    "target": "pectorals"
-  },
-  {
-    "id": "lat_prayer",
-    "aliases": ["lat prayer", "cable lat pullover", "straight arm pulldown", "jalón recto de espalda"],
-    "exercisedb_name": "cable straight back seated row",
-    "media_id": "0225",
+    "id": "alternate_lateral_pulldown",
+    "aliases": [
+      "alternate lateral pulldown"
+    ],
+    "exercisedb_name": "alternate lateral pulldown",
+    "media_id": "0007",
     "bodyPart": "back",
     "equipment": "cable",
     "target": "lats"
   },
   {
-    "id": "reverse_hyper",
-    "aliases": ["reverse hyper", "reverse hyperextension", "hiperextensión inversa"],
-    "exercisedb_name": "reverse hyperextension",
-    "media_id": "1559",
-    "bodyPart": "upper legs",
-    "equipment": "body weight",
-    "target": "glutes"
+    "id": "assisted_chest_dip_kneeling",
+    "aliases": [
+      "assisted chest dip (kneeling)",
+      "fondos",
+      "fondo en paralelas",
+      "pecho"
+    ],
+    "exercisedb_name": "assisted chest dip (kneeling)",
+    "media_id": "0009",
+    "bodyPart": "chest",
+    "equipment": "leverage machine",
+    "target": "pectorals"
   },
   {
-    "id": "sissy_squat",
-    "aliases": ["sissy squat", "sentadilla sissy", "quad squat"],
-    "exercisedb_name": "body weight sissy squat",
-    "media_id": "1357",
-    "bodyPart": "upper legs",
-    "equipment": "body weight",
-    "target": "quads"
+    "id": "assisted_hanging_knee_raise_with_throw_down",
+    "aliases": [
+      "assisted hanging knee raise with throw down",
+      "remo",
+      "jalón al pecho"
+    ],
+    "exercisedb_name": "assisted hanging knee raise with throw down",
+    "media_id": "0010",
+    "bodyPart": "waist",
+    "equipment": "assisted",
+    "target": "abs"
   },
   {
-    "id": "pistol_squat",
-    "aliases": ["pistol squat", "single leg squat", "sentadilla a una pierna", "one leg squat"],
-    "exercisedb_name": "bodyweight pistol squat",
-    "media_id": "0153",
-    "bodyPart": "upper legs",
-    "equipment": "body weight",
-    "target": "quads"
+    "id": "assisted_hanging_knee_raise",
+    "aliases": [
+      "assisted hanging knee raise"
+    ],
+    "exercisedb_name": "assisted hanging knee raise",
+    "media_id": "0011",
+    "bodyPart": "waist",
+    "equipment": "assisted",
+    "target": "abs"
+  },
+  {
+    "id": "assisted_lying_leg_raise_with_lateral_throw_down",
+    "aliases": [
+      "assisted lying leg raise with lateral throw down",
+      "remo",
+      "jalón al pecho"
+    ],
+    "exercisedb_name": "assisted lying leg raise with lateral throw down",
+    "media_id": "0012",
+    "bodyPart": "waist",
+    "equipment": "assisted",
+    "target": "abs"
+  },
+  {
+    "id": "assisted_lying_leg_raise_with_throw_down",
+    "aliases": [
+      "assisted lying leg raise with throw down",
+      "remo",
+      "jalón al pecho"
+    ],
+    "exercisedb_name": "assisted lying leg raise with throw down",
+    "media_id": "0013",
+    "bodyPart": "waist",
+    "equipment": "assisted",
+    "target": "abs"
   }
 ]

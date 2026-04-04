@@ -11,12 +11,23 @@
  * Requires RAPIDAPI_KEY in environment (set via .env.local or shell).
  */
 
-import { writeFileSync } from 'fs';
+import { writeFileSync, existsSync, readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
+
+// Load .env.local if present (Next.js convention; Node doesn't auto-load it)
+const envPath = resolve(ROOT, '.env.local');
+if (existsSync(envPath)) {
+  for (const line of readFileSync(envPath, 'utf8').split('\n')) {
+    const match = line.match(/^([A-Z_][A-Z0-9_]*)=(.*)$/);
+    if (match && !process.env[match[1]]) {
+      process.env[match[1]] = match[2].replace(/^['"]|['"]$/g, '');
+    }
+  }
+}
 
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
 if (!RAPIDAPI_KEY) {
