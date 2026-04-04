@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, startTransition } from 'react';
 import type { HistoryEntry } from '@/types/workout';
 import type { HistoryEntryLean } from '@/workers/search.worker';
 
@@ -56,7 +56,7 @@ export function useSearchWorker(history: HistoryEntry[]): UseSearchWorkerResult 
     }));
 
     worker.postMessage({ type: 'INIT', entries: lean });
-    setReady(true);
+    startTransition(() => setReady(true));
   }, [history]);
 
   const search = useCallback((query: string) => {

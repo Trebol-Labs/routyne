@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, startTransition } from 'react';
 import type { HistoryEntry } from '@/types/workout';
 import type { PRRow, WeekPoint } from '@/workers/analytics.worker';
 
@@ -55,7 +55,7 @@ export function useAnalyticsWorker(history: HistoryEntry[]): AnalyticsResult {
     const worker = workerRef.current;
     if (!worker || history.length === 0) return;
 
-    setLoading(true);
+    startTransition(() => setLoading(true));
     worker.postMessage({ type: 'COMPUTE', history });
   }, [history]);
 
