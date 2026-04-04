@@ -7,7 +7,7 @@
  *  - Pull: fetch remote records newer than last_pulled cursor → merge into IDB
  */
 
-import { getSupabaseClient, type Database } from '@/lib/supabase/client';
+import { getSupabaseClient } from '@/lib/supabase/client';
 import {
   getPendingMutations,
   dequeue,

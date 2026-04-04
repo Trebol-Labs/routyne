@@ -26,11 +26,6 @@ const SUGGESTIONS = [
   '¿Cómo está mi progresión de fuerza?',
 ];
 
-const coachEnabled = !!(
-  process.env.NEXT_PUBLIC_COACH_ENABLED === 'true' ||
-  // Enable if gateway or coach endpoint will be available
-  typeof window !== 'undefined'
-);
 
 export function CoachSheet({ onClose }: CoachSheetProps) {
   const { history, profile } = useWorkoutStore();

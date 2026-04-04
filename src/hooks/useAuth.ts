@@ -20,14 +20,16 @@ export interface AuthActions {
 export function useAuth(): AuthState & AuthActions {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // Start loading only if Supabase is actually configured — avoids a setState in the effect early-return
+  const [isLoading, setIsLoading] = useState(
+    !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+  );
 
   useEffect(() => {
     let mounted = true;
 
-    // Check for env vars — gracefully degrade when Supabase isn't configured
+    // Gracefully degrade when Supabase isn't configured
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-      setIsLoading(false);
       return;
     }
 

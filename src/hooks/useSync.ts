@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useAuth } from './useAuth';
 import { pushToCloud, pullFromCloud } from '@/lib/sync/syncEngine';
 import { getPendingCount } from '@/lib/sync/queue';
@@ -13,7 +13,7 @@ export function useSync(): { status: SyncStatus; pendingCount: number; syncNow: 
   const [pendingCount, setPendingCount] = useState(0);
   const isSyncing = useRef(false);
 
-  const sync = async (userId: string) => {
+  const sync = useCallback(async (userId: string) => {
     if (isSyncing.current) return;
     if (!navigator.onLine) { setStatus('offline'); return; }
 
@@ -30,25 +30,26 @@ export function useSync(): { status: SyncStatus; pendingCount: number; syncNow: 
     } finally {
       isSyncing.current = false;
     }
-  };
+  // isSyncing is a ref (stable); setters, pushToCloud, pullFromCloud, getPendingCount are all stable
+  }, []);
+
+  const userId = user?.id;
 
   // Sync on auth change (user just logged in)
   useEffect(() => {
-    if (!user) { setStatus('idle'); return; }
-    sync(user.id);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
+    if (!userId) { setStatus('idle'); return; }
+    sync(userId);
+  }, [userId, sync]);
 
   // Sync when tab returns to foreground
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
     const handleVisibility = () => {
-      if (!document.hidden) sync(user.id);
+      if (!document.hidden) sync(userId);
     };
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
+  }, [userId, sync]);
 
   // Poll pending count every 30s (shows badge in UI without full sync)
   useEffect(() => {
