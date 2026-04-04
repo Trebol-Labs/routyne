@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { NextRequest } from 'next/server';
 
 // Mock the provider module before importing the route
 vi.mock('@/lib/media/providers', () => ({
@@ -22,7 +23,7 @@ describe('GET /api/media/[slug]', () => {
     });
 
     const { GET } = await import('./route');
-    const req = new Request('http://localhost/api/media/barbell-squat');
+    const req = new NextRequest('http://localhost/api/media/barbell-squat');
     const res = await GET(req, { params: Promise.resolve({ slug: 'barbell-squat' }) });
 
     expect(res.status).toBe(200);
@@ -36,7 +37,7 @@ describe('GET /api/media/[slug]', () => {
     (mediaProvider.resolve as ReturnType<typeof vi.fn>).mockResolvedValue(null);
 
     const { GET } = await import('./route');
-    const req = new Request('http://localhost/api/media/unknown-exercise');
+    const req = new NextRequest('http://localhost/api/media/unknown-exercise');
     const res = await GET(req, { params: Promise.resolve({ slug: 'unknown-exercise' }) });
 
     expect(res.status).toBe(404);
@@ -50,7 +51,7 @@ describe('GET /api/media/[slug]', () => {
     });
 
     const { GET } = await import('./route');
-    const req = new Request('http://localhost/api/media/bicep-curls');
+    const req = new NextRequest('http://localhost/api/media/bicep-curls');
     await GET(req, { params: Promise.resolve({ slug: 'bicep-curls' }) });
 
     // Provider called with exercisedb_name from exercises.json, not raw slug
@@ -65,7 +66,7 @@ describe('GET /api/media/[slug]', () => {
     });
 
     const { GET } = await import('./route');
-    const req = new Request('http://localhost/api/media/triceps-pushdown-(rope-or-v-bar)');
+    const req = new NextRequest('http://localhost/api/media/triceps-pushdown-(rope-or-v-bar)');
     await GET(req, { params: Promise.resolve({ slug: 'triceps-pushdown-(rope-or-v-bar)' }) });
 
     // Parens stripped then Fuse matches to exercisedb_name from exercises.json
