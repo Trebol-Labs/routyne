@@ -15,6 +15,7 @@ export function useHydration(): boolean {
     if (ran.current) return;
     ran.current = true;
     hydrate();
+    navigator.storage?.persist?.();
   }, [hydrate]);
 
   return isHydrated;
