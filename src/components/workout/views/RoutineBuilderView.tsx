@@ -26,11 +26,13 @@ import {
   Trash2,
   X,
   PlusCircle,
+  Search,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
 import { generateMarkdown } from '@/lib/markdown/generator';
-import type { RoutineData } from '@/types/workout';
+import type { RoutineData, ExerciseBrowseItem } from '@/types/workout';
+import { SearchSheet } from '@/components/workout/overlays/SearchSheet';
 
 // ── Local draft types ─────────────────────────────────────────────────────────
 
@@ -79,9 +81,10 @@ interface ExerciseRowProps {
   showError: boolean;
   onChange: (id: string, patch: Partial<DraftExercise>) => void;
   onDelete: (id: string) => void;
+  onSearchExercise: (id: string) => void;
 }
 
-function ExerciseRow({ exercise, showError, onChange, onDelete }: ExerciseRowProps) {
+function ExerciseRow({ exercise, showError, onChange, onDelete, onSearchExercise }: ExerciseRowProps) {
   const {
     attributes,
     listeners,
@@ -124,19 +127,29 @@ function ExerciseRow({ exercise, showError, onChange, onDelete }: ExerciseRowPro
         </button>
 
         <div className="flex-1 flex flex-col gap-0.5">
-          <input
-            type="text"
-            value={exercise.name}
-            placeholder="Exercise name"
-            onChange={(e) => onChange(exercise.id, { name: e.target.value })}
-            className={[
-              'w-full bg-transparent border-b pb-0.5 text-sm text-white placeholder-white/40',
-              'focus:outline-none focus:border-blue-400 transition-colors',
-              showError && exercise.name.trim() === ''
-                ? 'border-red-500'
-                : 'border-white/20',
-            ].join(' ')}
-          />
+          <div className="flex items-center gap-1.5">
+            <input
+              type="text"
+              value={exercise.name}
+              placeholder="Exercise name"
+              onChange={(e) => onChange(exercise.id, { name: e.target.value })}
+              className={[
+                'flex-1 bg-transparent border-b pb-0.5 text-sm text-white placeholder-white/40',
+                'focus:outline-none focus:border-blue-400 transition-colors',
+                showError && exercise.name.trim() === ''
+                  ? 'border-red-500'
+                  : 'border-white/20',
+              ].join(' ')}
+            />
+            <button
+              type="button"
+              onClick={() => onSearchExercise(exercise.id)}
+              className="text-white/30 hover:text-blue-400 transition-colors flex-shrink-0 pb-0.5"
+              aria-label="Search exercise library"
+            >
+              <Search size={14} />
+            </button>
+          </div>
           {showError && exercise.name.trim() === '' && (
             <span className="text-[11px] text-red-400 leading-tight">
               Exercise name required
@@ -252,6 +265,7 @@ interface SessionCardProps {
   onAddExercise: (sessionId: string) => void;
   onDeleteSession: (id: string) => void;
   onDragEnd: (sessionId: string, event: DragEndEvent) => void;
+  onSearchExercise: (sessionId: string, exerciseId: string) => void;
 }
 
 function SessionCard({
@@ -264,6 +278,7 @@ function SessionCard({
   onAddExercise,
   onDeleteSession,
   onDragEnd,
+  onSearchExercise,
 }: SessionCardProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -318,6 +333,7 @@ function SessionCard({
                   showError={showErrors}
                   onChange={(exId, patch) => onExerciseChange(session.id, exId, patch)}
                   onDelete={(exId) => onExerciseDelete(session.id, exId)}
+                  onSearchExercise={(exId) => onSearchExercise(session.id, exId)}
                 />
               ))}
             </AnimatePresence>
@@ -348,6 +364,7 @@ export function RoutineBuilderView() {
   const [sessions, setSessions] = useState<DraftSession[]>([makeSession(1)]);
   const [showErrors, setShowErrors] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [searchTarget, setSearchTarget] = useState<{ sessionId: string; exerciseId: string } | null>(null);
 
   // ── Validation ──────────────────────────────────────────────────────────────
 
@@ -428,6 +445,14 @@ export function RoutineBuilderView() {
       })
     );
   }, []);
+
+  // ── Exercise search ─────────────────────────────────────────────────────────
+
+  const handleSelectExercise = useCallback((item: ExerciseBrowseItem) => {
+    if (!searchTarget) return;
+    handleExerciseChange(searchTarget.sessionId, searchTarget.exerciseId, { name: item.name });
+    setSearchTarget(null);
+  }, [searchTarget, handleExerciseChange]);
 
   // ── Save ────────────────────────────────────────────────────────────────────
 
@@ -529,6 +554,7 @@ export function RoutineBuilderView() {
             onAddExercise={handleAddExercise}
             onDeleteSession={handleDeleteSession}
             onDragEnd={handleDragEnd}
+            onSearchExercise={(sessionId, exerciseId) => setSearchTarget({ sessionId, exerciseId })}
           />
         ))}
       </AnimatePresence>
@@ -555,6 +581,16 @@ export function RoutineBuilderView() {
           >
             Fill in all exercise names before saving.
           </motion.p>
+        )}
+      </AnimatePresence>
+
+      {/* Exercise library search */}
+      <AnimatePresence>
+        {searchTarget && (
+          <SearchSheet
+            onClose={() => setSearchTarget(null)}
+            onSelectExercise={handleSelectExercise}
+          />
         )}
       </AnimatePresence>
     </div>

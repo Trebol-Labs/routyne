@@ -1,13 +1,12 @@
 'use client';
 
 import { memo } from 'react';
-import { Search, User, Dumbbell, Cloud, CloudOff, Loader2 } from 'lucide-react';
+import { User, Dumbbell, Cloud, CloudOff, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type SyncStatus = 'idle' | 'syncing' | 'synced' | 'error' | 'offline';
 
 interface TopHeaderProps {
-  onSearchClick: () => void;
   onProfileClick: () => void;
   onCloudClick?: () => void;
   syncStatus?: SyncStatus;
@@ -80,7 +79,6 @@ function CloudSyncIcon({ status }: { status: SyncStatus }) {
 }
 
 export const TopHeader = memo(({
-  onSearchClick,
   onProfileClick,
   onCloudClick,
   syncStatus = 'idle',
@@ -112,11 +110,6 @@ export const TopHeader = memo(({
 
            {/* Action Buttons */}
            <nav className="flex items-center gap-1.5">
-            <ActionButton
-              icon={Search}
-              label="Search exercises"
-              onClick={onSearchClick}
-            />
             {onCloudClick && (
               <button
                 onClick={onCloudClick}
