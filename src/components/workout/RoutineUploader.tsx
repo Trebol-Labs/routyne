@@ -206,12 +206,11 @@ export function RoutineUploader() {
               onDragLeave={() => setIsDragging(false)}
               onDrop={onDrop}
               className={cn(
-                'relative group transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]',
-                'rounded-[2rem] p-1 w-full',
+                'relative group transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] w-full',
                 isDragging ? 'scale-[1.02] rotate-[0.5deg]' : 'hover:scale-[1.005]',
               )}
             >
-              <div className="absolute inset-0 bg-blue-600/10 blur-[80px] rounded-[2rem] opacity-40 group-hover:opacity-55 transition-opacity pointer-events-none" />
+              <div className="absolute -inset-4 bg-blue-600/10 blur-[80px] rounded-[2rem] opacity-40 group-hover:opacity-55 transition-opacity pointer-events-none" />
               <div className="relative glass-panel rounded-[1.8rem] p-4 overflow-hidden">
                 <AnimatePresence mode="wait">
                   {isLoading ? (
@@ -248,31 +247,31 @@ export function RoutineUploader() {
                           }
                         }}
                       />
-                      <div className="flex items-stretch gap-2">
-                        <button
-                          type="button"
-                          onClick={() => fileInputRef.current?.click()}
-                          className="flex items-center justify-center gap-2 px-4 py-3.5 glass-btn rounded-2xl cursor-pointer flex-1"
-                        >
-                          <Upload className="w-4 h-4 text-blue-400 shrink-0" />
-                          <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.18em] font-display">Select .md</span>
-                        </button>
+                      <div className="flex flex-col gap-2">
                         <Button
                           variant="glass-primary"
                           size="lg"
                           onClick={() => handleParse(text)}
                           disabled={!text.trim() || isLoading}
-                          className="flex-[1.6] text-[11px] tracking-[0.15em] rounded-2xl"
+                          className="w-full text-[11px] tracking-[0.15em] rounded-2xl"
                         >
                           GENERATE
                         </Button>
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="flex items-center justify-center gap-1.5 py-2 text-white/25 hover:text-white/50 transition-colors cursor-pointer"
+                        >
+                          <Upload className="w-3 h-3 shrink-0" />
+                          <span className="text-[9px] font-black uppercase tracking-[0.2em]">Select .md file</span>
+                        </button>
                       </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
               </div>
               {isDragging && (
-                <div className="absolute inset-0 z-50 flex items-center justify-center rounded-[2rem] bg-blue-500/20 backdrop-blur-2xl border-2 border-white/30 pointer-events-none">
+                <div className="absolute inset-0 z-50 flex items-center justify-center rounded-[1.8rem] bg-blue-500/20 backdrop-blur-2xl border-2 border-white/30 pointer-events-none">
                   <div className="flex flex-col items-center gap-3">
                     <Upload className="w-10 h-10 text-white" />
                     <span className="text-white font-black text-xl tracking-tighter">DROP TO IMPORT</span>
@@ -297,12 +296,6 @@ export function RoutineUploader() {
             transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
             className="flex flex-col gap-2"
           >
-            <div className="flex items-center gap-2 px-1 pb-1">
-              <Star className="h-3.5 w-3.5 text-amber-400" />
-              <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em]">
-                {PROGRAM_TEMPLATES.length} Programs
-              </p>
-            </div>
 
             {isLoading ? (
               <div className="flex items-center justify-center py-12">

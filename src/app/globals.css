@@ -67,12 +67,17 @@
 
   /* Force dark mode background on html/body to prevent white flash/overscroll */
   html {
-    background-color: #0a0a0a;
+    background-color: #060a14;
+    background-image:
+      radial-gradient(ellipse 140% 90% at -5% -5%, rgba(30, 58, 138, 0.15) 0%, transparent 100%),
+      radial-gradient(ellipse 140% 90% at 105% 105%, rgba(67, 56, 202, 0.14) 0%, transparent 100%);
+    background-attachment: fixed;
+    min-height: 100%;
   }
 
   body {
     color: rgb(var(--foreground));
-    background: #0a0a0a;
+    background: transparent;
     font-family: var(--font-sans);
     overflow-x: hidden;
     -webkit-tap-highlight-color: transparent;
@@ -106,9 +111,7 @@
 
 @layer utilities {
   .liquid-bg-dark {
-    background: radial-gradient(circle at 0% 0%, #0c1120 0%, #000000 50%),
-                radial-gradient(circle at 100% 100%, #1e1b4b 0%, #000000 50%);
-    background-attachment: fixed;
+    background: transparent;
     min-height: 100vh;
   }
 
