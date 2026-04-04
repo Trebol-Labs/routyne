@@ -14,7 +14,6 @@ import { WorkoutSummaryView } from '@/components/workout/views/WorkoutSummaryVie
 import { RoutineBuilderView } from '@/components/workout/views/RoutineBuilderView';
 import { RoutineManagerView } from '@/components/workout/views/RoutineManagerView';
 import { ProfileSheet } from '@/components/workout/overlays/ProfileSheet';
-import { SearchSheet } from '@/components/workout/overlays/SearchSheet';
 import { AuthSheet } from '@/components/workout/overlays/AuthSheet';
 import { CoachSheet } from '@/components/workout/overlays/CoachSheet';
 import { TopHeader } from '@/components/workout/TopHeader';
@@ -39,7 +38,6 @@ export default function Home() {
   } = useWorkoutStore();
 
   const [showProfile, setShowProfile] = useState(false);
-  const [showSearch, setShowSearch] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [showCoach, setShowCoach] = useState(false);
   const [confirmNewRoutine, setConfirmNewRoutine] = useState(false);
@@ -83,7 +81,6 @@ export default function Home() {
 
         {/* Top Header */}
         <TopHeader
-          onSearchClick={() => setShowSearch(true)}
           onProfileClick={() => setShowProfile(true)}
           onCloudClick={process.env.NEXT_PUBLIC_SUPABASE_URL ? () => setShowAuth(true) : undefined}
           syncStatus={syncStatus}
@@ -198,9 +195,6 @@ export default function Home() {
             onOpenSync={process.env.NEXT_PUBLIC_SUPABASE_URL ? () => { setShowProfile(false); setShowAuth(true); } : undefined}
           />
         )}
-      </AnimatePresence>
-      <AnimatePresence>
-        {showSearch && <SearchSheet onClose={() => setShowSearch(false)} />}
       </AnimatePresence>
       <AnimatePresence>
         {showAuth && <AuthSheet onClose={() => setShowAuth(false)} />}
