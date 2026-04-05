@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.64",
-    "@anthropic-ai/sdk": "^0.80.0",
+    "@anthropic-ai/sdk": "^0.82.0",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
@@ -31,7 +31,7 @@
     "html-to-image": "^1.11.13",
     "idb": "^8.0.3",
     "lucide-react": "^0.574.0",
-    "next": "16.1.6",
+    "next": "16.2.2",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-focus-lock": "^2.13.7",
@@ -58,13 +58,22 @@
     "@vitest/ui": "^4.0.18",
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
-    "eslint-config-next": "16.1.6",
+    "eslint-config-next": "16.2.2",
     "eslint-plugin-react-compiler": "0.0.0-experimental-05e5570-20250218",
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^25.0.1",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.0.18"
+  },
+  "overrides": {
+    "serialize-javascript": ">=7.0.5",
+    "rollup": ">=4.59.0",
+    "flatted": ">=3.4.2",
+    "lodash": ">=4.17.24",
+    "minimatch": ">=9.0.7",
+    "picomatch": ">=4.0.4",
+    "ajv": "^6.14.0"
   },
   "packageManager": "pnpm@10.30.3+sha512.c961d1e0a2d8e354ecaa5166b822516668b7f44cb5bd95122d590dd81922f606f5473b6d23ec4a5be05e7fcd18e8488d47d978bbe981872f1145d06e9a740017"
 }
