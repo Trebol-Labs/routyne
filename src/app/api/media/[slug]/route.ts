@@ -16,6 +16,12 @@ interface ExerciseEntry {
 // In-process cache — avoids redundant API calls within a server lifetime
 const cache = new Map<string, MediaResult | null>();
 
+const SPECIAL_SEARCH_NAMES: Record<string, string> = {
+  'bicep curl': 'barbell curl',
+  'bicep curls': 'barbell curl',
+  'triceps pushdown': 'cable triceps pushdown',
+};
+
 // Fuse index: search aliases + id + bodyPart + target for robust fuzzy matching
 const fuse = new Fuse(exercisesData as ExerciseEntry[], {
   keys: [
@@ -34,11 +40,24 @@ function resolveSearchName(slug: string): string {
     .replace(/-/g, ' ')
     .replace(/\s*\([^)]*\)/g, '')
     .trim();
+
+  const special = SPECIAL_SEARCH_NAMES[name];
+  if (special) {
+    return special;
+  }
+
   const matches = fuse.search(name);
   if (matches.length) {
-    return matches[0].item.exercisedb_name;
+    return normalizeExerciseName(matches[0].item.exercisedb_name);
   }
-  return name;
+  return normalizeExerciseName(name);
+}
+
+function normalizeExerciseName(name: string): string {
+  return name
+    .replace(/\s*\([^)]*\)/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 export async function GET(

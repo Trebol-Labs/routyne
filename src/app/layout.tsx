@@ -3,6 +3,10 @@ import { Barlow_Condensed, Inter } from "next/font/google";
 import "./globals.css";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
+const siteUrl = process.env.VERCEL_URL
+  ? `https://${process.env.VERCEL_URL}`
+  : 'https://routyne-nu.vercel.app';
+
 const barlowCondensed = Barlow_Condensed({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
@@ -20,6 +24,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: "Routyne — Workout Tracker",
   description: "Mobile-first PWA workout tracker with liquid glass UI",
   manifest: '/manifest.json',
