@@ -43,6 +43,9 @@
     "web-push": "^3.6.7",
     "zustand": "^5.0.11"
   },
+  "engines": {
+    "node": "20.x"
+  },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.1",
     "@playwright/test": "^1.58.2",
