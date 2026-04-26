@@ -56,11 +56,7 @@ gemini.md
 # Git worktrees
 .worktrees/
 
-# Claude files
-
-.claude/
 .opencode/
-CLAUDE.md
 AGENTS.md
 !agents.md
 TestRoutine.md
