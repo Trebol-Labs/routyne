@@ -17,6 +17,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
 
@@ -30,6 +32,9 @@ jobs:
 
       - name: Lint
         run: pnpm lint
+
+      - name: Check commit messages
+        run: pnpm check:commits
 
       - name: Typecheck
         run: pnpm tsc --noEmit
