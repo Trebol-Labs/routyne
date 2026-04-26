@@ -36,6 +36,7 @@ create table if not exists public.history (
   duration_secs   int,
   volume_data     jsonb,
   notes           text,
+  deleted_at      timestamptz,
   synced_at       timestamptz default now()
 );
 
