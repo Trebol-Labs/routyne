@@ -109,8 +109,9 @@ async function fetchPage(limit, offset) {
 async function main() {
   console.log('⏳  Fetching exercises from ExerciseDB…');
 
-  // ExerciseDB v4: fetch up to 1300 exercises
-  const PAGE_SIZE = 500;
+  // ExerciseDB currently serves 10 rows per page on this endpoint/key combo.
+  // Page through the full catalog in chunks of 10 until the API returns empty.
+  const PAGE_SIZE = 10;
   let all = [];
   let offset = 0;
 
