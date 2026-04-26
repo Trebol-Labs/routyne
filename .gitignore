@@ -62,6 +62,7 @@ gemini.md
 .opencode/
 CLAUDE.md
 AGENTS.md
+!agents.md
 TestRoutine.md
 
 # Playwright MCP logs & screenshots
