@@ -23,6 +23,7 @@ Open `http://localhost:3000`.
 
 Optional feature flags and integrations:
 
+- `NEXT_PUBLIC_SITE_URL` (defaults to `https://routyne-nu.vercel.app`)
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `NEXT_PUBLIC_COACH_ENABLED`
@@ -38,12 +39,16 @@ Optional feature flags and integrations:
 ```bash
 pnpm dev
 pnpm lint
+pnpm check:commits
+pnpm tsc --noEmit
 pnpm test
 pnpm build
+pnpm test:e2e
 pnpm import:exercises
 ```
 
 ## Notes
 
+- Use pnpm only; `pnpm-lock.yaml` is the lockfile source.
 - The landing page lives at `/landing`.
 - The production deploy is connected to Vercel, but the latest workspace changes still need to be redeployed.
