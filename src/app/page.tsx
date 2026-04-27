@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Dumbbell } from 'lucide-react';
 import { RoutineUploader } from '@/components/workout/RoutineUploader';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -13,17 +13,40 @@ import { StatsView } from '@/components/workout/views/StatsView';
 import { WorkoutSummaryView } from '@/components/workout/views/WorkoutSummaryView';
 import { RoutineBuilderView } from '@/components/workout/views/RoutineBuilderView';
 import { RoutineManagerView } from '@/components/workout/views/RoutineManagerView';
-import { ProfileSheet } from '@/components/workout/overlays/ProfileSheet';
-import { AuthSheet } from '@/components/workout/overlays/AuthSheet';
+import { AccountSheet, type AccountSheetSection } from '@/components/workout/overlays/AccountSheet';
 import { CoachSheet } from '@/components/workout/overlays/CoachSheet';
 import { TopHeader } from '@/components/workout/TopHeader';
 import { BottomNav } from '@/components/workout/BottomNav';
-import { WorkoutView } from '@/types/workout';
 import { useHydration } from '@/hooks/useHydration';
 import { useStoragePersist } from '@/hooks/useStoragePersist';
 import { useSync } from '@/hooks/useSync';
+import { useAuth } from '@/hooks/useAuth';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { AchievementToast } from '@/components/workout/AchievementToast';
+import { COACH_ENABLED } from '@/lib/feature-flags';
+import type { UserProfile, WorkoutView } from '@/types/workout';
+
+const ACCENT_TOKENS: Record<UserProfile['preferences']['accentColor'], { primary: string; secondary: string }> = {
+  blue: { primary: '59 130 246', secondary: '99 102 241' },
+  emerald: { primary: '16 185 129', secondary: '52 211 153' },
+  orange: { primary: '249 115 22', secondary: '251 146 60' },
+  violet: { primary: '139 92 246', secondary: '168 85 247' },
+  mono: { primary: '255 255 255', secondary: '160 160 160' },
+};
+
+function applyAppearancePreferences(profile: UserProfile['preferences']): void {
+  const root = document.documentElement;
+  const accent = ACCENT_TOKENS[profile.accentColor];
+  root.style.setProperty('--accent-primary-rgb', accent.primary);
+  root.style.setProperty('--accent-secondary-rgb', accent.secondary);
+  root.style.setProperty('--space-page-x', profile.uiDensity === 'compact' ? '0.75rem' : '1rem');
+  root.style.setProperty('--space-card', profile.uiDensity === 'compact' ? '1rem' : '1.25rem');
+  root.style.setProperty('--space-section', profile.uiDensity === 'compact' ? '1.25rem' : '1.5rem');
+  root.style.setProperty('--space-nav-clear', profile.uiDensity === 'compact' ? '9rem' : '10rem');
+  root.dataset.uiDensity = profile.uiDensity;
+  root.dataset.motionLevel = profile.motionLevel;
+  root.dataset.accentColor = profile.accentColor;
+}
 
 export default function Home() {
   const isReady = useHydration();
@@ -35,15 +58,21 @@ export default function Home() {
     resetAll,
     pendingAchievements,
     clearPendingAchievements,
+    profile,
   } = useWorkoutStore();
 
-  const [showProfile, setShowProfile] = useState(false);
-  const [showAuth, setShowAuth] = useState(false);
+  const auth = useAuth();
+  useSync(auth.user?.id);
+  const [accountSection, setAccountSection] = useState<AccountSheetSection | null>(null);
   const [showCoach, setShowCoach] = useState(false);
   const [confirmNewRoutine, setConfirmNewRoutine] = useState(false);
 
   useStoragePersist();
-  const { status: syncStatus, pendingCount } = useSync();
+
+  useEffect(() => {
+    if (!isReady) return;
+    applyAppearancePreferences(profile.preferences);
+  }, [isReady, profile.preferences]);
 
   if (!isReady) {
     return (
@@ -77,14 +106,11 @@ export default function Home() {
 
   return (
     <main className="min-h-[100dvh] liquid-bg-dark text-zinc-100 selection:bg-blue-500/40 font-sans">
-      <div className="max-w-screen-md mx-auto h-dvh flex flex-col relative px-4">
+      <div className="max-w-screen-md mx-auto h-dvh flex flex-col relative px-[var(--space-page-x)]">
 
         {/* Top Header */}
         <TopHeader
-          onProfileClick={() => setShowProfile(true)}
-          onCloudClick={process.env.NEXT_PUBLIC_SUPABASE_URL ? () => setShowAuth(true) : undefined}
-          syncStatus={syncStatus}
-          pendingCount={pendingCount}
+          onAccountClick={(section) => setAccountSection(section)}
         />
 
         <div className="flex-grow pt-4 pb-[var(--space-nav-clear)] flex flex-col">
@@ -183,21 +209,18 @@ export default function Home() {
           currentView={currentView}
           onNavigate={handleNavClick}
           hasRoutine={!!currentRoutine}
-          onCoachClick={process.env.NEXT_PUBLIC_COACH_ENABLED ? () => setShowCoach(true) : undefined}
+          onCoachClick={COACH_ENABLED ? () => setShowCoach(true) : undefined}
         />
       </div>
 
       {/* Overlay sheets */}
       <AnimatePresence>
-        {showProfile && (
-          <ProfileSheet
-            onClose={() => setShowProfile(false)}
-            onOpenSync={process.env.NEXT_PUBLIC_SUPABASE_URL ? () => { setShowProfile(false); setShowAuth(true); } : undefined}
+        {accountSection && (
+          <AccountSheet
+            onClose={() => setAccountSection(null)}
+            initialSection={accountSection}
           />
         )}
-      </AnimatePresence>
-      <AnimatePresence>
-        {showAuth && <AuthSheet onClose={() => setShowAuth(false)} />}
       </AnimatePresence>
       <AnimatePresence>
         {showCoach && <CoachSheet onClose={() => setShowCoach(false)} />}
