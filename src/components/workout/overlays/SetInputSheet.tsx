@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence, useMotionValue, animate, type PanInfo } from 'framer-motion';
-import { Check, X, ChevronDown, ChevronUp, TrendingUp, Scale } from 'lucide-react';
+import { Check, X, TrendingUp, Scale, Minus, Plus } from 'lucide-react';
 import { PlateCalculator } from '@/components/workout/overlays/PlateCalculator';
 import { cn } from '@/lib/utils';
+import type { EffortTrackingMode } from '@/types/workout';
 
 interface ProgressionSuggestion {
   suggestedWeight: number | null;
@@ -23,6 +24,7 @@ interface SetInputSheetProps {
   lastWeight?: number;
   weightUnit: 'kg' | 'lbs';
   progressionSuggestion?: ProgressionSuggestion | null;
+  effortTracking?: EffortTrackingMode;
 }
 
 const EASE = [0.23, 1, 0.32, 1] as const;
@@ -30,6 +32,12 @@ const CLOSE_THRESHOLD = 80;
 
 const RIR_OPTIONS = ['5+', '3', '2', '1', '0'] as const;
 type RirOption = (typeof RIR_OPTIONS)[number];
+
+const RPE_OPTIONS = [6, 7, 8, 9, 10] as const;
+
+function clampRpe(value: number): number {
+  return Math.max(1, Math.min(10, Math.round(value * 2) / 2));
+}
 
 function rpeColor(value: number): string {
   if (value <= 5) return '#4ade80'; // green-400
@@ -47,10 +55,10 @@ export function SetInputSheet({
   lastWeight,
   weightUnit,
   progressionSuggestion,
+  effortTracking = 'both',
 }: SetInputSheetProps) {
   const [reps, setReps] = useState(String(targetRepsMax));
   const [weight, setWeight] = useState(lastWeight != null ? String(lastWeight) : '');
-  const [rpeExpanded, setRpeExpanded] = useState(false);
   const [rpe, setRpe] = useState<number | null>(null);
   const [rir, setRir] = useState<RirOption | null>(null);
   const [showPlateCalc, setShowPlateCalc] = useState(false);
@@ -101,7 +109,7 @@ export function SetInputSheet({
     [panOffset, onClose],
   );
 
-  const applysuggestion = () => {
+  const applySuggestion = () => {
     if (!progressionSuggestion) return;
     if (progressionSuggestion.suggestedWeight != null) {
       setWeight(String(progressionSuggestion.suggestedWeight));
@@ -111,14 +119,31 @@ export function SetInputSheet({
     }
   };
 
+  const supportsRpe = effortTracking === 'rpe' || effortTracking === 'both';
+  const supportsRir = effortTracking === 'rir' || effortTracking === 'both';
+
+  const bumpRpe = (delta: number) => {
+    setRpe((current) => clampRpe((current ?? 7) + delta));
+  };
+
   const handleConfirm = () => {
     const repsDone = Math.max(0, parseInt(reps) || 0);
     const weightVal = weight ? parseFloat(weight) : undefined;
-    onConfirm(repsDone, weightVal, rpe ?? undefined, rir != null ? Number(rir.replace('+', '')) : undefined);
+    onConfirm(
+      repsDone,
+      weightVal,
+      supportsRpe ? rpe ?? undefined : undefined,
+      supportsRir && rir != null ? Number(rir.replace('+', '')) : undefined,
+    );
   };
 
   const handleSkipWeight = () => {
-    onConfirm(parseInt(reps) || targetRepsMax, undefined, rpe ?? undefined, rir != null ? Number(rir.replace('+', '')) : undefined);
+    onConfirm(
+      parseInt(reps) || targetRepsMax,
+      undefined,
+      supportsRpe ? rpe ?? undefined : undefined,
+      supportsRir && rir != null ? Number(rir.replace('+', '')) : undefined,
+    );
   };
 
   const rpeAccentColor = rpe != null ? rpeColor(rpe) : '#6b7280';
@@ -163,7 +188,7 @@ export function SetInputSheet({
         <div className="flex items-start justify-between px-5 pt-2 pb-4">
           <div className="min-w-0 flex-1 pr-3">
             <p className="mb-1 text-[10px] font-black uppercase tracking-[0.3em] text-white/30">
-              Set {setIdx + 1}
+              Serie {setIdx + 1}
             </p>
             <h3 className="truncate font-display text-lg font-black uppercase leading-tight tracking-tight text-white">
               {exerciseName}
@@ -174,7 +199,7 @@ export function SetInputSheet({
               </div>
               {hasLastWeight && (
                 <div className="rounded-full border border-sky-400/15 bg-sky-500/[0.08] px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-sky-200/85">
-                  {lastWeight} {weightUnit} last
+                  Último: {lastWeight} {weightUnit}
                 </div>
               )}
             </div>
@@ -182,7 +207,7 @@ export function SetInputSheet({
           <button
             onClick={onClose}
             className="mt-0.5 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-white/8 bg-white/[0.04] transition-colors hover:bg-white/10"
-            aria-label="Close"
+            aria-label="Cerrar"
           >
             <X className="h-3.5 w-3.5 text-white/50" />
           </button>
@@ -197,14 +222,14 @@ export function SetInputSheet({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.3, ease: EASE }}
-              onClick={applysuggestion}
+              onClick={applySuggestion}
               className={cn(
                 'mx-5 mb-4 flex w-[calc(100%-2.5rem)] items-start gap-3 rounded-2xl border px-4 py-3 text-left transition-all active:scale-[0.98]',
                 progressionSuggestion.confidence === 'high'
                   ? 'border-sky-400/20 bg-sky-500/[0.1] hover:bg-sky-500/[0.15]'
                   : 'border-white/8 bg-white/[0.04] hover:bg-white/[0.07]',
               )}
-              aria-label={`Apply suggestion: ${progressionSuggestion.reason}`}
+              aria-label={`Usar sugerencia: ${progressionSuggestion.reason}`}
             >
               <TrendingUp
                 className={cn(
@@ -255,10 +280,10 @@ export function SetInputSheet({
               <span
                 className={cn(
                   'shrink-0 text-[9px] font-black uppercase tracking-widest',
-                  progressionSuggestion.confidence === 'high' ? 'text-sky-400/70' : 'text-white/25',
+                progressionSuggestion.confidence === 'high' ? 'text-sky-400/70' : 'text-white/25',
                 )}
               >
-                Apply
+                Usar
               </span>
             </motion.button>
           )}
@@ -283,15 +308,15 @@ export function SetInputSheet({
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <label className="block text-[10px] font-black uppercase tracking-[0.25em] text-white/30">
-                Weight ({weightUnit})
+                Peso ({weightUnit})
               </label>
               <button
                 onClick={() => setShowPlateCalc(true)}
                 className="flex items-center gap-1 rounded-lg border border-white/8 bg-white/[0.04] px-2 py-1 text-[9px] font-black uppercase tracking-widest text-white/30 hover:bg-white/[0.07] hover:text-white/50 transition-colors"
-                aria-label="Open plate calculator"
+                aria-label="Abrir calculadora de discos"
               >
                 <Scale className="w-2.5 h-2.5" />
-                Plates
+                Discos
               </button>
             </div>
             <input
@@ -309,116 +334,112 @@ export function SetInputSheet({
         {/* Separator */}
         <div className="mx-5 mb-3 h-px bg-white/[0.06]" />
 
-        {/* RPE / RIR section */}
-        <div className="px-5 pb-4">
-          <button
-            onClick={() => setRpeExpanded((v) => !v)}
-            className="flex w-full cursor-pointer items-center justify-between py-1"
-            aria-expanded={rpeExpanded}
-            aria-controls="rpe-section"
-          >
-            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-white/30">
-              Rate Effort{' '}
-              <span className="text-white/18">(Optional)</span>
-            </span>
-            {rpeExpanded ? (
-              <ChevronUp className="h-3.5 w-3.5 text-white/30" />
-            ) : (
-              <ChevronDown className="h-3.5 w-3.5 text-white/30" />
-            )}
-          </button>
+        {/* Effort controls */}
+        {(supportsRpe || supportsRir) && (
+          <div className="px-5 pb-4">
+            <div className="space-y-4 rounded-2xl border border-white/8 bg-white/[0.03] p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/30">
+                    Esfuerzo
+                  </p>
+                  <p className="mt-1 text-[10px] font-medium text-white/22">
+                    Taps rápidos y ajustes de 0,5
+                  </p>
+                </div>
+                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-white/35">
+                  Opcional
+                </span>
+              </div>
 
-          <AnimatePresence initial={false}>
-            {rpeExpanded && (
-              <motion.div
-                id="rpe-section"
-                key="rpe-section"
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.28, ease: EASE }}
-                style={{ overflow: 'hidden' }}
-              >
-                <div className="pt-3 space-y-5">
-                  {/* RPE slider */}
-                  <div className="space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <label
-                        htmlFor="rpe-slider"
-                        className="text-[10px] font-black uppercase tracking-[0.25em] text-white/40"
+              {supportsRpe && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="text-[10px] font-black uppercase tracking-[0.25em] text-white/40">
+                      RPE
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => bumpRpe(-0.5)}
+                        className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/8 bg-white/[0.04] text-white/55 transition-colors hover:bg-white/[0.08] hover:text-white"
+                        aria-label="Bajar RPE en 0.5"
                       >
-                        RPE
-                      </label>
+                        <Minus className="h-3.5 w-3.5" />
+                      </button>
                       <span
-                        className="text-sm font-black tabular-nums transition-colors"
+                        className="min-w-14 text-center text-xl font-black tabular-nums transition-colors"
                         style={{ color: rpeAccentColor }}
                       >
-                        {rpe != null ? rpe : '—'}
+                        {rpe != null ? rpe.toFixed(1).replace(/\.0$/, '') : '—'}
                       </span>
-                    </div>
-                    <div className="relative">
-                      <input
-                        id="rpe-slider"
-                        type="range"
-                        min={1}
-                        max={10}
-                        step={0.5}
-                        value={rpe ?? 7}
-                        onChange={(e) => setRpe(parseFloat(e.target.value))}
-                        onMouseDown={() => { if (rpe == null) setRpe(7); }}
-                        onTouchStart={() => { if (rpe == null) setRpe(7); }}
-                        aria-label="RPE — Rate of Perceived Exertion from 1 to 10"
-                        aria-valuemin={1}
-                        aria-valuemax={10}
-                        aria-valuenow={rpe ?? 7}
-                        className="w-full h-2 rounded-full cursor-pointer appearance-none bg-white/[0.08] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white/20 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:active:scale-110 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white/20 [&::-moz-range-thumb]:bg-white"
-                        style={{ accentColor: rpeAccentColor }}
-                      />
-                    </div>
-                    <div className="flex justify-between text-[9px] font-bold uppercase tracking-widest text-white/20">
-                      <span>Easy</span>
-                      <span>Moderate</span>
-                      <span>Max</span>
-                    </div>
-                    {rpe == null && (
                       <button
-                        onClick={() => setRpe(7)}
-                        className="w-full text-center text-[10px] font-bold text-white/20 hover:text-white/40 transition-colors"
+                        type="button"
+                        onClick={() => bumpRpe(0.5)}
+                        className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/8 bg-white/[0.04] text-white/55 transition-colors hover:bg-white/[0.08] hover:text-white"
+                        aria-label="Subir RPE en 0.5"
                       >
-                        Tap slider to set RPE
+                        <Plus className="h-3.5 w-3.5" />
                       </button>
-                    )}
+                    </div>
                   </div>
 
-                  {/* RIR picker */}
-                  <div className="space-y-2">
-                    <label className="block text-[10px] font-black uppercase tracking-[0.25em] text-white/40">
-                      Reps in Reserve
-                    </label>
-                    <div className="flex gap-2">
-                      {RIR_OPTIONS.map((option) => (
+                  <div className="grid grid-cols-5 gap-2">
+                    {RPE_OPTIONS.map((option) => {
+                      const isSelected = rpe === option;
+                      return (
                         <button
                           key={option}
-                          onClick={() => setRir((prev) => (prev === option ? null : option))}
-                          aria-pressed={rir === option}
-                          aria-label={`${option} reps in reserve`}
+                          type="button"
+                          onClick={() => setRpe(option)}
+                          aria-pressed={isSelected}
                           className={cn(
-                            'flex-1 rounded-xl py-2.5 text-[11px] font-black uppercase tracking-widest transition-all active:scale-95',
-                            rir === option
+                            'min-h-11 rounded-xl border px-2 py-2 text-[11px] font-black uppercase tracking-widest transition-all',
+                            isSelected
                               ? 'active-glass-btn text-white'
-                              : 'sunken-glass text-white/40 hover:text-white/60',
+                              : 'sunken-glass text-white/45 hover:text-white/70',
                           )}
                         >
                           {option}
                         </button>
-                      ))}
-                    </div>
+                      );
+                    })}
                   </div>
                 </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+              )}
+
+              {supportsRir && (
+                <div className="space-y-3">
+                  <label className="block text-[10px] font-black uppercase tracking-[0.25em] text-white/40">
+                    Reps en reserva
+                  </label>
+                  <div className="grid grid-cols-5 gap-2">
+                    {RIR_OPTIONS.map((option) => {
+                      const isSelected = rir === option;
+                      return (
+                        <button
+                          key={option}
+                          type="button"
+                          onClick={() => setRir((prev) => (prev === option ? null : option))}
+                          aria-pressed={isSelected}
+                          aria-label={`${option} reps en reserva`}
+                          className={cn(
+                            'min-h-11 rounded-xl border px-2 py-2 text-[11px] font-black uppercase tracking-widest transition-all',
+                            isSelected
+                              ? 'active-glass-btn text-white'
+                              : 'sunken-glass text-white/45 hover:text-white/70',
+                          )}
+                        >
+                          {option}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Actions */}
         <div className="space-y-2 px-5 pb-10">
@@ -430,14 +451,14 @@ export function SetInputSheet({
             )}
           >
             <Check className="h-4.5 w-4.5" strokeWidth={2.5} />
-            Log Set
+            Registrar serie
           </button>
 
           <button
             onClick={handleSkipWeight}
             className="h-10 w-full text-[11px] font-bold uppercase tracking-widest text-white/30 transition-colors hover:text-white/50"
           >
-            Skip weight
+            Omitir peso
           </button>
         </div>
       </motion.div>

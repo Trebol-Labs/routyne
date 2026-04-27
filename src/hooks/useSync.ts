@@ -1,68 +1,128 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { useAuth } from './useAuth';
 import { pushToCloud, pullFromCloud } from '@/lib/sync/syncEngine';
 import { getPendingCount } from '@/lib/sync/queue';
+import { loadMetaValue, saveMetaValue } from '@/lib/db/meta';
 
 export type SyncStatus = 'idle' | 'syncing' | 'synced' | 'error' | 'offline';
 
-export function useSync(): { status: SyncStatus; pendingCount: number; syncNow: () => void } {
-  const { user } = useAuth();
+export interface UseSyncResult {
+  status: SyncStatus;
+  pendingCount: number;
+  lastSyncAt: string | null;
+  lastError: string | null;
+  syncNow: () => void;
+}
+
+const LAST_SYNC_KEY_PREFIX = 'last-sync-at:';
+
+export function useSync(userId?: string): UseSyncResult {
   const [status, setStatus] = useState<SyncStatus>('idle');
   const [pendingCount, setPendingCount] = useState(0);
+  const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
+  const [lastError, setLastError] = useState<string | null>(null);
   const isSyncing = useRef(false);
 
-  const sync = useCallback(async (userId: string) => {
+  const refreshPendingCount = useCallback(async () => {
+    const count = await getPendingCount();
+    setPendingCount(count);
+  }, []);
+
+  const sync = useCallback(async (currentUserId: string) => {
     if (isSyncing.current) return;
-    if (!navigator.onLine) { setStatus('offline'); return; }
+
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setStatus('offline');
+      setLastError('Sin conexión');
+      return;
+    }
 
     isSyncing.current = true;
     setStatus('syncing');
+    setLastError(null);
+
     try {
-      await pushToCloud(userId);
-      await pullFromCloud(userId);
-      const remaining = await getPendingCount();
-      setPendingCount(remaining);
+      await pushToCloud(currentUserId);
+      await pullFromCloud(currentUserId);
+      const now = new Date().toISOString();
+      setLastSyncAt(now);
       setStatus('synced');
-    } catch {
-      setStatus('error');
+      await saveMetaValue(`${LAST_SYNC_KEY_PREFIX}${currentUserId}`, now);
+      await refreshPendingCount();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'No se pudo sincronizar';
+      setLastError(message);
+      setStatus(typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'error');
     } finally {
       isSyncing.current = false;
     }
-  // isSyncing is a ref (stable); setters, pushToCloud, pullFromCloud, getPendingCount are all stable
-  }, []);
+  }, [refreshPendingCount]);
 
-  const userId = user?.id;
-
-  // Sync on auth change (user just logged in)
   useEffect(() => {
-    if (!userId) { setStatus('idle'); return; }
-    sync(userId);
-  }, [userId, sync]);
+    void refreshPendingCount();
+  }, [refreshPendingCount]);
 
-  // Sync when tab returns to foreground
+  useEffect(() => {
+    if (!userId) {
+      setStatus('idle');
+      setLastError(null);
+      setLastSyncAt(null);
+      return;
+    }
+
+    void (async () => {
+      const savedLastSync = await loadMetaValue(`${LAST_SYNC_KEY_PREFIX}${userId}`);
+      setLastSyncAt(savedLastSync);
+      await sync(userId);
+    })();
+  }, [sync, userId]);
+
   useEffect(() => {
     if (!userId) return;
-    const handleVisibility = () => {
-      if (!document.hidden) sync(userId);
-    };
-    document.addEventListener('visibilitychange', handleVisibility);
-    return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [userId, sync]);
 
-  // Poll pending count every 30s (shows badge in UI without full sync)
+    const handleVisibility = () => {
+      if (!document.hidden) {
+        void sync(userId);
+      }
+    };
+
+    const handleOnline = () => {
+      void sync(userId);
+    };
+
+    const handleOffline = () => {
+      setStatus('offline');
+      setLastError('Sin conexión');
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [sync, userId]);
+
   useEffect(() => {
-    const id = setInterval(async () => {
-      const count = await getPendingCount();
-      setPendingCount(count);
+    const id = window.setInterval(() => {
+      void refreshPendingCount();
     }, 30_000);
-    return () => clearInterval(id);
-  }, []);
+    return () => window.clearInterval(id);
+  }, [refreshPendingCount]);
 
   return {
     status,
     pendingCount,
-    syncNow: () => user && sync(user.id),
+    lastSyncAt,
+    lastError,
+    syncNow: () => {
+      if (userId) {
+        void sync(userId);
+      }
+    },
   };
 }

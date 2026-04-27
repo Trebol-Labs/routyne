@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import {
   RoutineData, WorkoutState, WorkoutView,
   HistoryEntry, ExerciseVolume, UserProfile, RoutineSummary,
+  UserProfilePatch,
   WorkoutSummary,
 } from '@/types/workout';
 
@@ -16,19 +17,26 @@ import { saveHistoryEntry, loadHistory } from '@/lib/db/history';
 import {
   saveActiveSession, loadActiveSession, clearActiveSession,
 } from '@/lib/db/activeSession';
-import { loadProfile, saveProfile } from '@/lib/db/profile';
+import { DEFAULT_PROFILE, loadProfile, saveProfile } from '@/lib/db/profile';
 import { clearWorkoutData } from '@/lib/db/index';
 
-// ── Default profile ──────────────────────────────────────────────────────────
+function createInitialProfile(): UserProfile {
+  return {
+    ...DEFAULT_PROFILE,
+    preferences: { ...DEFAULT_PROFILE.preferences },
+  };
+}
 
-const DEFAULT_PROFILE: UserProfile = {
-  displayName: 'Athlete',
-  avatarEmoji: '💪',
-  weightUnit: 'kg',
-  heightCm: null,
-  defaultRestSeconds: 90,
-  restDays: [],
-};
+function mergeProfilePatch(profile: UserProfile, patch: UserProfilePatch): UserProfile {
+  return {
+    ...profile,
+    ...patch,
+    preferences: patch.preferences
+      ? { ...profile.preferences, ...patch.preferences }
+      : profile.preferences,
+    updatedAt: new Date().toISOString(),
+  };
+}
 
 // ── Volume helper ─────────────────────────────────────────────────────────────
 
@@ -80,7 +88,7 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
   setCompletion: {},
   history: [],
   historyHasMore: false,
-  profile: { ...DEFAULT_PROFILE },
+  profile: createInitialProfile(),
   routineLibrary: [],
   sessionStartTime: null,
   lastWorkoutSummary: null,
@@ -340,7 +348,7 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
       await clearActiveSession();
 
       // ── Enqueue cloud sync mutation (fire-and-forget) ──────────────────
-      if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
         const [{ enqueue }, { historyEntryToRemote }] = await Promise.all([
           import('@/lib/sync/queue'),
           import('@/lib/sync/merge'),
@@ -381,9 +389,24 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
   },
 
   // ── Profile ────────────────────────────────────────────────────────────────
-  updateProfile: async (patch: Partial<UserProfile>) => {
-    set((s) => ({ profile: { ...s.profile, ...patch } }));
-    saveProfile(get().profile).catch(console.error);
+  updateProfile: async (patch: UserProfilePatch) => {
+    const nextProfile = mergeProfilePatch(get().profile, patch);
+    set({ profile: nextProfile });
+    saveProfile(nextProfile).catch(console.error);
+
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      try {
+        const { enqueue } = await import('@/lib/sync/queue');
+        // Queue the local profile shape; syncEngine converts it to the remote payload.
+        enqueue({
+          table: 'profile',
+          operation: 'upsert',
+          payload: nextProfile,
+        }).catch((err) => console.error('[useWorkoutStore] enqueue failed', err));
+      } catch (err) {
+        console.error('[useWorkoutStore] profile sync enqueue failed', err);
+      }
+    }
   },
 
   // ── Active Session ─────────────────────────────────────────────────────────

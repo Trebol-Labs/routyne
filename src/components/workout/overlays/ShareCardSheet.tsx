@@ -5,6 +5,7 @@ import { motion, useMotionValue, animate, type PanInfo } from 'framer-motion';
 import { X, Download, Share2, Loader2 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { ShareCard } from '@/components/workout/ShareCard';
+import { SITE_URL } from '@/lib/site';
 import type { WorkoutSummary } from '@/types/workout';
 
 const EASE = [0.23, 1, 0.32, 1] as const;
@@ -75,13 +76,13 @@ export function ShareCardSheet({ summary, weightUnit, onClose }: ShareCardSheetP
       if (!blob) throw new Error('capture failed');
 
       const file = new File([blob], 'routyne-workout.png', { type: 'image/png' });
-      const text = `Just finished ${summary.entry.sessionTitle}! ${summary.totalSets} sets · ${Math.round(summary.entry.totalVolume)} ${weightUnit} volume${summary.newPRs.length > 0 ? ` · ${summary.newPRs.length} new PR${summary.newPRs.length > 1 ? 's' : ''}! 🏆` : ' 💪'}`;
+      const text = `Acabo de terminar ${summary.entry.sessionTitle}. ${summary.totalSets} series · ${Math.round(summary.entry.totalVolume)} ${weightUnit} de volumen${summary.newPRs.length > 0 ? ` · ${summary.newPRs.length} PR nuevo${summary.newPRs.length > 1 ? 's' : ''}! 🏆` : ' 💪'} ${SITE_URL}`;
 
       if (navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file], text });
       } else if (navigator.share) {
         // Fallback: share text only (files not supported on this device)
-        await navigator.share({ title: 'Routyne Workout', text });
+        await navigator.share({ title: 'Entrenamiento Routyne', text });
       }
     } catch (err) {
       // User cancelled or share API not available — silent
@@ -116,7 +117,7 @@ export function ShareCardSheet({ summary, weightUnit, onClose }: ShareCardSheetP
         ref={panelRef}
         role="dialog"
         aria-modal="true"
-        aria-label="Share workout card"
+        aria-label="Compartir tarjeta de entrenamiento"
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
@@ -135,15 +136,15 @@ export function ShareCardSheet({ summary, weightUnit, onClose }: ShareCardSheetP
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-2 pb-4">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30 mb-1">Share</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30 mb-1">Compartir</p>
             <h3 className="font-display text-xl font-black uppercase leading-tight tracking-tight text-white">
-              Workout Card
+              Tarjeta de entrenamiento
             </h3>
           </div>
           <button
             onClick={onClose}
             className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-white/8 bg-white/[0.04] transition-colors hover:bg-white/10"
-            aria-label="Close"
+            aria-label="Cerrar"
           >
             <X className="h-3.5 w-3.5 text-white/50" />
           </button>
@@ -178,7 +179,7 @@ export function ShareCardSheet({ summary, weightUnit, onClose }: ShareCardSheetP
                 ) : (
                   <Share2 className="h-4 w-4" />
                 )}
-                Share
+                Compartir
               </button>
             )}
             <button
@@ -191,13 +192,13 @@ export function ShareCardSheet({ summary, weightUnit, onClose }: ShareCardSheetP
               ) : (
                 <Download className="h-4 w-4" />
               )}
-              Save PNG
+              Guardar PNG
             </button>
           </div>
 
           {!canShare && (
             <p className="text-center text-[10px] font-black uppercase tracking-widest text-white/25">
-              Web Share not available — use Save PNG
+              Compartir web no disponible · usa Guardar PNG
             </p>
           )}
         </div>

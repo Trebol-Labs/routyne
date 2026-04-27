@@ -5,7 +5,7 @@
 import { getDB } from './index';
 import { saveRoutine } from './routines';
 import { saveHistoryEntry } from './history';
-import { saveProfile } from './profile';
+import { DEFAULT_PROFILE, saveProfile } from './profile';
 import type { HistoryEntry, RoutineData, UserProfile } from '@/types/workout';
 
 const MIGRATION_KEY = 'legacy-migrated';
@@ -52,6 +52,19 @@ interface LegacyStorage {
   };
 }
 
+function normalizeLegacyProfile(profile: Partial<UserProfile>): UserProfile {
+  return {
+    ...DEFAULT_PROFILE,
+    ...profile,
+    preferences: {
+      ...DEFAULT_PROFILE.preferences,
+      ...(profile.preferences ?? {}),
+    },
+    restDays: profile.restDays ?? DEFAULT_PROFILE.restDays,
+    updatedAt: profile.updatedAt ?? new Date().toISOString(),
+  };
+}
+
 export async function migrateLegacyData(): Promise<void> {
   if (typeof window === 'undefined') return;
 
@@ -81,7 +94,7 @@ export async function migrateLegacyData(): Promise<void> {
   // Migrate profile
   if (state.profile) {
     try {
-      await saveProfile(state.profile);
+      await saveProfile(normalizeLegacyProfile(state.profile as Partial<UserProfile>));
     } catch { /* non-critical */ }
   }
 

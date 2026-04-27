@@ -32,19 +32,19 @@ interface ExerciseDetailSheetProps {
 
 function relativeDate(date: Date): string {
   const days = Math.floor((Date.now() - date.getTime()) / 86400000);
-  if (days === 0) return 'Today';
-  if (days === 1) return 'Yesterday';
-  if (days < 7) return `${days} days ago`;
-  if (days < 14) return 'Last week';
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  if (days === 0) return 'Hoy';
+  if (days === 1) return 'Ayer';
+  if (days < 7) return `hace ${days} días`;
+  if (days < 14) return 'La semana pasada';
+  return date.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' });
 }
 
 function formatPRDate(date: Date): string {
-  return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  return date.toLocaleDateString('es-ES', { month: 'short', year: 'numeric' });
 }
 
 function formatChartLabel(date: Date): string {
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return date.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' });
 }
 
 // ── Chart subcomponent ────────────────────────────────────────────────────────
@@ -85,7 +85,7 @@ function ProgressChart({ points, mode, weightUnit }: ProgressChartProps) {
     return (
       <div className="flex h-32 items-center justify-center">
         <p className="text-[11px] font-bold uppercase tracking-widest text-white/25">
-          Not enough data
+          Faltan datos
         </p>
       </div>
     );
@@ -96,7 +96,7 @@ function ProgressChart({ points, mode, weightUnit }: ProgressChartProps) {
     volume: Math.round(p.totalVolume),
     oneRM: Math.round(p.estimatedOneRM),
     weightUnit,
-    modeLabel: mode === 'volume' ? '' : 'e1RM',
+    modeLabel: mode === 'volume' ? '' : '1RM',
   }));
 
   const dataKey = mode === 'volume' ? 'volume' : 'oneRM';
@@ -239,7 +239,7 @@ export function ExerciseDetailSheet({
         <div className="flex items-start justify-between px-5 pt-2 pb-4">
           <div className="min-w-0 flex-1 pr-3">
             <p className="mb-1 text-[10px] font-black uppercase tracking-[0.3em] text-white/30">
-              Progress History
+              Historial de progreso
             </p>
             <h3 className="truncate font-display text-xl font-black uppercase leading-tight tracking-tight text-white">
               {exerciseName}
@@ -248,7 +248,7 @@ export function ExerciseDetailSheet({
           <button
             onClick={onClose}
             className="mt-0.5 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-white/8 bg-white/[0.04] transition-colors hover:bg-white/10"
-            aria-label="Close"
+            aria-label="Cerrar"
           >
             <X className="h-3.5 w-3.5 text-white/50" />
           </button>
@@ -261,11 +261,11 @@ export function ExerciseDetailSheet({
               <span className="text-xl leading-none" aria-hidden="true">🏆</span>
               <div className="min-w-0 flex-1">
                 <p className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-300/60">
-                  All-time PR
+                  PR histórico
                 </p>
                 <p className="mt-0.5 text-sm font-black text-amber-200">
                   {allTimePR.weight}
-                  {weightUnit} × {allTimePR.reps} reps
+                  {weightUnit} × {allTimePR.reps} repeticiones
                   <span className="ml-2 text-amber-300/50 font-bold">
                     · {formatPRDate(allTimePR.date)}
                   </span>
@@ -275,7 +275,7 @@ export function ExerciseDetailSheet({
           ) : (
             <div className="flex items-center justify-center rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3">
               <p className="text-[11px] font-bold uppercase tracking-widest text-white/25">
-                No data yet — start training!
+                Aún no hay datos. Empieza a entrenar.
               </p>
             </div>
           )}
@@ -286,7 +286,7 @@ export function ExerciseDetailSheet({
             <div className="mb-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-white/50">
-                  {chartMode === 'volume' ? 'Volume Progress' : 'Est. 1RM'}
+                  {chartMode === 'volume' ? 'Progreso de volumen' : '1RM estimado'}
                 </p>
                 <TrendIcon className={`h-3.5 w-3.5 ${trendColor}`} aria-hidden="true" />
               </div>
@@ -302,7 +302,7 @@ export function ExerciseDetailSheet({
                       : 'text-white/30 hover:text-white/50',
                   ].join(' ')}
                 >
-                  Volume
+                  Volumen
                 </button>
                 <button
                   onClick={() => setChartMode('1rm')}
@@ -313,7 +313,7 @@ export function ExerciseDetailSheet({
                       : 'text-white/30 hover:text-white/50',
                   ].join(' ')}
                 >
-                  Est. 1RM
+                  1RM estimado
                 </button>
               </div>
             </div>
@@ -324,13 +324,13 @@ export function ExerciseDetailSheet({
           {/* ── Recent sessions table ── */}
           <div>
             <p className="mb-3 text-[11px] font-black uppercase tracking-[0.2em] text-white/40">
-              Recent Sessions
+              Sesiones recientes
             </p>
 
             {recentSessions.length === 0 ? (
               <div className="flex items-center justify-center rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-4">
                 <p className="text-[11px] font-bold uppercase tracking-widest text-white/25">
-                  No sessions recorded yet
+                  Aún no hay sesiones registradas
                 </p>
               </div>
             ) : (
@@ -351,7 +351,7 @@ export function ExerciseDetailSheet({
                         </p>
                       </div>
                       <div className="shrink-0 rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[10px] font-black text-white/55 whitespace-nowrap">
-                        {session.setsCompleted} sets · {session.totalVolume}
+                        {session.setsCompleted} series · {session.totalVolume}
                         {weightUnit}
                       </div>
                     </div>
@@ -373,7 +373,7 @@ export function ExerciseDetailSheet({
                               key={si}
                               className="rounded-full border border-white/8 bg-white/[0.04] px-2 py-0.5 text-[10px] font-bold text-white/40"
                             >
-                              {sd.repsDone} reps
+                              {sd.repsDone} repeticiones
                             </span>
                           )
                         ))}
@@ -390,7 +390,7 @@ export function ExerciseDetailSheet({
             onClick={onClose}
             className="active-glass-btn flex h-[3.25rem] w-full items-center justify-center rounded-2xl text-[13px] font-black uppercase tracking-widest text-white transition-all active:scale-[0.98]"
           >
-            Close
+            Cerrar
           </button>
         </div>
       </motion.div>

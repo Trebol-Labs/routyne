@@ -55,7 +55,7 @@ export async function getDB(): Promise<IDBPDatabase<RoutineDB>> {
       }
 
       if (oldVersion < 4) {
-        // syncQueue (v4) — IDB-backed offline mutation queue for cloud sync
+        // syncQueue (v4) — IDB-backed mutation queue for cloud sync
         const syncStore = db.createObjectStore('syncQueue', { keyPath: 'id' });
         syncStore.createIndex('by-timestamp', 'timestamp');
       }

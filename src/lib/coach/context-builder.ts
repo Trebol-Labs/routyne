@@ -39,6 +39,10 @@ export interface UserCoachContext {
   profile: {
     displayName: string;
     weightUnit: 'kg' | 'lbs';
+    trainingGoal: string;
+    experienceLevel: string;
+    coachTone: string;
+    effortTracking: string;
   };
   recentSessions: CoachRecentSession[];
   personalRecords: CoachPersonalRecord[];
@@ -143,6 +147,10 @@ export function buildUserContext(
     profile: {
       displayName: profile.displayName,
       weightUnit: profile.weightUnit,
+      trainingGoal: profile.preferences.trainingGoal,
+      experienceLevel: profile.preferences.experienceLevel,
+      coachTone: profile.preferences.coachTone,
+      effortTracking: profile.preferences.effortTracking,
     },
     recentSessions,
     personalRecords: computePRs(history),

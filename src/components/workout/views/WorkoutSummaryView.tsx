@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
 import { ShareCardSheet } from '@/components/workout/overlays/ShareCardSheet';
 import { CoachSheet } from '@/components/workout/overlays/CoachSheet';
+import { COACH_ENABLED } from '@/lib/feature-flags';
 import type { ExerciseVolume, SetDetail, WorkoutSummary } from '@/types/workout';
 
 // ── Duration formatter ────────────────────────────────────────────────────────
@@ -117,7 +118,6 @@ export function WorkoutSummaryView() {
   const { lastWorkoutSummary, setCurrentView, profile, history } = useWorkoutStore();
   const [showShareCard, setShowShareCard] = useState(false);
   const [showCoach, setShowCoach] = useState(false);
-  const coachEnabled = !!process.env.NEXT_PUBLIC_COACH_ENABLED;
   const isFirstWorkout = history.length === 1;
 
   // Guard: no summary — redirect to history
@@ -340,7 +340,7 @@ export function WorkoutSummaryView() {
           onClick={() => setCurrentView('history')}
         >
           <History className="w-4 h-4 mr-2" />
-          View History
+          Ver historial
         </Button>
 
         {/* Secondary */}
@@ -350,7 +350,7 @@ export function WorkoutSummaryView() {
           onClick={() => setCurrentView('routine-overview')}
         >
           <ChevronLeft className="w-4 h-4 mr-2" />
-          Back to Routine
+          Volver a la rutina
         </Button>
 
         {/* Ghost share */}
@@ -360,17 +360,17 @@ export function WorkoutSummaryView() {
           onClick={() => setShowShareCard(true)}
         >
           <Share2 className="w-4 h-4 mr-2" />
-          Share Workout
+          Compartir entrenamiento
         </Button>
 
         {/* AI Coach CTA — only shown when coach is configured */}
-        {coachEnabled && (
+        {COACH_ENABLED && (
           <Button
             variant="ghost"
             className="w-full h-12 text-sm font-bold text-indigo-400/70 hover:text-indigo-300 uppercase tracking-widest font-display"
             onClick={() => setShowCoach(true)}
           >
-            🤖 Ask AI Coach
+            🤖 Preguntar al coach IA
           </Button>
         )}
       </motion.div>

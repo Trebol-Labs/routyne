@@ -1,4 +1,5 @@
 import { ImageResponse } from 'next/og';
+import { SITE_HOST } from '@/lib/site';
 
 export const runtime = 'edge';
 export const size = {
@@ -8,9 +9,9 @@ export const size = {
 export const contentType = 'image/png';
 
 const statCards = [
-  { value: '100%', label: 'Offline first' },
-  { value: 'IDB', label: 'Local source of truth' },
-  { value: 'SYNC', label: 'Supabase optional' },
+  { value: 'SYNC', label: 'Cuenta opcional' },
+  { value: 'IDB', label: 'Cache local' },
+  { value: 'PREF', label: 'Preferencias' },
 ];
 
 export default function OpenGraphImage() {
@@ -177,7 +178,7 @@ export default function OpenGraphImage() {
                   textTransform: 'uppercase',
                 }}
               >
-                Offline PWA workout tracker
+                Cuenta, sincronización y progreso
               </span>
               <h1
                 style={{
@@ -204,7 +205,7 @@ export default function OpenGraphImage() {
                   fontWeight: 500,
                 }}
               >
-                Rutina, progresión, historial y share cards en un flujo móvil que no depende de la nube para arrancar.
+                Rutina, progresión, historial y preferencias en un flujo móvil con sincronización real cuando la activas.
               </p>
             </div>
 
@@ -257,17 +258,17 @@ export default function OpenGraphImage() {
               gap: 24,
             }}
           >
-            <span
-              style={{
-                fontSize: 16,
-                fontWeight: 700,
-                letterSpacing: '0.24em',
-                textTransform: 'uppercase',
-                color: 'rgba(255,255,255,0.32)',
-              }}
-            >
-              Mobile-first workout tracker
-            </span>
+              <span
+                style={{
+                  fontSize: 16,
+                  fontWeight: 700,
+                  letterSpacing: '0.24em',
+                  textTransform: 'uppercase',
+                  color: 'rgba(255,255,255,0.32)',
+                }}
+              >
+              Workout tracker con sincronización opcional
+              </span>
             <span
               style={{
                 fontSize: 16,
@@ -277,7 +278,7 @@ export default function OpenGraphImage() {
                 color: 'rgba(255,255,255,0.28)',
               }}
             >
-              routyne-nu.vercel.app
+              {SITE_HOST}
             </span>
           </div>
         </div>

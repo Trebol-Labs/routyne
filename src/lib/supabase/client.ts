@@ -43,6 +43,8 @@ export interface Database {
           weight: number;
           unit: string;
           created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
         };
         Insert: Omit<Database['public']['Tables']['bodyweight']['Row'], 'created_at'>;
         Update: Partial<Database['public']['Tables']['bodyweight']['Insert']>;
@@ -56,6 +58,7 @@ export interface Database {
           height_cm: number | null;
           default_rest_s: number;
           rest_days: number[];
+          preferences: Record<string, unknown>;
           updated_at: string;
         };
         Insert: Partial<Database['public']['Tables']['profiles']['Row']> & { user_id: string };

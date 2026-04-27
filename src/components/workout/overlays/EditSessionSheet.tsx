@@ -47,7 +47,7 @@ export function EditSessionSheet({ onClose, exercises: initialExercises, onSave 
   }
 
   return (
-    <Sheet onClose={onClose} title="Edit Session" height="85vh">
+    <Sheet onClose={onClose} title="Editar sesión" height="85vh">
       <div className="flex h-full flex-col">
         <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-4 no-scrollbar">
           {exercises.map((ex, idx) => (
@@ -55,7 +55,7 @@ export function EditSessionSheet({ onClose, exercises: initialExercises, onSave 
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="min-w-0 flex-1">
                   <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/30 mb-1">
-                    Exercise {idx + 1}
+                    Ejercicio {idx + 1}
                   </p>
                   <h4 className="truncate font-display text-base font-black uppercase tracking-tight text-white/90">
                     {ex.cleanName}
@@ -71,7 +71,7 @@ export function EditSessionSheet({ onClose, exercises: initialExercises, onSave 
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">Sets</label>
+                  <label className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">Series</label>
                   <div className="flex items-center rounded-lg bg-white/5 p-1">
                     <button
                       onClick={() => handleUpdateExercise(ex.id, { sets: Math.max(1, ex.sets - 1) })}
@@ -90,7 +90,7 @@ export function EditSessionSheet({ onClose, exercises: initialExercises, onSave 
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">Reps</label>
+                  <label className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">Repeticiones</label>
                   <div className="flex items-center gap-1">
                     <input
                       type="number"
@@ -116,7 +116,7 @@ export function EditSessionSheet({ onClose, exercises: initialExercises, onSave 
             className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-white/20 bg-white/[0.02] py-4 text-[11px] font-black uppercase tracking-widest text-white/50 transition-colors hover:border-white/30 hover:bg-white/[0.04] hover:text-white/80"
           >
             <Plus className="h-4 w-4" />
-            Add Exercise
+            Añadir ejercicio
           </button>
         </div>
 

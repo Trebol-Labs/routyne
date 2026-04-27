@@ -1,5 +1,5 @@
 /**
- * Offline mutation queue — persisted in IDB syncQueue store.
+ * Sync mutation queue — persisted in IDB syncQueue store.
  * Mutations are enqueued locally and drained by syncEngine when online + authenticated.
  */
 

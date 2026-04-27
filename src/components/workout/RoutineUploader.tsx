@@ -62,7 +62,7 @@ function ProgramCard({
             {program.level}
           </span>
           <span className="text-white/20 text-[9px] font-black uppercase tracking-widest">
-            {program.daysPerWeek}d/wk
+          {program.daysPerWeek}d/sem
           </span>
         </div>
       </div>
@@ -138,10 +138,10 @@ export function RoutineUploader() {
         className="flex flex-col items-center gap-2 pt-2"
       >
         <h1 className="text-4xl sm:text-5xl font-black tracking-tighter text-liquid leading-none text-center font-display">
-          GET <span className="brightness-125 [-webkit-text-fill-color:#3b82f6]">STARTED</span>
+          EMPIEZA <span className="brightness-125 [-webkit-text-fill-color:#3b82f6]">AHORA</span>
         </h1>
         <p className="text-white/35 font-medium text-sm tracking-tight text-center">
-          Pick a program or import your own routine
+          Elige un programa o importa tu propia rutina
         </p>
       </motion.div>
 
@@ -153,8 +153,8 @@ export function RoutineUploader() {
         className="flex items-center gap-1 p-1 glass-panel rounded-2xl border-white/10"
       >
         {([
-          { id: 'templates', label: 'Programs', icon: LayoutTemplate },
-          { id: 'import', label: 'Import', icon: Code },
+          { id: 'templates', label: 'Programas', icon: LayoutTemplate },
+          { id: 'import', label: 'Importar', icon: Code },
         ] as const).map(({ id, label, icon: Icon }) => (
           <button
             key={id}
@@ -194,8 +194,8 @@ export function RoutineUploader() {
                 <Zap className="h-4 w-4 text-sky-400" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sky-100 text-[12px] font-black uppercase tracking-tight">Build visually</p>
-                <p className="text-white/30 text-[10px]">No markdown needed — use the drag & drop builder</p>
+                <p className="text-sky-100 text-[12px] font-black uppercase tracking-tight">Construir visualmente</p>
+                <p className="text-white/30 text-[10px]">No necesitas markdown: usa el constructor de arrastrar y soltar</p>
               </div>
               <ChevronRight className="h-4 w-4 text-white/20 shrink-0" />
             </button>
@@ -222,14 +222,14 @@ export function RoutineUploader() {
                       className="flex flex-col items-center justify-center py-10 gap-5"
                     >
                       <Loader2 className="w-12 h-12 text-white animate-[spin_2s_linear_infinite]" />
-                      <p className="text-white font-black text-lg tracking-tighter">Parsing routine…</p>
+                      <p className="text-white font-black text-lg tracking-tighter">Analizando rutina…</p>
                     </motion.div>
                   ) : (
                     <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col gap-3">
                       <textarea
                         value={text}
                         onChange={(e) => setText(e.target.value)}
-                        placeholder={"# Push Day\n## Bench Press\n* **Bench Press**: 4x8-10 90s"}
+                        placeholder={"# Día de empuje\n## Press banca\n* **Press banca**: 4x8-10 90s"}
                         className="w-full h-28 bg-black/30 backdrop-blur-md rounded-2xl px-4 py-3 border border-white/5 focus:ring-0 text-white placeholder:text-white/10 resize-none font-mono text-sm leading-relaxed sunken-glass"
                       />
                       <input
@@ -255,7 +255,7 @@ export function RoutineUploader() {
                           disabled={!text.trim() || isLoading}
                           className="w-full text-[11px] tracking-[0.15em] rounded-2xl"
                         >
-                          GENERATE
+                          GENERAR
                         </Button>
                         <button
                           type="button"
@@ -326,7 +326,7 @@ export function RoutineUploader() {
             exit={{ opacity: 0, y: -8 }}
             className="flex flex-col gap-2.5"
           >
-            <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] px-1">Saved Routines</p>
+            <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] px-1">Rutinas guardadas</p>
             <div className="flex flex-col gap-2">
               {routineLibrary.map((r, i) => (
                 <motion.div
@@ -342,7 +342,7 @@ export function RoutineUploader() {
                   <div className="flex-1 min-w-0">
                     <p className="text-white font-black text-sm uppercase tracking-tight truncate font-display">{r.title}</p>
                     <p className="text-white/30 text-[10px] font-black uppercase tracking-widest mt-0.5">
-                      {r.sessionCount} day{r.sessionCount !== 1 ? 's' : ''} · {r.exerciseCount} exercises
+            {r.sessionCount} sesión{r.sessionCount !== 1 ? 'es' : ''} · {r.exerciseCount} ejercicios
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -352,12 +352,12 @@ export function RoutineUploader() {
                       onClick={() => loadRoutineFromLibrary(r.id)}
                       className="text-[10px] px-4 py-2 rounded-xl"
                     >
-                      Load
+                      Cargar
                     </Button>
                     <button
                       onClick={() => setPendingDeleteId(r.id)}
                       className="w-8 h-8 rounded-xl flex items-center justify-center text-white/20 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
-                      aria-label={`Delete ${r.title}`}
+                      aria-label={`Eliminar ${r.title}`}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -371,10 +371,10 @@ export function RoutineUploader() {
 
       <ConfirmDialog
         open={pendingDeleteId !== null}
-        title="Delete Routine?"
-        message={`"${routineLibrary.find((r) => r.id === pendingDeleteId)?.title ?? ''}" will be removed.`}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        title="¿Borrar rutina?"
+        message={`"${routineLibrary.find((r) => r.id === pendingDeleteId)?.title ?? ''}" se eliminará.`}
+        confirmLabel="Borrar"
+        cancelLabel="Cancelar"
         variant="danger"
         onConfirm={() => {
           if (pendingDeleteId) deleteRoutineFromLibrary(pendingDeleteId);

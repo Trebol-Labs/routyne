@@ -1,38 +1,39 @@
 import Link from 'next/link';
+import { SITE_HOST } from '@/lib/site';
 
 // Static generation — no dynamic data
 export const dynamic = 'force-static';
 
 const FEATURES = [
   {
-    icon: '📴',
-    title: '100% Offline',
-    body: 'Todo se guarda en tu dispositivo. Sin cuenta, sin servidores, sin datos que vender.',
+    icon: '👤',
+    title: 'Cuenta y sincronización',
+    body: 'Entra con email o cuenta anónima, revisa cambios pendientes y conserva tu perfil entre dispositivos.',
   },
   {
-    icon: '🏆',
-    title: 'PRs automáticos',
-    body: 'Detecta tus marcas personales en cada sesión y celebra cada progreso.',
+    icon: '🎯',
+    title: 'Preferencias de entrenamiento',
+    body: 'Ajusta objetivo, experiencia, tono del coach, días de descanso y ritmo de trabajo.',
+  },
+  {
+    icon: '⚡',
+    title: 'Registro rápido',
+    body: 'Loguea series con taps, chips, steppers y entradas numéricas sin abrir menús pesados.',
   },
   {
     icon: '📊',
     title: 'Analíticas reales',
-    body: 'Volumen semanal, grupos musculares, recuperación y progresión de carga.',
+    body: 'Ve volumen, rachas, peso corporal y progreso sin ruido.',
   },
   {
-    icon: '🤖',
-    title: 'Sugerencia de carga',
-    body: 'Progresión lineal, doble progresión o basada en RPE según tu nivel.',
+    icon: '🎨',
+    title: 'Apariencia adaptable',
+    body: 'Cambia acento, densidad y movimiento sin romper el estilo glass.',
   },
   {
-    icon: '📤',
-    title: 'Comparte tu logro',
-    body: 'Genera una share card con tu sesión y compártela directo desde el gym.',
-  },
-  {
-    icon: '🔒',
-    title: 'Tu privacidad primero',
-    body: 'Sin tracking, sin anuncios, sin telemetría. Tus datos son tuyos.',
+    icon: '🗂️',
+    title: 'Copia y recuperación',
+    body: 'Exporta o importa datos locales cuando necesites mover tu historial.',
   },
 ];
 
@@ -68,7 +69,7 @@ export default function LandingPage() {
         <div className="relative space-y-4 max-w-2xl">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-300 text-[11px] font-black uppercase tracking-widest">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-            PWA · Offline · Gratis
+            PWA · Sincronización opcional · Gratis
           </div>
 
           <h1 className="text-5xl sm:text-7xl font-black tracking-tighter leading-[0.9] font-display">
@@ -89,8 +90,7 @@ export default function LandingPage() {
           </h1>
 
           <p className="text-white/50 text-base sm:text-lg font-medium max-w-lg mx-auto leading-relaxed">
-            El gym tracker que respeta tu privacidad. Sin cuenta, sin suscripción, sin anuncios.
-            Todo offline en tu dispositivo.
+            El tracker para entrenar, ajustar tus preferencias y recuperar tu perfil entre dispositivos sin perder el flujo.
           </p>
         </div>
 
@@ -130,7 +130,7 @@ export default function LandingPage() {
           <p className="text-[11px] font-black text-white/30 uppercase tracking-[0.3em]">Funciones</p>
           <h2 className="text-4xl font-black tracking-tighter font-display text-white">
             Todo lo que necesitas.<br />
-            <span className="text-liquid">Nada más.</span>
+            <span className="text-liquid">Sin fricción.</span>
           </h2>
         </div>
 
@@ -155,7 +155,7 @@ export default function LandingPage() {
         <div className="text-center mb-12 space-y-2">
           <p className="text-[11px] font-black text-white/30 uppercase tracking-[0.3em]">Programas incluidos</p>
           <h2 className="text-4xl font-black tracking-tighter font-display text-white">
-            Empieza hoy mismo.
+            Empieza con una base sólida.
           </h2>
           <p className="text-white/40 text-sm font-medium">5 programas probados listos para usar</p>
         </div>
@@ -205,7 +205,7 @@ export default function LandingPage() {
           <div className="p-5 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">ROUTYNE</span>
-              <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Push Day</span>
+              <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Empuje</span>
             </div>
             <div className="space-y-1">
               <p className="text-2xl font-black text-white font-display tracking-tighter">💪 Sesión</p>
@@ -220,7 +220,7 @@ export default function LandingPage() {
               ))}
             </div>
             <div className="pt-1 border-t border-white/[0.06]">
-              <p className="text-[9px] text-white/20 text-center uppercase tracking-widest">routyne.app</p>
+              <p className="text-[9px] text-white/20 text-center uppercase tracking-widest">{SITE_HOST}</p>
             </div>
           </div>
         </div>
@@ -257,6 +257,11 @@ export default function LandingPage() {
 
       {/* ── Footer ── */}
       <footer className="border-t border-white/[0.06] px-6 py-8 text-center">
+        <div className="mb-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[10px] font-black uppercase tracking-widest text-white/30">
+          <Link href="/privacy" className="hover:text-white/60 transition-colors">Privacidad</Link>
+          <Link href="/terms" className="hover:text-white/60 transition-colors">Términos</Link>
+          <Link href="/support" className="hover:text-white/60 transition-colors">Soporte</Link>
+        </div>
         <p className="text-white/20 text-[11px] font-medium uppercase tracking-widest">
           © 2026 Routyne · Hecho con 💪 · Sin suscripción
         </p>

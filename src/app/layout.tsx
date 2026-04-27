@@ -1,21 +1,18 @@
-import type { Metadata, Viewport } from "next";
-import { Barlow_Condensed, Inter } from "next/font/google";
-import "./globals.css";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
-
-const siteUrl = process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL}`
-  : 'https://routyne-nu.vercel.app';
+import type { Metadata, Viewport } from 'next';
+import { Barlow_Condensed, Inter } from 'next/font/google';
+import './globals.css';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { SITE_URL } from '@/lib/site';
 
 const barlowCondensed = Barlow_Condensed({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-display",
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-display',
 });
 
 const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-body",
+  subsets: ['latin'],
+  variable: '--font-body',
 });
 
 export const viewport: Viewport = {
@@ -24,10 +21,20 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
-  title: "Routyne — Workout Tracker",
-  description: "Mobile-first PWA workout tracker with liquid glass UI",
+  metadataBase: new URL(SITE_URL),
+  title: 'Routyne — Cuenta, sincronización y progreso',
+  description: 'PWA de entrenamiento con cuenta opcional, sincronización de perfil y preferencias, y almacenamiento local en el navegador.',
   manifest: '/manifest.json',
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    title: 'Routyne — Cuenta, sincronización y progreso',
+    description: 'PWA de entrenamiento con cuenta opcional, sincronización de perfil y preferencias, y almacenamiento local en el navegador.',
+    url: '/',
+    siteName: 'Routyne',
+    type: 'website',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
@@ -44,7 +51,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" style={{ colorScheme: 'dark' }}>
+    <html lang="es" style={{ colorScheme: 'dark' }}>
       <body
         className={`${barlowCondensed.variable} ${inter.variable} antialiased`}
       >

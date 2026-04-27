@@ -65,6 +65,25 @@ export type WorkoutView =
 
 // ── User profile ──────────────────────────────────────────────────────────────
 
+export type TrainingGoal = 'strength' | 'hypertrophy' | 'general' | 'endurance';
+export type ExperienceLevel = 'beginner' | 'intermediate' | 'advanced';
+export type EffortTrackingMode = 'off' | 'rpe' | 'rir' | 'both';
+export type CoachTone = 'direct' | 'supportive' | 'technical';
+export type AccentColor = 'blue' | 'emerald' | 'orange' | 'violet' | 'mono';
+export type UiDensity = 'comfortable' | 'compact';
+export type MotionLevel = 'system' | 'reduced' | 'full';
+
+export interface UserProfilePreferences {
+  trainingGoal: TrainingGoal;
+  experienceLevel: ExperienceLevel;
+  weekStartsOn: 0 | 1;
+  effortTracking: EffortTrackingMode;
+  coachTone: CoachTone;
+  accentColor: AccentColor;
+  uiDensity: UiDensity;
+  motionLevel: MotionLevel;
+}
+
 export interface UserProfile {
   displayName: string;
   avatarEmoji: string;
@@ -72,7 +91,13 @@ export interface UserProfile {
   heightCm: number | null;
   defaultRestSeconds: number;
   restDays: number[];   // JS day-of-week: 0=Sun, 1=Mon … 6=Sat
+  preferences: UserProfilePreferences;
+  updatedAt: string;   // ISO 8601
 }
+
+export type UserProfilePatch = Partial<Omit<UserProfile, 'preferences'>> & {
+  preferences?: Partial<UserProfilePreferences>;
+};
 
 // ── Exercise browse (ExerciseDB) ──────────────────────────────────────────────
 
@@ -172,6 +197,8 @@ export interface Bodyweight {
   date: string;     // YYYY-MM-DD
   weight: number;
   unit: 'kg' | 'lbs';
+  updatedAt: string;   // ISO 8601
+  deletedAt: string | null;
 }
 
 // ── Achievements ──────────────────────────────────────────────────────────────
@@ -219,7 +246,7 @@ export interface WorkoutState {
   finishSession: () => Promise<void>;
   abandonSession: () => Promise<void>;
   loadMoreHistory: () => Promise<void>;
-  updateProfile: (patch: Partial<UserProfile>) => Promise<void>;
+  updateProfile: (patch: UserProfilePatch) => Promise<void>;
   resetAll: () => Promise<void>;
   updateActiveSessionExercises: (exercises: ParsedExercise[]) => Promise<void>;
 

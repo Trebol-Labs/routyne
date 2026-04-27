@@ -190,7 +190,7 @@ export function ActiveSessionView() {
 
   const [showRestTimer, setShowRestTimer] = useState(false);
   const [restTimerKey, setRestTimerKey] = useState(0);
-  const [restDuration, setRestDuration] = useState(90);
+  const [restDuration, setRestDuration] = useState(profile.defaultRestSeconds);
   const [showAbandon, setShowAbandon] = useState(false);
   const [pendingSet, setPendingSet] = useState<PendingSet | null>(null);
   const [armedPreview, setArmedPreview] = useState<ArmedPreview | null>(null);
@@ -391,7 +391,7 @@ export function ActiveSessionView() {
     >
       <div className="-mt-2">
         <div className="mb-2 flex items-center justify-between">
-          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">Progress</span>
+          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">Progreso</span>
           <span className="text-[10px] font-black uppercase tracking-widest text-white/50">
             {completedSets} / {totalSets}
           </span>
@@ -419,7 +419,7 @@ export function ActiveSessionView() {
             variant="glass-icon"
             size="icon-lg"
             onClick={() => setCurrentView('routine-overview')}
-            aria-label="Back to overview"
+            aria-label="Volver al resumen"
           >
             <ChevronLeft className="h-6 w-6 text-white" />
           </Button>
@@ -431,7 +431,7 @@ export function ActiveSessionView() {
               {isLocked && (
                 <div className="flex items-center gap-1.5 rounded-full border border-blue-500/20 bg-blue-500/10 px-2 py-0.5">
                   <Zap className="h-3 w-3 fill-blue-400 text-blue-400" />
-                  <span className="text-[9px] font-black uppercase tracking-widest text-blue-400">Wake Lock On</span>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-blue-400">Pantalla activa</span>
                 </div>
               )}
             </div>
@@ -442,7 +442,7 @@ export function ActiveSessionView() {
           <button
             onClick={() => setShowEditSession(true)}
             className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] text-white/50 transition-colors hover:bg-white/10 hover:text-white/80"
-            aria-label="Edit session"
+            aria-label="Editar sesión"
           >
             <Pencil className="h-4 w-4" />
           </button>
@@ -450,7 +450,7 @@ export function ActiveSessionView() {
             variant="glass-icon"
             size="icon-lg"
             onClick={() => setShowRestTimer(true)}
-            aria-label="Open rest timer"
+            aria-label="Abrir temporizador de descanso"
           >
             <Clock className="h-6 w-6 text-blue-400" />
           </Button>
@@ -484,7 +484,7 @@ export function ActiveSessionView() {
                     aria-label={`Log all remaining sets for ${exercise.cleanName}`}
                   >
                     <CheckCheck className="h-3 w-3" />
-                    <span className="text-[9px] font-black uppercase tracking-widest">All</span>
+                    <span className="text-[9px] font-black uppercase tracking-widest">Todo</span>
                   </button>
                 )}
               </div>
@@ -588,6 +588,7 @@ export function ActiveSessionView() {
             targetRepsMax={pendingSet.targetRepsMax}
             lastWeight={pendingSet.lastWeight}
             weightUnit={profile.weightUnit}
+            effortTracking={profile.preferences.effortTracking}
           />
         )}
       </AnimatePresence>
@@ -619,7 +620,7 @@ export function ActiveSessionView() {
       <ConfirmDialog
         open={showAbandon}
         title="Abandon Workout?"
-        message="All progress will be lost."
+        message="Se perderá todo el progreso de la sesión."
         confirmLabel="Abandon"
         cancelLabel="Keep Going"
         variant="danger"

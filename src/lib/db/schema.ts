@@ -94,6 +94,8 @@ export interface ProfileRecord {
   heightCm: number | null;
   defaultRestSeconds: number;
   restDays?: number[];   // optional for backward compat
+  preferences?: Record<string, unknown>;
+  updatedAt?: string;
 }
 
 export interface MetaRecord {
@@ -120,6 +122,8 @@ export interface BodyweightRecord {
   date: string;     // YYYY-MM-DD
   weight: number;
   unit: 'kg' | 'lbs';
+  updatedAt: string;
+  deletedAt: string | null;
 }
 
 // ── DBSchema for idb ─────────────────────────────────────────────────────────

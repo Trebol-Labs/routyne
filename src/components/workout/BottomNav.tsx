@@ -65,16 +65,16 @@ NavButton.displayName = 'NavButton';
 export const BottomNav = memo(({ currentView, onNavigate, hasRoutine, onCoachClick }: BottomNavProps) => {
   const navItems = useMemo(() => {
     const baseItems = [
-      { id: 'overview', view: 'routine-overview' as WorkoutView, icon: Dumbbell, label: 'Overview', matchViews: ['routine-overview', 'active-session'], isPrimary: false },
-      { id: 'history', view: 'history' as WorkoutView, icon: Calendar, label: 'History', matchViews: ['history'], isPrimary: false },
-      { id: 'stats', view: 'stats' as WorkoutView, icon: TrendingUp, label: 'Stats', matchViews: ['stats'], isPrimary: false },
+      { id: 'overview', view: 'routine-overview' as WorkoutView, icon: Dumbbell, label: 'Resumen', matchViews: ['routine-overview', 'active-session'], isPrimary: false },
+      { id: 'history', view: 'history' as WorkoutView, icon: Calendar, label: 'Historial', matchViews: ['history'], isPrimary: false },
+      { id: 'stats', view: 'stats' as WorkoutView, icon: TrendingUp, label: 'Estadísticas', matchViews: ['stats'], isPrimary: false },
     ];
 
     const importItem = {
       id: 'library',
       view: (hasRoutine ? 'routine-manager' : 'uploader') as WorkoutView,
       icon: hasRoutine ? Library : Plus,
-      label: hasRoutine ? 'Routines' : 'Add Routine',
+      label: hasRoutine ? 'Rutinas' : 'Añadir rutina',
       matchViews: ['uploader', 'routine-manager'],
       isPrimary: !hasRoutine,
     };
@@ -121,7 +121,7 @@ export const BottomNav = memo(({ currentView, onNavigate, hasRoutine, onCoachCli
           {onCoachClick && (
             <NavButton
               icon={Bot}
-              label="AI Coach"
+              label="Coach IA"
               isActive={false}
               onClick={onCoachClick}
             />

@@ -32,7 +32,7 @@ const BodyWeightChart = dynamic(
 // ── Level system ───────────────────────────────────────────────────────────────
 
 const LEVEL_THRESHOLDS = [0, 5, 10, 20, 35, 50, 75, 100, 150, 200, 300];
-const LEVEL_NAMES = ['Rookie', 'Amateur', 'Regular', 'Athlete', 'Veteran', 'Elite', 'Iron', 'Master', 'Legend', 'Immortal', 'Myth'];
+const LEVEL_NAMES = ['Novato', 'Amateur', 'Regular', 'Atleta', 'Veterano', 'Élite', 'Hierro', 'Maestro', 'Leyenda', 'Inmortal', 'Mítico'];
 
 function computeLevel(sessions: number) {
   let idx = 0;
@@ -55,12 +55,12 @@ function computeLevel(sessions: number) {
 // ── Achievement categories ─────────────────────────────────────────────────────
 
 const ACHIEVEMENT_CATEGORIES = {
-  sessions: { label: 'Consistency', emoji: '🔥', colorClass: 'text-orange-400',  barClass: 'bg-orange-400'  },
-  volume:   { label: 'Volume',      emoji: '💪', colorClass: 'text-blue-400',    barClass: 'bg-blue-400'    },
-  prs:      { label: 'Records',     emoji: '🏆', colorClass: 'text-yellow-400',  barClass: 'bg-yellow-400'  },
-  variety:  { label: 'Variety',     emoji: '🎭', colorClass: 'text-purple-400',  barClass: 'bg-purple-400'  },
-  streak:   { label: 'Streaks',     emoji: '⚡', colorClass: 'text-cyan-400',    barClass: 'bg-cyan-400'    },
-  special:  { label: 'Special',     emoji: '✨', colorClass: 'text-emerald-400', barClass: 'bg-emerald-400' },
+  sessions: { label: 'Constancia', emoji: '🔥', colorClass: 'text-orange-400',  barClass: 'bg-orange-400'  },
+  volume:   { label: 'Volumen',    emoji: '💪', colorClass: 'text-blue-400',    barClass: 'bg-blue-400'    },
+  prs:      { label: 'Récords',    emoji: '🏆', colorClass: 'text-yellow-400',  barClass: 'bg-yellow-400'  },
+  variety:  { label: 'Variedad',   emoji: '🎭', colorClass: 'text-purple-400',  barClass: 'bg-purple-400'  },
+  streak:   { label: 'Rachas',     emoji: '⚡', colorClass: 'text-cyan-400',    barClass: 'bg-cyan-400'    },
+  special:  { label: 'Especial',   emoji: '✨', colorClass: 'text-emerald-400', barClass: 'bg-emerald-400' },
 } as const;
 
 // ── Progress thresholds for chain achievements ─────────────────────────────────
@@ -155,9 +155,9 @@ export function StatsView() {
   const sectionLabel = 'text-[10px] font-black text-white/40 uppercase tracking-[0.4em]';
 
   const TABS: { id: Tab; label: string }[] = [
-    { id: 'overview',  label: 'Overview' },
-    { id: 'progress',  label: 'Progress' },
-    { id: 'trophies',  label: 'Trophies' },
+    { id: 'overview',  label: 'Resumen' },
+    { id: 'progress',  label: 'Progreso' },
+    { id: 'trophies',  label: 'Trofeos' },
   ];
 
   return (
@@ -173,7 +173,7 @@ export function StatsView() {
         <div className="flex items-center gap-3">
           <div className="w-2 h-10 bg-blue-500 rounded-full shadow-[0_0_20px_rgba(59,130,246,0.6)]" />
           <div>
-            <h3 className="text-white font-black text-2xl sm:text-3xl tracking-tighter uppercase font-display leading-none">Stats</h3>
+            <h3 className="text-white font-black text-2xl sm:text-3xl tracking-tighter uppercase font-display leading-none">Estadísticas</h3>
             {history.length > 0 && (
               <p className="text-[9px] font-black text-white/35 uppercase tracking-[0.3em] mt-0.5">
                 Lv.{levelInfo.level} · {levelInfo.name}
@@ -187,8 +187,8 @@ export function StatsView() {
           <div className="glass-panel rounded-[var(--radius-xl)] border-white/5 px-6 py-10 text-center space-y-4">
             <TrendingUp className="w-14 h-14 text-white/5 mx-auto" />
             <div>
-              <p className="text-white/40 font-black text-lg uppercase tracking-tighter">Your stats will appear here</p>
-              <p className="text-white/25 text-[11px] font-black uppercase tracking-[0.3em] mt-1">Complete a session to start tracking</p>
+              <p className="text-white/40 font-black text-lg uppercase tracking-tighter">Tus estadísticas aparecerán aquí</p>
+              <p className="text-white/25 text-[11px] font-black uppercase tracking-[0.3em] mt-1">Completa una sesión para empezar a registrar</p>
             </div>
           </div>
         ) : (
@@ -197,9 +197,9 @@ export function StatsView() {
             {/* ── Summary cards ── */}
             <div className="grid grid-cols-3 gap-2">
               {[
-                { label: 'Sessions',  value: totalSessions.toLocaleString(), color: 'text-blue-400'    },
-                { label: 'Volume',    value: volumeDisplay,                  color: 'text-indigo-400'  },
-                { label: 'Exercises', value: totalExercises.toLocaleString(), color: 'text-emerald-400' },
+                { label: 'Sesiones',  value: totalSessions.toLocaleString(), color: 'text-blue-400'    },
+                { label: 'Volumen',    value: volumeDisplay,                  color: 'text-indigo-400'  },
+                { label: 'Ejercicios', value: totalExercises.toLocaleString(), color: 'text-emerald-400' },
               ].map((card) => (
                 <div key={card.label} className="glass-panel rounded-[var(--radius-lg)] p-3 sm:p-4 border-white/5 text-center space-y-1">
                   <p className={`text-xl sm:text-2xl font-black tracking-tighter font-display truncate ${card.color}`}>{card.value}</p>
@@ -221,11 +221,11 @@ export function StatsView() {
                 </div>
                 {!levelInfo.isMax ? (
                   <span className="text-[9px] font-black text-white/25 uppercase tracking-widest">
-                    {levelInfo.sessionsToNext} to Lv.{levelInfo.level + 1}
-                  </span>
-                ) : (
-                  <span className="text-[9px] font-black text-amber-400/60 uppercase tracking-widest">Max level</span>
-                )}
+                    {levelInfo.sessionsToNext} para Lv.{levelInfo.level + 1}
+                </span>
+              ) : (
+                  <span className="text-[9px] font-black text-amber-400/60 uppercase tracking-widest">Nivel máximo</span>
+              )}
               </div>
               <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
                 <motion.div
@@ -278,26 +278,30 @@ export function StatsView() {
                 {activeTab === 'overview' && (
                   <>
                     <div className="glass-panel rounded-[var(--radius-lg)] p-5 border-white/5 space-y-3">
-                      <p className={sectionLabel}>Activity</p>
-                      <StreakCalendar history={history} restDays={profile.restDays ?? []} />
+                      <p className={sectionLabel}>Actividad</p>
+                      <StreakCalendar
+                        history={history}
+                        restDays={profile.restDays ?? []}
+                        weekStartsOn={profile.preferences.weekStartsOn}
+                      />
                     </div>
 
                     <div className="glass-panel rounded-[var(--radius-lg)] p-5 border-white/5 space-y-4">
                       <div className="flex items-center justify-between">
-                        <p className={sectionLabel}>Body Weight</p>
+                        <p className={sectionLabel}>Peso corporal</p>
                         <button
                           onClick={() => setShowBodyWeightSheet(true)}
                           className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-white/50 hover:bg-white/[0.07] hover:text-white/70 transition-colors"
                         >
                           <Scale className="w-3 h-3" />
-                          Log
+                          Registrar
                         </button>
                       </div>
                       <BodyWeightChart entries={bodyweightEntries} unit={profile.weightUnit} />
                     </div>
 
                     <div className="glass-panel rounded-[var(--radius-lg)] p-5 border-white/5 space-y-3">
-                      <p className={sectionLabel}>Recent Sessions</p>
+                      <p className={sectionLabel}>Sesiones recientes</p>
                       {history.slice(0, 5).map((entry) => (
                         <div
                           key={entry.id}
@@ -306,7 +310,7 @@ export function StatsView() {
                           <div className="min-w-0">
                             <p className="text-xs font-black text-white/70 uppercase tracking-tighter truncate">{entry.sessionTitle}</p>
                             <p className="text-[8px] font-black text-white/40 uppercase tracking-[0.2em] mt-0.5">
-                              {entry.volumeData.length} exercises
+                              {entry.volumeData.length} ejercicios
                             </p>
                           </div>
                           <span className={cn(
@@ -328,32 +332,32 @@ export function StatsView() {
                   <>
                     <div className="glass-panel rounded-[var(--radius-lg)] p-5 border-white/5 space-y-4">
                       <div className="flex items-center justify-between">
-                        <p className={sectionLabel}>Volume</p>
+                        <p className={sectionLabel}>Volumen</p>
                         <ToggleGroup
                           options={['7d', '30d']}
                           value={`${volumeLimit}d`}
                           onChange={(v) => setVolumeLimit(v === '7d' ? 7 : 30)}
-                          ariaLabel="Chart range"
+                          ariaLabel="Rango del gráfico"
                         />
                       </div>
                       <VolumeBarChart history={history} limit={volumeLimit} weightUnit={profile.weightUnit} />
                     </div>
 
                     <div className="glass-panel rounded-[var(--radius-lg)] p-5 border-white/5 space-y-4">
-                      <p className={sectionLabel}>Personal Records</p>
+                      <p className={sectionLabel}>Récords personales</p>
                       <PersonalRecordsTable history={history} weightUnit={profile.weightUnit} />
                     </div>
 
                     <div className="glass-panel rounded-[var(--radius-lg)] p-5 border-white/5 space-y-4">
                       <div className="flex items-center justify-between">
-                        <p className={sectionLabel}>Weekly Muscle Volume</p>
-                        <span className="text-[9px] font-black uppercase tracking-widest text-white/25">Last 7 days</span>
+                        <p className={sectionLabel}>Volumen muscular semanal</p>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-white/25">Últimos 7 días</span>
                       </div>
                       <MuscleGroupChart data={muscleData} />
                     </div>
 
                     <div className="glass-panel rounded-[var(--radius-lg)] p-5 border-white/5 space-y-4">
-                      <p className={sectionLabel}>Recovery Status</p>
+                      <p className={sectionLabel}>Estado de recuperación</p>
                       <RecoveryIndicator data={muscleData} />
                     </div>
                   </>
@@ -365,7 +369,7 @@ export function StatsView() {
                     {/* Overall progress */}
                     <div className="glass-panel rounded-[var(--radius-lg)] p-5 border-white/5 space-y-3">
                       <div className="flex items-center justify-between">
-                        <p className={sectionLabel}>Collection</p>
+                        <p className={sectionLabel}>Colección</p>
                         <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">
                           {earnedAchievements.length} / {ACHIEVEMENTS.length}
                         </span>
@@ -379,7 +383,7 @@ export function StatsView() {
                         />
                       </div>
                       <p className="text-[9px] font-black text-white/25 uppercase tracking-[0.3em]">
-                        {ACHIEVEMENTS.length - earnedAchievements.length} remaining
+                        {ACHIEVEMENTS.length - earnedAchievements.length} restantes
                       </p>
                     </div>
 

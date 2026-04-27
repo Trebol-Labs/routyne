@@ -5,10 +5,19 @@
  */
 
 import { saveHistoryEntry } from '@/lib/db/history';
+import { saveBodyweight, deleteBodyweightEntriesByDate } from '@/lib/db/bodyweight';
+import { loadProfile, saveProfile, normalizeProfileRecord } from '@/lib/db/profile';
+import type { BodyweightRecord } from '@/lib/db/schema';
 import type { Database } from '@/lib/supabase/client';
-import type { HistoryEntry, ExerciseVolume } from '@/types/workout';
+import type {
+  HistoryEntry,
+  ExerciseVolume,
+  UserProfile,
+} from '@/types/workout';
 
 type RemoteHistory = Database['public']['Tables']['history']['Row'];
+type RemoteProfile = Database['public']['Tables']['profiles']['Row'];
+type RemoteBodyweight = Database['public']['Tables']['bodyweight']['Row'];
 
 // ── History ────────────────────────────────────────────────────────────────────
 
@@ -37,28 +46,118 @@ export async function mergeRemoteHistory(
   const local = localById.get(remote.id);
 
   if (!local) {
-    // Not local — insert from remote
     const entry = remoteToLocalEntry(remote);
-    await saveHistoryEntry(
-      entry,
-      entry.id, // routineId unknown remotely — use entry id as fallback
-      entry.id
-    );
+    await saveHistoryEntry(entry, entry.id, entry.id);
     return true;
   }
 
-  // Both exist — keep the newer completed_at
   const remoteDate = new Date(remote.completed_at);
   if (remoteDate > local.completedAt) {
-    await saveHistoryEntry(
-      remoteToLocalEntry(remote),
-      remote.id,
-      remote.id
-    );
+    await saveHistoryEntry(remoteToLocalEntry(remote), remote.id, remote.id);
     return true;
   }
 
-  return false; // local is at least as recent — no action
+  return false;
+}
+
+// ── Profile ────────────────────────────────────────────────────────────────────
+
+function remoteToLocalProfile(remote: RemoteProfile): UserProfile {
+  return normalizeProfileRecord({
+    id: 'profile',
+    displayName: remote.display_name ?? 'Atleta',
+    avatarEmoji: remote.avatar_emoji ?? '💪',
+    weightUnit: (remote.weight_unit as 'kg' | 'lbs') ?? 'kg',
+    heightCm: remote.height_cm ?? null,
+    defaultRestSeconds: remote.default_rest_s ?? 90,
+    restDays: remote.rest_days ?? [],
+    preferences: remote.preferences ?? {},
+    updatedAt: remote.updated_at ?? new Date(0).toISOString(),
+  });
+}
+
+export function profileToRemote(
+  profile: UserProfile,
+  userId: string
+): Database['public']['Tables']['profiles']['Insert'] {
+  return {
+    user_id: userId,
+    display_name: profile.displayName || null,
+    avatar_emoji: profile.avatarEmoji,
+    weight_unit: profile.weightUnit,
+    height_cm: profile.heightCm,
+    default_rest_s: profile.defaultRestSeconds,
+    rest_days: profile.restDays,
+    preferences: profile.preferences as unknown as Record<string, unknown>,
+    updated_at: profile.updatedAt,
+  };
+}
+
+export async function mergeRemoteProfile(remote: RemoteProfile): Promise<boolean> {
+  const local = await loadProfile();
+  const localUpdated = new Date(local.updatedAt).getTime();
+  const remoteUpdated = new Date(remote.updated_at).getTime();
+
+  if (remoteUpdated <= localUpdated) {
+    return false;
+  }
+
+  await saveProfile(remoteToLocalProfile(remote));
+  return true;
+}
+
+// ── Bodyweight ────────────────────────────────────────────────────────────────
+
+function remoteToLocalBodyweight(remote: RemoteBodyweight): BodyweightRecord {
+  return {
+    id: remote.id,
+    date: remote.date,
+    weight: remote.weight,
+    unit: remote.unit as 'kg' | 'lbs',
+    updatedAt: remote.updated_at,
+    deletedAt: remote.deleted_at,
+  };
+}
+
+export function bodyweightToRemote(
+  entry: BodyweightRecord,
+  userId: string
+): Database['public']['Tables']['bodyweight']['Insert'] {
+  return {
+    id: entry.id,
+    user_id: userId,
+    date: entry.date,
+    weight: entry.weight,
+    unit: entry.unit,
+    updated_at: entry.updatedAt,
+    deleted_at: entry.deletedAt,
+  };
+}
+
+export async function mergeRemoteBodyweight(
+  remote: RemoteBodyweight,
+  localByDate: Map<string, BodyweightRecord>
+): Promise<boolean> {
+  const local = localByDate.get(remote.date);
+
+  if (remote.deleted_at) {
+    const remoteDeletedAt = new Date(remote.deleted_at).getTime();
+    const localUpdatedAt = local ? new Date(local.updatedAt).getTime() : 0;
+    if (!local || remoteDeletedAt > localUpdatedAt) {
+      await deleteBodyweightEntriesByDate(remote.date);
+      return !!local;
+    }
+    return false;
+  }
+
+  const remoteUpdatedAt = new Date(remote.updated_at).getTime();
+  const localUpdatedAt = local ? new Date(local.updatedAt).getTime() : 0;
+  if (!local || remoteUpdatedAt > localUpdatedAt) {
+    await saveBodyweight(remoteToLocalBodyweight(remote));
+    return true;
+  }
+
+  return false;
 }
 
 // ── History payload builder ────────────────────────────────────────────────────

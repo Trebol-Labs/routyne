@@ -23,9 +23,10 @@ function computeStreak(workoutDays: Set<string>, restDays: number[]): number {
 interface StreakCalendarProps {
   history: HistoryEntry[];
   restDays?: number[];
+  weekStartsOn?: 0 | 1;
 }
 
-export function StreakCalendar({ history, restDays = [] }: StreakCalendarProps) {
+export function StreakCalendar({ history, restDays = [], weekStartsOn = 1 }: StreakCalendarProps) {
   const workoutDays = new Set(history.map((e) => new Date(e.completedAt).toDateString()));
   const streak = computeStreak(workoutDays, restDays);
   const today = new Date();
@@ -39,9 +40,11 @@ export function StreakCalendar({ history, restDays = [] }: StreakCalendarProps) 
     days.push(d);
   }
 
-  // Pad to start on Monday
-  const firstDow = days[0].getDay(); // 0=Sun..6=Sat
-  const padStart = firstDow === 0 ? 6 : firstDow - 1; // days to pad before first cell
+  const firstDow = days[0].getDay();
+  const padStart = (firstDow - weekStartsOn + 7) % 7;
+  const dayLabels = weekStartsOn === 1
+    ? ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+    : ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
   const allCells: (Date | null)[] = [
     ...Array.from({ length: padStart }, () => null),
     ...days,
@@ -55,7 +58,7 @@ export function StreakCalendar({ history, restDays = [] }: StreakCalendarProps) 
          <span className="text-[9px] sm:text-[10px] font-black text-white/30 uppercase tracking-widest">day streak</span>
        </div>
        <div className="grid grid-cols-7 gap-0.5 sm:gap-1">
-         {['M','T','W','T','F','S','S'].map((d, i) => (
+         {dayLabels.map((d, i) => (
            <div key={i} className="text-center text-[9px] sm:text-[10px] font-black text-white/35 uppercase pb-0.5 sm:pb-1">{d}</div>
          ))}
         {allCells.map((day, i) => {

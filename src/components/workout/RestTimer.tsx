@@ -138,7 +138,7 @@ export function RestTimer({ duration, onFinish, onClose }: RestTimerProps) {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 mb-3">
               <Clock className="w-3 h-3 text-blue-400 shrink-0" />
-              <span className="text-[9px] font-black text-white/40 uppercase tracking-[0.3em] font-display">Rest Timer</span>
+              <span className="text-[9px] font-black text-white/40 uppercase tracking-[0.3em] font-display">Descanso</span>
             </div>
 
             <div className="flex items-center gap-2">
@@ -152,7 +152,7 @@ export function RestTimer({ duration, onFinish, onClose }: RestTimerProps) {
               <button
                 onClick={toggleTimer}
                 className="active-glass-btn w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-transform active:scale-95"
-                aria-label={isRunning ? 'Pause timer' : 'Resume timer'}
+                aria-label={isRunning ? 'Pausar temporizador' : 'Reanudar temporizador'}
               >
                 {isRunning
                   ? <Pause className="w-3.5 h-3.5 text-white fill-white" />
@@ -173,7 +173,7 @@ export function RestTimer({ duration, onFinish, onClose }: RestTimerProps) {
           <button
             onClick={onClose}
             className="shrink-0 self-start w-6 h-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer"
-            aria-label="Close rest timer"
+            aria-label="Cerrar temporizador de descanso"
           >
             <X className="w-3 h-3 text-white/50" />
           </button>

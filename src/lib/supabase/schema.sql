@@ -58,6 +58,8 @@ create table if not exists public.bodyweight (
   weight      float       not null,
   unit        text        not null default 'kg',
   created_at  timestamptz default now(),
+  updated_at  timestamptz default now(),
+  deleted_at  timestamptz,
   unique(user_id, date)
 );
 
@@ -77,6 +79,7 @@ create table if not exists public.profiles (
   height_cm       int,
   default_rest_s  int     default 90,
   rest_days       int[]   default '{0}',
+  preferences     jsonb   default '{}'::jsonb,
   updated_at      timestamptz default now()
 );
 

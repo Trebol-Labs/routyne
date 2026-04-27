@@ -8,7 +8,15 @@ import { ExerciseBrowseItem } from '@/types/workout';
 import { Dumbbell, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const BODY_PARTS = ['All', 'Chest', 'Back', 'Shoulders', 'Arms', 'Legs', 'Core'];
+const BODY_PARTS = [
+  { value: 'All', label: 'Todos' },
+  { value: 'chest', label: 'Pecho' },
+  { value: 'back', label: 'Espalda' },
+  { value: 'shoulders', label: 'Hombros' },
+  { value: 'arms', label: 'Brazos' },
+  { value: 'legs', label: 'Piernas' },
+  { value: 'core', label: 'Core' },
+] as const;
 
 interface SearchSheetProps {
   onClose: () => void;
@@ -41,7 +49,7 @@ export function SearchSheet({ onClose, onSelectExercise }: SearchSheetProps) {
   const { history, profile } = useWorkoutStore();
   const [tab, setTab] = useState<'exercises' | 'history'>('exercises');
   const [query, setQuery] = useState('');
-  const [selectedBodyPart, setSelectedBodyPart] = useState('All');
+  const [selectedBodyPart, setSelectedBodyPart] = useState<(typeof BODY_PARTS)[number]['value']>('All');
   const [results, setResults] = useState<ExerciseBrowseItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout>>(null);
@@ -59,7 +67,7 @@ export function SearchSheet({ onClose, onSelectExercise }: SearchSheetProps) {
       try {
         const params = new URLSearchParams();
         if (query) params.set('q', query);
-        if (selectedBodyPart && selectedBodyPart !== 'All') params.set('bodyPart', selectedBodyPart.toLowerCase());
+        if (selectedBodyPart && selectedBodyPart !== 'All') params.set('bodyPart', selectedBodyPart);
         const res = await fetch(`/api/exercises/browse?${params}`);
         const data = await res.json();
         setResults(data);
@@ -77,7 +85,7 @@ export function SearchSheet({ onClose, onSelectExercise }: SearchSheetProps) {
   );
 
   return (
-    <Sheet onClose={onClose} title="Search">
+    <Sheet onClose={onClose} title="Buscar">
       {/*
         Layout — fixed-height panel, only the results list scrolls:
         Row 1: Tabs (shrink-0)                     ~32px
@@ -98,7 +106,7 @@ export function SearchSheet({ onClose, onSelectExercise }: SearchSheetProps) {
                 tab === t ? 'active-glass-btn text-white' : 'bg-white/5 text-white/30 hover:text-white/50'
               )}
             >
-              {t}
+              {t === 'exercises' ? 'Ejercicios' : 'Historial'}
             </button>
           ))}
         </div>
@@ -111,7 +119,7 @@ export function SearchSheet({ onClose, onSelectExercise }: SearchSheetProps) {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={tab === 'exercises' ? 'Search exercises...' : 'Search sessions...'}
+            placeholder={tab === 'exercises' ? 'Buscar ejercicios...' : 'Buscar sesiones...'}
             className="sunken-glass rounded-lg pl-8 pr-3 py-2 text-sm font-black text-white w-full bg-transparent border-none outline-none placeholder:text-white/20"
           />
         </div>
@@ -122,16 +130,16 @@ export function SearchSheet({ onClose, onSelectExercise }: SearchSheetProps) {
             <div className="shrink-0 flex gap-1 overflow-x-auto overscroll-contain no-scrollbar -mx-0.5 px-0.5">
               {BODY_PARTS.map((bp) => (
                 <button
-                  key={bp}
-                  onClick={() => setSelectedBodyPart(bp)}
+                  key={bp.value}
+                  onClick={() => setSelectedBodyPart(bp.value)}
                   className={cn(
                     'shrink-0 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest transition-all',
-                    selectedBodyPart === bp
+                    selectedBodyPart === bp.value
                       ? 'active-glass-btn text-white'
                       : 'bg-white/5 border border-white/10 text-white/40 hover:text-white/60'
                   )}
                 >
-                  {bp}
+                  {bp.label}
                 </button>
               ))}
             </div>
@@ -145,7 +153,7 @@ export function SearchSheet({ onClose, onSelectExercise }: SearchSheetProps) {
               ) : results.length === 0 ? (
                 <div className="py-8 flex flex-col items-center gap-2 text-center">
                   <Dumbbell className="w-6 h-6 text-white/10" />
-                  <p className="text-[10px] font-black text-white/25 uppercase tracking-widest">No exercises found</p>
+                  <p className="text-[10px] font-black text-white/25 uppercase tracking-widest">No se encontraron ejercicios</p>
                 </div>
               ) : (
                 results.map((item) => (
@@ -170,7 +178,7 @@ export function SearchSheet({ onClose, onSelectExercise }: SearchSheetProps) {
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain no-scrollbar space-y-1.5">
             {filteredHistory.length === 0 ? (
               <div className="py-8 flex flex-col items-center gap-2 text-center">
-                <p className="text-[10px] font-black text-white/25 uppercase tracking-widest">No sessions found</p>
+                <p className="text-[10px] font-black text-white/25 uppercase tracking-widest">No se encontraron sesiones</p>
               </div>
             ) : (
               filteredHistory.map((entry) => (
@@ -178,7 +186,7 @@ export function SearchSheet({ onClose, onSelectExercise }: SearchSheetProps) {
                   <div className="min-w-0">
                     <p className="text-sm font-black text-white/80 uppercase tracking-tight truncate">{entry.sessionTitle}</p>
                     <p className="text-[8px] font-black text-white/30 uppercase tracking-widest mt-0.5">
-                      {new Date(entry.completedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {entry.volumeData.length} exercises
+                      {new Date(entry.completedAt).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' })} · {entry.volumeData.length} ejercicios
                     </p>
                   </div>
                   {entry.totalVolume > 0 && (

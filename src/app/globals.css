@@ -62,7 +62,31 @@
     --foreground: 237 237 237;
     --glass-bg: 255 255 255 / 0.6;
     --glass-border: 255 255 255 / 0.4;
-    --accent: 59 130 246;
+    --accent-primary-rgb: 59 130 246;
+    --accent-secondary-rgb: 99 102 241;
+  }
+
+  :root[data-ui-density='compact'] {
+    --space-page-x: 0.75rem;
+    --space-card: 1rem;
+    --space-section: 1.25rem;
+    --space-nav-clear: 9rem;
+  }
+
+  :root[data-ui-density='comfortable'] {
+    --space-page-x: 1rem;
+    --space-card: 1.25rem;
+    --space-section: 1.5rem;
+    --space-nav-clear: 10rem;
+  }
+
+  :root[data-motion-level='reduced'] *,
+  :root[data-motion-level='reduced'] *::before,
+  :root[data-motion-level='reduced'] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 
   /* Force dark mode background on html/body to prevent white flash/overscroll */
@@ -148,11 +172,15 @@
   }
 
   .active-glass-btn {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.65) 0%, rgba(99, 102, 241, 0.65) 100%);
+    background: linear-gradient(
+      135deg,
+      rgb(var(--accent-primary-rgb) / 0.65) 0%,
+      rgb(var(--accent-secondary-rgb) / 0.65) 100%
+    );
     backdrop-filter: blur(var(--blur-md));
     -webkit-backdrop-filter: blur(var(--blur-md));
     border: 1px solid rgba(255, 255, 255, 0.18);
-    box-shadow: 0 4px 20px -4px rgba(59, 130, 246, 0.45);
+    box-shadow: 0 4px 20px -4px rgb(var(--accent-primary-rgb) / 0.45);
   }
 
   /* Standard glass button — consistent interactive surface */
@@ -169,7 +197,7 @@
   }
   .glass-btn:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+    box-shadow: 0 0 0 2px rgb(var(--accent-primary-rgb) / 0.5);
   }
   .glass-btn:hover {
     background: rgba(255, 255, 255, 0.1);

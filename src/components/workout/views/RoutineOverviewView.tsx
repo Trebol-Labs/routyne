@@ -34,7 +34,7 @@ export function RoutineOverviewView() {
           <div className="relative space-y-3">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/8 rounded-full">
                <LayoutGrid className="w-3.5 h-3.5 text-white/40" />
-               <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.25em]">{currentRoutine.sessions.length} Sessions · {pickerSession?.exercises.length} Exercises</span>
+               <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.25em]">{currentRoutine.sessions.length} sesiones · {pickerSession?.exercises.length} ejercicios</span>
             </div>
 
             <div className="space-y-2">
@@ -47,14 +47,14 @@ export function RoutineOverviewView() {
 
         {/* Horizontal Session Picker */}
         <div className="space-y-3">
-          <h3 className="text-[11px] font-black text-white/25 uppercase tracking-[0.4em] pl-1 font-display">Sessions</h3>
+          <h3 className="text-[11px] font-black text-white/25 uppercase tracking-[0.4em] pl-1 font-display">Sesiones</h3>
 
           <div className="flex gap-3 overflow-x-auto pt-3 pb-3 no-scrollbar -mx-4 px-4">
             {currentRoutine.sessions.map((session, idx) => (
               <button
                 key={session.id}
                 onClick={() => setSessionPickerIdx(idx)}
-                aria-label={`Session ${idx + 1}: ${session.title}`}
+                aria-label={`Sesión ${idx + 1}: ${session.title}`}
                 aria-pressed={sessionPickerIdx === idx}
                 className={cn(
                   "shrink-0 relative flex flex-col items-center justify-center min-w-[100px] h-[110px] rounded-[var(--radius-xl)] border transition-colors transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]",
@@ -77,7 +77,7 @@ export function RoutineOverviewView() {
                   "text-[10px] font-black tracking-[0.2em] uppercase leading-none",
                   sessionPickerIdx === idx ? "text-white/80" : "text-white/40"
                 )}>
-                  Day
+                  Día
                 </h4>
 
                 <span className={cn(
@@ -86,7 +86,7 @@ export function RoutineOverviewView() {
                     ? "text-white/70 bg-white/15"
                     : "text-white/35 bg-white/[0.05]"
                 )}>
-                  {session.exercises.length} Ex
+                  {session.exercises.length} ejer.
                 </span>
               </button>
             ))}
@@ -100,7 +100,7 @@ export function RoutineOverviewView() {
           className="w-full rounded-[var(--radius-xl)] gap-3 group"
         >
           <Play className="w-5 h-5 fill-white group-hover:scale-110 transition-transform" />
-          START SESSION {sessionPickerIdx + 1}
+          INICIAR SESIÓN {sessionPickerIdx + 1}
         </Button>
       </div>
 
@@ -109,7 +109,7 @@ export function RoutineOverviewView() {
         <div className="flex items-center gap-3">
           <div className="w-1 h-6 bg-blue-500 rounded-full" />
           <h3 className="text-white font-black text-xl tracking-tighter uppercase font-display">
-            Sequence
+            Secuencia
           </h3>
         </div>
 

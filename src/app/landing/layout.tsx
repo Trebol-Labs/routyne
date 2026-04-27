@@ -1,34 +1,21 @@
 import type { Metadata, Viewport } from 'next';
-import { Barlow_Condensed, Inter } from 'next/font/google';
-import '../globals.css';
-
-const siteUrl = process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL}`
-  : 'https://routyne-nu.vercel.app';
-
-const barlowCondensed = Barlow_Condensed({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-display',
-});
-
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-body',
-});
+import { SITE_URL } from '@/lib/site';
 
 export const viewport: Viewport = {
   themeColor: '#000000',
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
-  title: 'Routyne — Fitness Tracker sin suscripción',
+  metadataBase: new URL(SITE_URL),
+  title: 'Routyne — Entrenamiento, cuenta y sincronización',
   description:
-    'Trackea tu progreso, bate tus PRs y comparte tus logros. Gratis, offline, sin anuncios. PWA workout tracker para el gym.',
+    'Registra entrenamientos, ajusta preferencias de entrenamiento y sincroniza tu perfil cuando quieras. Sin anuncios y sin suscripción.',
+  alternates: {
+    canonical: '/landing',
+  },
   openGraph: {
-    title: 'Routyne — Fitness Tracker sin suscripción',
-    description: 'Trackea tu progreso, bate tus PRs y comparte tus logros. Gratis, offline, sin anuncios.',
+    title: 'Routyne — Entrenamiento, cuenta y sincronización',
+    description: 'Registra entrenamientos, ajusta preferencias de entrenamiento y sincroniza tu perfil cuando quieras. Sin anuncios y sin suscripción.',
     url: '/landing',
     siteName: 'Routyne',
     type: 'website',
@@ -36,19 +23,13 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Routyne — Fitness Tracker sin suscripción',
-    description: 'Trackea tu progreso, bate tus PRs y comparte tus logros. Gratis, offline, sin anuncios.',
+    title: 'Routyne — Entrenamiento, cuenta y sincronización',
+    description: 'Registra entrenamientos, ajusta preferencias de entrenamiento y sincroniza tu perfil cuando quieras. Sin anuncios y sin suscripción.',
     images: ['/landing/opengraph-image'],
   },
-  keywords: ['workout tracker pwa', 'gym app sin suscripción', 'fitness tracker offline', 'seguimiento de entrenamiento gratis', 'app gym privacidad'],
+  keywords: ['workout tracker pwa', 'gym app sin suscripción', 'seguimiento de entrenamiento', 'sincronización de perfil', 'app gym privacidad'],
 };
 
 export default function LandingLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="es" style={{ colorScheme: 'dark' }}>
-      <body className={`${barlowCondensed.variable} ${inter.variable} antialiased`}>
-        {children}
-      </body>
-    </html>
-  );
+  return <div lang="es">{children}</div>;
 }

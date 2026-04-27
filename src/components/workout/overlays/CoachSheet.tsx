@@ -41,7 +41,7 @@ export function CoachSheet({ onClose }: CoachSheetProps) {
       return '¡Hola! Completa tu primer entrenamiento y podré darte consejos personalizados basados en tus datos reales.';
     }
     const last = history[0];
-    const name = profile.displayName && profile.displayName !== 'Athlete'
+    const name = profile.displayName && profile.displayName !== 'Atleta'
       ? ` ${profile.displayName}`
       : '';
     return `¡Hola${name}! Tu último entreno fue **${last.sessionTitle}**. ¿En qué puedo ayudarte?`;
@@ -85,7 +85,7 @@ export function CoachSheet({ onClose }: CoachSheetProps) {
       if (res.status === 503) {
         setMessages((prev) => [
           ...prev,
-          { role: 'assistant', content: 'El AI Coach no está disponible en este momento.', isError: true },
+          { role: 'assistant', content: 'El coach IA no está disponible en este momento.', isError: true },
         ]);
         return;
       }
@@ -119,7 +119,7 @@ export function CoachSheet({ onClose }: CoachSheetProps) {
   };
 
   return (
-    <Sheet onClose={onClose} title="AI Coach">
+    <Sheet onClose={onClose} title="Coach IA">
       <div className="h-full flex flex-col overflow-hidden px-4 pb-4">
 
         {/* Chat area */}
