@@ -20,6 +20,7 @@ create table if not exists public.routines (
 
 alter table public.routines enable row level security;
 
+drop policy if exists "Users own their routines" on public.routines;
 create policy "Users own their routines"
   on public.routines for all
   using (auth.uid() = user_id);
@@ -42,6 +43,7 @@ create table if not exists public.history (
 
 alter table public.history enable row level security;
 
+drop policy if exists "Users own their history" on public.history;
 create policy "Users own their history"
   on public.history for all
   using (auth.uid() = user_id);
@@ -65,6 +67,7 @@ create table if not exists public.bodyweight (
 
 alter table public.bodyweight enable row level security;
 
+drop policy if exists "Users own their bodyweight" on public.bodyweight;
 create policy "Users own their bodyweight"
   on public.bodyweight for all
   using (auth.uid() = user_id);
@@ -85,6 +88,7 @@ create table if not exists public.profiles (
 
 alter table public.profiles enable row level security;
 
+drop policy if exists "Users own their profile" on public.profiles;
 create policy "Users own their profile"
   on public.profiles for all
   using (auth.uid() = user_id);
@@ -99,6 +103,7 @@ create table if not exists public.sync_cursors (
 
 alter table public.sync_cursors enable row level security;
 
+drop policy if exists "Users own their sync cursor" on public.sync_cursors;
 create policy "Users own their sync cursor"
   on public.sync_cursors for all
   using (auth.uid() = user_id);
