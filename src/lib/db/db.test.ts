@@ -173,7 +173,7 @@ describe('activeSession', () => {
 describe('profile', () => {
   it('returns default profile when none saved', async () => {
     const p = await loadProfile();
-    expect(p.displayName).toBe('Athlete');
+    expect(p.displayName).toBe('Atleta');
     expect(p.weightUnit).toBe('kg');
   });
 
@@ -185,6 +185,17 @@ describe('profile', () => {
       heightCm: 165,
       defaultRestSeconds: 120,
       restDays: [],
+      preferences: {
+        trainingGoal: 'strength',
+        experienceLevel: 'intermediate',
+        weekStartsOn: 1,
+        effortTracking: 'both',
+        coachTone: 'supportive',
+        accentColor: 'blue',
+        uiDensity: 'comfortable',
+        motionLevel: 'system',
+      },
+      updatedAt: new Date('2026-03-01T10:00:00Z').toISOString(),
     });
     const p = await loadProfile();
     expect(p.displayName).toBe('Sierra');

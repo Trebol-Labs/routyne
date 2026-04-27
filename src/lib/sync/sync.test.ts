@@ -10,25 +10,39 @@ import { resetDBSingleton } from '@/lib/db/index';
 // ── Mock Supabase ────────────────────────────────────────────────────────────
 
 const mockUpsert = vi.fn().mockResolvedValue({ error: null });
-const mockUpdate = vi.fn().mockResolvedValue({ error: null });
-const mockSelect = vi.fn();
-const mockEq = vi.fn();
-const mockGt = vi.fn();
-const mockOrder = vi.fn();
-const mockSingle = vi.fn();
 
-const mockFrom = vi.fn(() => ({
-  upsert: mockUpsert,
-  update: mockUpdate.mockReturnValue({ eq: mockEq }),
-  select: mockSelect.mockReturnValue({
-    eq: mockEq.mockReturnValue({
-      single: mockSingle,
-      gt: mockGt.mockReturnValue({
-        order: mockOrder,
-      }),
-    }),
-  }),
-}));
+type QueryTable = 'history' | 'profiles' | 'bodyweight' | 'sync_cursors';
+type QueryResult = { data: unknown; error: { message: string } | null };
+
+const queryResults: Record<QueryTable, QueryResult> = {
+  history: { data: [], error: null },
+  profiles: { data: [], error: null },
+  bodyweight: { data: [], error: null },
+  sync_cursors: { data: null, error: null },
+};
+
+function setQueryResult(table: QueryTable, result: QueryResult): void {
+  queryResults[table] = result;
+}
+
+function createBuilder(table: QueryTable) {
+  const builder = {
+    select: vi.fn(() => builder),
+    eq: vi.fn(() => builder),
+    gt: vi.fn(() => builder),
+    order: vi.fn(() => builder),
+    single: vi.fn(async () => queryResults.sync_cursors),
+    upsert: mockUpsert,
+    update: vi.fn(() => builder),
+    then: (
+      onFulfilled?: (value: QueryResult) => unknown,
+      onRejected?: (reason: unknown) => unknown
+    ) => Promise.resolve(queryResults[table]).then(onFulfilled, onRejected),
+  };
+  return builder;
+}
+
+const mockFrom = vi.fn((table: string) => createBuilder(table as QueryTable));
 
 vi.mock('@/lib/supabase/client', () => ({
   getSupabaseClient: () => ({ from: mockFrom }),
@@ -37,8 +51,10 @@ vi.mock('@/lib/supabase/client', () => ({
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 import { enqueue, dequeue, getPendingMutations, getPendingCount, pruneFailedMutations } from './queue';
-import { mergeRemoteHistory, historyEntryToRemote } from './merge';
-import type { HistoryEntry } from '@/types/workout';
+import { mergeRemoteHistory, mergeRemoteProfile, mergeRemoteBodyweight, historyEntryToRemote } from './merge';
+import { loadProfile, saveProfile } from '@/lib/db/profile';
+import { loadAllBodyweight, saveBodyweight } from '@/lib/db/bodyweight';
+import type { Bodyweight, HistoryEntry, UserProfile } from '@/types/workout';
 
 const USER_ID = 'user-abc-123';
 
@@ -56,12 +72,51 @@ function makeEntry(overrides: Partial<HistoryEntry> = {}): HistoryEntry {
   };
 }
 
+function makeProfile(overrides: Partial<UserProfile> = {}): UserProfile {
+  return {
+    displayName: 'Sierra',
+    avatarEmoji: '🏋️',
+    weightUnit: 'kg',
+    heightCm: 165,
+    defaultRestSeconds: 120,
+    restDays: [],
+    preferences: {
+      trainingGoal: 'strength',
+      experienceLevel: 'intermediate',
+      weekStartsOn: 1,
+      effortTracking: 'both',
+      coachTone: 'supportive',
+      accentColor: 'blue',
+      uiDensity: 'comfortable',
+      motionLevel: 'system',
+    },
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    ...overrides,
+  };
+}
+
+function makeBodyweight(overrides: Partial<Bodyweight> = {}): Bodyweight {
+  return {
+    id: 'bw-1',
+    date: '2026-01-10',
+    weight: 82.4,
+    unit: 'kg',
+    updatedAt: '2026-01-10T10:00:00.000Z',
+    deletedAt: null,
+    ...overrides,
+  };
+}
+
 // ── Test lifecycle ───────────────────────────────────────────────────────────
 
 beforeEach(() => {
   vi.stubGlobal('indexedDB', new IDBFactory());
   resetDBSingleton();
   vi.clearAllMocks();
+  setQueryResult('history', { data: [], error: null });
+  setQueryResult('profiles', { data: [], error: null });
+  setQueryResult('bodyweight', { data: [], error: null });
+  setQueryResult('sync_cursors', { data: null, error: null });
 });
 
 afterEach(() => {
@@ -132,6 +187,59 @@ describe('pushToCloud', () => {
     await pushToCloud(USER_ID);
     expect(mockFrom).not.toHaveBeenCalled();
   });
+
+  it('pushes profile mutations to the profiles table', async () => {
+    await enqueue({
+      table: 'profile',
+      operation: 'upsert',
+      payload: makeProfile({ displayName: 'Sync Me' }),
+    });
+
+    const { pushToCloud } = await import('./syncEngine');
+    await pushToCloud(USER_ID);
+
+    expect(mockFrom).toHaveBeenCalledWith('profiles');
+    expect(mockUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        user_id: USER_ID,
+        display_name: 'Sync Me',
+      }),
+      { onConflict: 'user_id' }
+    );
+  });
+
+  it('pushes bodyweight upserts and delete tombstones', async () => {
+    await enqueue({
+      table: 'bodyweight',
+      operation: 'upsert',
+      payload: makeBodyweight({ id: 'bw-upsert' }),
+    });
+    await enqueue({
+      table: 'bodyweight',
+      operation: 'delete',
+      payload: makeBodyweight({
+        id: 'bw-delete',
+        deletedAt: '2026-01-11T12:00:00.000Z',
+        updatedAt: '2026-01-11T12:00:00.000Z',
+      }),
+    });
+
+    const { pushToCloud } = await import('./syncEngine');
+    await pushToCloud(USER_ID);
+
+    expect(mockFrom).toHaveBeenCalledWith('bodyweight');
+    expect(mockUpsert).toHaveBeenCalledTimes(2);
+    const tombstoneCall = mockUpsert.mock.calls.find(([payload]) => (
+      (payload as Record<string, unknown>).deleted_at !== null
+    ));
+    expect(tombstoneCall?.[0]).toEqual(
+      expect.objectContaining({
+        user_id: USER_ID,
+        deleted_at: '2026-01-11T12:00:00.000Z',
+      })
+    );
+    expect(await getPendingCount()).toBe(0);
+  });
 });
 
 // ── pullFromCloud tests ──────────────────────────────────────────────────────
@@ -139,11 +247,10 @@ describe('pushToCloud', () => {
 describe('pullFromCloud', () => {
   it('returns 0 when remote returns empty result', async () => {
     // getCursor → returns epoch
-    mockSingle.mockResolvedValueOnce({ data: null, error: null });
-    // pull query → no remote rows
-    mockOrder.mockResolvedValueOnce({ data: [], error: null });
-    // updateCursor upsert
-    mockUpsert.mockResolvedValueOnce({ error: null });
+    setQueryResult('sync_cursors', { data: null, error: null });
+    setQueryResult('history', { data: [], error: null });
+    setQueryResult('profiles', { data: [], error: null });
+    setQueryResult('bodyweight', { data: [], error: null });
 
     const { pullFromCloud } = await import('./syncEngine');
     const merged = await pullFromCloud(USER_ID);
@@ -165,12 +272,10 @@ describe('pullFromCloud', () => {
       deleted_at: null,
     };
 
-    // getCursor
-    mockSingle.mockResolvedValueOnce({ data: null, error: null });
-    // pull query returns 1 remote row
-    mockOrder.mockResolvedValueOnce({ data: [remoteRow], error: null });
-    // updateCursor
-    mockUpsert.mockResolvedValueOnce({ error: null });
+    setQueryResult('sync_cursors', { data: null, error: null });
+    setQueryResult('history', { data: [remoteRow], error: null });
+    setQueryResult('profiles', { data: [], error: null });
+    setQueryResult('bodyweight', { data: [], error: null });
 
     const { pullFromCloud } = await import('./syncEngine');
     const merged = await pullFromCloud(USER_ID);
@@ -238,6 +343,127 @@ describe('mergeRemoteHistory', () => {
     const localMap = new Map([['r1', entry]]);
     const changed = await mergeRemoteHistory(remoteRow as never, localMap);
     expect(changed).toBe(true);
+  });
+});
+
+describe('mergeRemoteProfile', () => {
+  it('applies a newer remote profile', async () => {
+    await saveProfile(makeProfile({
+      displayName: 'Local',
+      updatedAt: '2025-01-01T00:00:00.000Z',
+    }));
+
+    const remoteRow = {
+      user_id: USER_ID,
+      display_name: 'Remote',
+      avatar_emoji: '🔥',
+      weight_unit: 'lbs',
+      height_cm: 181,
+      default_rest_s: 150,
+      rest_days: [0, 2],
+      preferences: {
+        trainingGoal: 'hypertrophy',
+        experienceLevel: 'advanced',
+        weekStartsOn: 0,
+        effortTracking: 'rir',
+        coachTone: 'direct',
+        accentColor: 'orange',
+        uiDensity: 'compact',
+        motionLevel: 'reduced',
+      },
+      updated_at: '2025-02-01T00:00:00.000Z',
+    };
+
+    const changed = await mergeRemoteProfile(remoteRow as never);
+    expect(changed).toBe(true);
+
+    const saved = await loadProfile();
+    expect(saved.displayName).toBe('Remote');
+    expect(saved.weightUnit).toBe('lbs');
+    expect(saved.preferences.trainingGoal).toBe('hypertrophy');
+    expect(saved.updatedAt).toBe('2025-02-01T00:00:00.000Z');
+  });
+
+  it('skips an older remote profile', async () => {
+    await saveProfile(makeProfile({
+      displayName: 'Local',
+      updatedAt: '2025-03-01T00:00:00.000Z',
+    }));
+
+    const remoteRow = {
+      user_id: USER_ID,
+      display_name: 'Remote',
+      avatar_emoji: '🔥',
+      weight_unit: 'lbs',
+      height_cm: 181,
+      default_rest_s: 150,
+      rest_days: [0, 2],
+      preferences: {
+        trainingGoal: 'hypertrophy',
+        experienceLevel: 'advanced',
+        weekStartsOn: 0,
+        effortTracking: 'rir',
+        coachTone: 'direct',
+        accentColor: 'orange',
+        uiDensity: 'compact',
+        motionLevel: 'reduced',
+      },
+      updated_at: '2025-02-01T00:00:00.000Z',
+    };
+
+    const changed = await mergeRemoteProfile(remoteRow as never);
+    expect(changed).toBe(false);
+
+    const saved = await loadProfile();
+    expect(saved.displayName).toBe('Local');
+  });
+});
+
+describe('mergeRemoteBodyweight', () => {
+  it('writes a newer remote bodyweight record', async () => {
+    const remoteRow = {
+      id: 'bw-remote',
+      user_id: USER_ID,
+      date: '2025-03-01',
+      weight: 84.2,
+      unit: 'kg',
+      created_at: '2025-03-01T10:00:00.000Z',
+      updated_at: '2025-03-01T10:05:00.000Z',
+      deleted_at: null,
+    };
+
+    const changed = await mergeRemoteBodyweight(remoteRow as never, new Map());
+    expect(changed).toBe(true);
+
+    const saved = await loadAllBodyweight();
+    expect(saved).toHaveLength(1);
+    expect(saved[0].weight).toBe(84.2);
+  });
+
+  it('deletes a local bodyweight entry when the remote tombstone is newer', async () => {
+    const local = makeBodyweight({
+      id: 'bw-local',
+      date: '2025-04-01',
+      updatedAt: '2025-04-01T08:00:00.000Z',
+    });
+    await saveBodyweight(local);
+
+    const remoteRow = {
+      id: 'bw-local',
+      user_id: USER_ID,
+      date: '2025-04-01',
+      weight: 84.2,
+      unit: 'kg',
+      created_at: '2025-04-01T08:00:00.000Z',
+      updated_at: '2025-04-01T08:00:00.000Z',
+      deleted_at: '2025-04-01T09:00:00.000Z',
+    };
+
+    const changed = await mergeRemoteBodyweight(remoteRow as never, new Map([[local.date, local]]));
+    expect(changed).toBe(true);
+
+    const saved = await loadAllBodyweight();
+    expect(saved).toHaveLength(0);
   });
 });
 

@@ -13,12 +13,16 @@ export default defineConfig({
   },
   projects: [
     {
+      name: 'chromium-desktop',
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
       name: 'chromium-mobile',
-      use: { ...devices['iPhone 14 Pro'] },
+      use: { ...devices['Pixel 5'] },
     },
   ],
   webServer: {
-    command: 'npm run dev',
+    command: 'pnpm dev',
     url: 'http://localhost:3000',
     reuseExistingServer: true,
     timeout: 120_000,
