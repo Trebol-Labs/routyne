@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { User, Session } from '@supabase/supabase-js';
 import { getSupabaseClient } from '@/lib/supabase/client';
+import { getAuthRedirectUrl } from '@/lib/site';
 
 export interface AuthState {
   user: User | null;
@@ -35,10 +36,17 @@ export function useAuth(): AuthState & AuthActions {
 
     const sb = getSupabaseClient();
 
-    sb.auth.getSession().then(({ data }) => {
+    sb.auth.getSession().then(({ data, error }) => {
       if (!mounted) return;
+      if (error) {
+        console.error('[Auth] getSession failed', error);
+      }
       setSession(data.session);
       setUser(data.session?.user ?? null);
+      setIsLoading(false);
+    }).catch((error) => {
+      if (!mounted) return;
+      console.error('[Auth] getSession threw', error);
       setIsLoading(false);
     });
 
@@ -63,9 +71,22 @@ export function useAuth(): AuthState & AuthActions {
 
   const signInWithEmail = async (email: string): Promise<{ error: string | null }> => {
     const sb = getSupabaseClient();
+    const emailRedirectTo = getAuthRedirectUrl('/auth/callback');
+
+    if (user?.is_anonymous) {
+      const { error } = await sb.auth.updateUser(
+        { email },
+        { emailRedirectTo }
+      );
+      return { error: error?.message ?? null };
+    }
+
     const { error } = await sb.auth.signInWithOtp({
       email,
-      options: { shouldCreateUser: true },
+      options: {
+        shouldCreateUser: true,
+        emailRedirectTo,
+      },
     });
     return { error: error?.message ?? null };
   };

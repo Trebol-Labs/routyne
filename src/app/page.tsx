@@ -1,7 +1,8 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Dumbbell } from 'lucide-react';
 import { RoutineUploader } from '@/components/workout/RoutineUploader';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -49,6 +50,36 @@ function applyAppearancePreferences(profile: UserProfile['preferences']): void {
 }
 
 export default function Home() {
+  return (
+    <Suspense fallback={<LoadingScreen />}>
+      <HomeContent />
+    </Suspense>
+  );
+}
+
+function LoadingScreen() {
+  return (
+    <main className="min-h-[100dvh] liquid-bg-dark flex items-center justify-center">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="flex flex-col items-center gap-6"
+      >
+        <div className="relative">
+          <div className="absolute inset-0 bg-blue-600 blur-[var(--blur-lg)] opacity-40 animate-pulse rounded-full" />
+          <div className="relative w-16 h-16 rounded-[var(--radius-lg)] bg-gradient-to-tr from-white/20 to-white/5 p-px backdrop-blur-3xl shadow-2xl">
+            <div className="w-full h-full rounded-[var(--radius-md)] bg-black/40 flex items-center justify-center border border-white/5">
+              <Dumbbell className="text-white w-8 h-8 animate-pulse" />
+            </div>
+          </div>
+        </div>
+        <p className="text-[11px] text-white/40 font-black uppercase tracking-[0.3em]">Loading...</p>
+      </motion.div>
+    </main>
+  );
+}
+
+function HomeContent() {
   const isReady = useHydration();
 
   const {
@@ -63,7 +94,12 @@ export default function Home() {
 
   const auth = useAuth();
   useSync(auth.user?.id);
-  const [accountSection, setAccountSection] = useState<AccountSheetSection | null>(null);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [accountSection, setAccountSection] = useState<AccountSheetSection | null>(
+    searchParams.get('account') === 'sync' ? 'sync' : null
+  );
   const [showCoach, setShowCoach] = useState(false);
   const [confirmNewRoutine, setConfirmNewRoutine] = useState(false);
 
@@ -74,26 +110,20 @@ export default function Home() {
     applyAppearancePreferences(profile.preferences);
   }, [isReady, profile.preferences]);
 
+  useEffect(() => {
+    if (searchParams.get('account') !== 'sync') return;
+
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.delete('account');
+    nextParams.delete('auth');
+    nextParams.delete('auth_error');
+
+    const nextQuery = nextParams.toString();
+    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
+  }, [pathname, router, searchParams]);
+
   if (!isReady) {
-    return (
-      <main className="min-h-[100dvh] liquid-bg-dark flex items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="flex flex-col items-center gap-6"
-        >
-          <div className="relative">
-            <div className="absolute inset-0 bg-blue-600 blur-[var(--blur-lg)] opacity-40 animate-pulse rounded-full" />
-            <div className="relative w-16 h-16 rounded-[var(--radius-lg)] bg-gradient-to-tr from-white/20 to-white/5 p-px backdrop-blur-3xl shadow-2xl">
-              <div className="w-full h-full rounded-[var(--radius-md)] bg-black/40 flex items-center justify-center border border-white/5">
-                <Dumbbell className="text-white w-8 h-8 animate-pulse" />
-              </div>
-            </div>
-          </div>
-          <p className="text-[11px] text-white/40 font-black uppercase tracking-[0.3em]">Loading...</p>
-        </motion.div>
-      </main>
-    );
+    return <LoadingScreen />;
   }
 
   const handleNavClick = (view: WorkoutView) => {

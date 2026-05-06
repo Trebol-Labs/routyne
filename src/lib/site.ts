@@ -12,3 +12,12 @@ function normalizeSiteUrl(value: string | undefined): string {
 
 export const SITE_URL = normalizeSiteUrl(process.env.NEXT_PUBLIC_SITE_URL);
 export const SITE_HOST = new URL(SITE_URL).host;
+
+export function getAuthRedirectUrl(path = '/'): string {
+  const base =
+    typeof window !== 'undefined'
+      ? window.location.origin
+      : SITE_URL;
+
+  return new URL(path, base).toString();
+}

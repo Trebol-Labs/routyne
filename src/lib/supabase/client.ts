@@ -15,7 +15,9 @@ export interface Database {
           updated_at: string;
           deleted_at: string | null;
         };
-        Insert: Omit<Database['public']['Tables']['routines']['Row'], 'created_at' | 'updated_at'>;
+        Insert:
+          Omit<Database['public']['Tables']['routines']['Row'], 'created_at' | 'updated_at'>
+          & Partial<Pick<Database['public']['Tables']['routines']['Row'], 'created_at' | 'updated_at'>>;
         Update: Partial<Database['public']['Tables']['routines']['Insert']>;
       };
       history: {
@@ -91,7 +93,8 @@ export function getSupabaseClient(): SupabaseClient<Database> {
     auth: {
       autoRefreshToken: true,
       persistSession: true,
-      detectSessionInUrl: false, // PWA — no server-side URL parsing needed
+      // Required for magic links and anonymous-email upgrades to complete in the browser.
+      detectSessionInUrl: true,
     },
   });
 
