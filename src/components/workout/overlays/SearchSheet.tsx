@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Sheet } from '@/components/ui/Sheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
+import { useSearchWorker } from '@/hooks/useSearchWorker';
 import { ExerciseBrowseItem } from '@/types/workout';
 import { Dumbbell, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -55,6 +56,14 @@ export function SearchSheet({ onClose, onSelectExercise }: SearchSheetProps) {
   const timerRef = useRef<ReturnType<typeof setTimeout>>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const { results: workerResults, search: workerSearch, ready: workerReady } = useSearchWorker(history);
+
+  const historyExerciseCount = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const e of history) map.set(e.id, e.volumeData.length);
+    return map;
+  }, [history]);
+
   useEffect(() => {
     // Removed auto-focus to prevent keyboard from popping up immediately and causing layout shifts on mobile
   }, []);
@@ -80,9 +89,10 @@ export function SearchSheet({ onClose, onSelectExercise }: SearchSheetProps) {
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [query, selectedBodyPart, tab]);
 
-  const filteredHistory = history.filter((e) =>
-    e.sessionTitle.toLowerCase().includes(query.toLowerCase())
-  );
+  useEffect(() => {
+    if (tab !== 'history') return;
+    workerSearch(query);
+  }, [query, tab, workerSearch]);
 
   return (
     <Sheet onClose={onClose} title="Buscar">
@@ -176,17 +186,22 @@ export function SearchSheet({ onClose, onSelectExercise }: SearchSheetProps) {
         {tab === 'history' && (
           /* History results: ONLY this scrolls */
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain no-scrollbar space-y-1.5">
-            {filteredHistory.length === 0 ? (
+            {!workerReady ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full rounded-lg bg-white/5" />
+              ))
+            ) : workerResults.length === 0 ? (
               <div className="py-8 flex flex-col items-center gap-2 text-center">
                 <p className="text-[10px] font-black text-white/25 uppercase tracking-widest">No se encontraron sesiones</p>
               </div>
             ) : (
-              filteredHistory.map((entry) => (
+              workerResults.map((entry) => (
                 <div key={entry.id} className="flex items-center justify-between p-2 rounded-lg bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] transition-colors cursor-pointer">
                   <div className="min-w-0">
                     <p className="text-sm font-black text-white/80 uppercase tracking-tight truncate">{entry.sessionTitle}</p>
                     <p className="text-[8px] font-black text-white/30 uppercase tracking-widest mt-0.5">
-                      {new Date(entry.completedAt).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' })} · {entry.volumeData.length} ejercicios
+                      {new Date(entry.completedAt).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' })}
+                      {(historyExerciseCount.get(entry.id) ?? 0) > 0 && ` · ${historyExerciseCount.get(entry.id)} ejercicios`}
                     </p>
                   </div>
                   {entry.totalVolume > 0 && (
