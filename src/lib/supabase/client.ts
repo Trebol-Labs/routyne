@@ -88,7 +88,7 @@ export function getSupabaseClient(): SupabaseClient<Database> {
     auth: {
       autoRefreshToken: true,
       persistSession: true,
-      detectSessionInUrl: false, // PWA — no server-side URL parsing needed
+      detectSessionInUrl: true,
     },
   });
 

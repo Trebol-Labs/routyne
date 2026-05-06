@@ -14,6 +14,7 @@ export interface AuthState {
 export interface AuthActions {
   signInAnonymously: () => Promise<{ error: string | null }>;
   signInWithEmail: (email: string) => Promise<{ error: string | null }>;
+  signInWithGoogle: () => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -70,6 +71,19 @@ export function useAuth(): AuthState & AuthActions {
     return { error: error?.message ?? null };
   };
 
+  const signInWithGoogle = async (): Promise<{ error: string | null }> => {
+    const sb = getSupabaseClient();
+    const redirectTo =
+      typeof window !== 'undefined'
+        ? `${window.location.origin}/auth/callback`
+        : `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://routyne-nu.vercel.app'}/auth/callback`;
+    const { error } = await sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo },
+    });
+    return { error: error?.message ?? null };
+  };
+
   const signOut = async (): Promise<void> => {
     const sb = getSupabaseClient();
     await sb.auth.signOut();
@@ -77,5 +91,5 @@ export function useAuth(): AuthState & AuthActions {
 
   const isAnonymous = !!user && !user.email && user.is_anonymous === true;
 
-  return { user, session, isLoading, isAnonymous, signInAnonymously, signInWithEmail, signOut };
+  return { user, session, isLoading, isAnonymous, signInAnonymously, signInWithEmail, signInWithGoogle, signOut };
 }

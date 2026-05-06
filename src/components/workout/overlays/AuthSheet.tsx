@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Cloud, Mail, Loader2, CheckCircle2, LogOut, ArrowRight, X } from 'lucide-react';
+import { GoogleIcon } from '@/components/ui/GoogleIcon';
 import { Sheet } from '@/components/ui/Sheet';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
@@ -15,7 +16,7 @@ interface AuthSheetProps {
 type Step = 'prompt' | 'email-input' | 'email-sent' | 'synced';
 
 export function AuthSheet({ onClose }: AuthSheetProps) {
-  const { user, isAnonymous, signInAnonymously, signInWithEmail, signOut } = useAuth();
+  const { user, isAnonymous, signInAnonymously, signInWithEmail, signInWithGoogle, signOut } = useAuth();
   const [step, setStep] = useState<Step>(() => {
     if (user && !isAnonymous) return 'synced';
     if (user && isAnonymous) return 'email-input';
@@ -32,6 +33,17 @@ export function AuthSheet({ onClose }: AuthSheetProps) {
     setIsWorking(false);
     if (error) { setErrorMsg(error); return; }
     setStep('email-input');
+  };
+
+  const handleGoogle = async () => {
+    setIsWorking(true);
+    setErrorMsg(null);
+    const { error } = await signInWithGoogle();
+    // Google redirects away — only handle errors here
+    if (error) {
+      setIsWorking(false);
+      setErrorMsg(error);
+    }
   };
 
   const handleSendMagicLink = async () => {
@@ -103,22 +115,40 @@ export function AuthSheet({ onClose }: AuthSheetProps) {
 
               {/* CTAs */}
               <div className="flex flex-col gap-2">
-                <Button
-                  variant="glass-primary"
-                  className="w-full h-12 text-sm font-black uppercase tracking-widest"
-                  onClick={handleAnonymous}
+                {/* Google */}
+                <button
+                  onClick={handleGoogle}
                   disabled={isWorking}
+                  className="w-full h-12 flex items-center justify-center gap-2.5 rounded-xl bg-white text-gray-800 text-sm font-bold shadow-sm hover:bg-white/90 active:scale-[0.98] transition-all disabled:opacity-50"
                 >
-                  {isWorking ? <Loader2 className="w-4 h-4 animate-spin" /> : (
-                    <><Cloud className="w-4 h-4 mr-2" />Continuar sin cuenta</>
-                  )}
-                </Button>
+                  {isWorking
+                    ? <Loader2 className="w-4 h-4 animate-spin text-gray-600" />
+                    : <><GoogleIcon className="w-5 h-5" />Continuar con Google</>
+                  }
+                </button>
+
+                {/* Divider */}
+                <div className="flex items-center gap-3 py-1">
+                  <div className="flex-1 h-px bg-white/10" />
+                  <span className="text-white/25 text-[11px] font-medium uppercase tracking-widest">o</span>
+                  <div className="flex-1 h-px bg-white/10" />
+                </div>
+
                 <button
                   onClick={() => setStep('email-input')}
                   className="flex items-center justify-center gap-1.5 py-3 text-white/40 hover:text-white/60 text-[12px] font-black uppercase tracking-widest transition-colors"
                 >
                   <Mail className="w-3.5 h-3.5" />
                   Usar email
+                </button>
+
+                <button
+                  onClick={handleAnonymous}
+                  disabled={isWorking}
+                  className="flex items-center justify-center gap-1.5 py-2 text-white/20 hover:text-white/40 text-[11px] font-medium transition-colors"
+                >
+                  <Cloud className="w-3 h-3" />
+                  Continuar sin cuenta
                 </button>
               </div>
             </motion.div>
