@@ -11,7 +11,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import webpush from 'web-push';
-import { subscriptions } from '../subscribe/route';
+import { subscriptions } from '@/lib/push/subscriptions';
 
 // ── VAPID setup ───────────────────────────────────────────────────────────────
 

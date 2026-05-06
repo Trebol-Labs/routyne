@@ -7,16 +7,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { subscriptions } from '@/lib/push/subscriptions';
 
 // ── In-memory store (Hobby tier, resets on cold start) ────────────────────────
-
-interface StoredSubscription {
-  endpoint: string;
-  keys: { p256dh: string; auth: string };
-  addedAt: number;
-}
-
-const subscriptions = new Map<string, StoredSubscription>();
 
 // ── POST — subscribe ──────────────────────────────────────────────────────────
 
@@ -58,7 +51,3 @@ export async function DELETE(req: NextRequest) {
   subscriptions.delete(body.endpoint);
   return NextResponse.json({ ok: true });
 }
-
-// ── Exported for use by /api/push/notify ─────────────────────────────────────
-
-export { subscriptions };
