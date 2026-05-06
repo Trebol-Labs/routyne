@@ -1,6 +1,6 @@
 # Routyne
 
-Routyne is a mobile-first Next.js PWA workout tracker. It stores workouts locally in IndexedDB, syncs to Supabase when configured, and includes stats, share cards, push notifications, and an optional AI coach.
+Routyne is a mobile-first Next.js PWA workout tracker. It stores workouts locally in IndexedDB, syncs profile, history, bodyweight, and routines to Supabase when configured, and includes stats, share cards, push notifications, and an optional AI coach.
 
 ## Docs
 
@@ -51,4 +51,6 @@ pnpm import:exercises
 
 - Use pnpm only; `pnpm-lock.yaml` is the lockfile source.
 - The landing page lives at `/landing`.
+- Supabase magic links return to `/auth/callback`; browser redirects use the current origin, with `NEXT_PUBLIC_SITE_URL` as the server-side fallback.
+- Push subscriptions are shared between API routes through `src/lib/push/subscriptions.ts`, but still live in process memory on the Vercel Hobby tier.
 - The production deploy is connected to Vercel, but the latest workspace changes still need to be redeployed.

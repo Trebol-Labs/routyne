@@ -15,6 +15,7 @@ This file replaces the old `CLAUDE.md` general docs. The current app status and 
 | Variable | Required | Purpose |
 |---|---|---|
 | `RAPIDAPI_KEY` | Always | ExerciseDB media and search |
+| `NEXT_PUBLIC_SITE_URL` | Optional | Production URL fallback for server-side links and auth redirects |
 | `NEXT_PUBLIC_SUPABASE_URL` | Optional | Cloud sync and auth |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Optional | Supabase client key |
 | `NEXT_PUBLIC_COACH_ENABLED` | Optional | Shows the AI Coach button |
@@ -74,11 +75,15 @@ pnpm import:exercises
 - `src/lib/supabase/schema.sql` - DDL to run in Supabase SQL Editor
 - `src/lib/sync/queue.ts` - IDB-backed mutation queue
 - `src/lib/sync/merge.ts` - last-write-wins merge helpers
-- `src/lib/sync/syncEngine.ts` - push/pull/profile sync
+- `src/lib/sync/syncEngine.ts` - queued push, remote pull, first-auth local bootstrap, and routine/profile/history/bodyweight sync
+- `src/app/auth/callback/page.tsx` - browser auth callback for magic links and anonymous account upgrades
+- `src/lib/site.ts` - canonical site URL and auth redirect helpers
 - `src/hooks/useAuth.ts` - Supabase session state
 - `src/hooks/useSync.ts` - triggers sync on auth and visibility changes
 - `src/components/workout/overlays/AuthSheet.tsx` - magic-link auth UI
 - `src/components/workout/overlays/ProfileSheet.tsx` - sync status and profile UI
+
+`syncCloudData(userId)` is the high-level sync entry point. On first authenticated sync it pulls remote changes, drains queued mutations, then seeds the local profile, history, bodyweight, and routines to Supabase before marking `cloud-sync-initialized:{userId}` in IDB meta.
 
 ## AI Coach
 
@@ -92,6 +97,7 @@ pnpm import:exercises
 
 - `worker/push.ts` handles push events and rest-timer scheduling
 - `src/lib/push/client.ts` handles browser subscription logic
+- `src/lib/push/subscriptions.ts` owns the shared in-memory subscription map
 - `src/app/api/push/subscribe/route.ts` stores subscriptions in memory on Hobby tier
 - `src/app/api/push/notify/route.ts` sends immediate notifications
 - `src/hooks/usePushNotifications.ts` manages subscription state
