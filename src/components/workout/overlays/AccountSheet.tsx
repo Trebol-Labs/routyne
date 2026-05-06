@@ -24,6 +24,7 @@ import {
 import { Sheet } from '@/components/ui/Sheet';
 import { Button } from '@/components/ui/button';
 import { EmojiPicker } from '@/components/ui/EmojiPicker';
+import { GoogleIcon } from '@/components/ui/GoogleIcon';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
 import { useSync } from '@/hooks/useSync';
 import { useAuth } from '@/hooks/useAuth';
@@ -207,7 +208,7 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
     history,
     hydrate,
   } = useWorkoutStore();
-  const { user, session, isAnonymous, isLoading: authLoading, signInAnonymously, signInWithEmail, signOut } = useAuth();
+  const { user, session, isAnonymous, isLoading: authLoading, signInAnonymously, signInWithEmail, signInWithGoogle, signOut } = useAuth();
   const { status: syncStatus, pendingCount, lastSyncAt, lastError, syncNow } = useSync(user?.id);
   const { language, setLanguage, t } = useI18n();
   const push = usePushNotifications(session?.access_token);
@@ -673,33 +674,55 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
                             </p>
                           </div>
                         </div>
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          <Button
-                            variant="glass-primary"
-                            className="min-h-12 rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-[0_18px_40px_-18px_rgba(56,189,248,0.9)]"
-                            onClick={() => setAuthMode('email')}
-                            disabled={accountActionDisabled}
-                          >
-                            <Mail className="mr-2 h-4 w-4" />
-                            {language === 'en' ? 'Sign in with email' : 'Entrar con email'}
-                          </Button>
+                        <div className="flex flex-col gap-2">
                           <button
                             type="button"
                             onClick={async () => {
                               setAccountMessage(null);
-                              const { error } = await signInAnonymously();
-                              if (error) {
-                                setAccountMessage(error);
-                                return;
-                              }
-                              setAuthMode('email');
+                              const { error } = await signInWithGoogle();
+                              if (error) setAccountMessage(error);
                             }}
-                            className="min-h-12 rounded-2xl border border-white/12 bg-white/[0.06] px-3 text-[11px] font-black uppercase tracking-widest text-white/70 transition-colors hover:border-white/20 hover:text-white disabled:opacity-50"
                             disabled={accountActionDisabled}
+                            className="flex min-h-12 w-full items-center justify-center gap-2.5 rounded-2xl bg-white text-[11px] font-black uppercase tracking-widest text-gray-800 shadow-sm transition-all hover:bg-white/90 active:scale-[0.98] disabled:opacity-50"
                           >
-                            <UserRound className="mr-2 inline h-4 w-4" />
-                            {language === 'en' ? 'Try anonymous' : 'Probar anónimo'}
+                            {accountActionDisabled
+                              ? <Loader2 className="h-4 w-4 animate-spin text-gray-500" />
+                              : <><GoogleIcon className="h-4 w-4" />{language === 'en' ? 'Continue with Google' : 'Continuar con Google'}</>
+                            }
                           </button>
+                          <div className="flex items-center gap-3">
+                            <div className="h-px flex-1 bg-white/10" />
+                            <span className="text-[10px] font-medium uppercase tracking-widest text-white/25">{language === 'en' ? 'or' : 'o'}</span>
+                            <div className="h-px flex-1 bg-white/10" />
+                          </div>
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            <Button
+                              variant="glass-primary"
+                              className="min-h-12 rounded-2xl text-[11px] font-black uppercase tracking-widest"
+                              onClick={() => setAuthMode('email')}
+                              disabled={accountActionDisabled}
+                            >
+                              <Mail className="mr-2 h-4 w-4" />
+                              {language === 'en' ? 'Sign in with email' : 'Entrar con email'}
+                            </Button>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                setAccountMessage(null);
+                                const { error } = await signInAnonymously();
+                                if (error) {
+                                  setAccountMessage(error);
+                                  return;
+                                }
+                                setAuthMode('email');
+                              }}
+                              className="min-h-12 rounded-2xl border border-white/12 bg-white/[0.06] px-3 text-[11px] font-black uppercase tracking-widest text-white/70 transition-colors hover:border-white/20 hover:text-white disabled:opacity-50"
+                              disabled={accountActionDisabled}
+                            >
+                              <UserRound className="mr-2 inline h-4 w-4" />
+                              {language === 'en' ? 'Anonymous' : 'Anónimo'}
+                            </button>
+                          </div>
                         </div>
                         <p className="text-xs font-medium leading-relaxed text-white/45">
                           {language === 'en'
@@ -776,25 +799,42 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
                         </button>
                       </div>
                     ) : (
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        <Button
-                          variant="glass-primary"
-                          className="min-h-12 rounded-2xl text-[11px] font-black uppercase tracking-widest"
-                          onClick={() => setAuthMode('email')}
-                          disabled={accountActionDisabled}
-                        >
-                          <Mail className="mr-2 h-4 w-4" />
-                          {language === 'en' ? 'Add email' : 'Añadir email'}
-                        </Button>
+                      <div className="flex flex-col gap-2">
                         <button
                           type="button"
-                          onClick={syncNow}
+                          onClick={async () => {
+                            setAccountMessage(null);
+                            const { error } = await signInWithGoogle();
+                            if (error) setAccountMessage(error);
+                          }}
                           disabled={accountActionDisabled}
-                          className="min-h-12 rounded-2xl border border-white/10 bg-white/[0.04] px-3 text-[11px] font-black uppercase tracking-widest text-white/65 transition-colors hover:text-white disabled:opacity-50"
+                          className="flex min-h-12 w-full items-center justify-center gap-2.5 rounded-2xl bg-white text-[11px] font-black uppercase tracking-widest text-gray-800 shadow-sm transition-all hover:bg-white/90 active:scale-[0.98] disabled:opacity-50"
                         >
-                          <RefreshCw className="mr-2 inline h-4 w-4" />
-                          {language === 'en' ? 'Sync now' : 'Sincronizar'}
+                          {accountActionDisabled
+                            ? <Loader2 className="h-4 w-4 animate-spin text-gray-500" />
+                            : <><GoogleIcon className="h-4 w-4" />{language === 'en' ? 'Continue with Google' : 'Continuar con Google'}</>
+                          }
                         </button>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <Button
+                            variant="glass-primary"
+                            className="min-h-12 rounded-2xl text-[11px] font-black uppercase tracking-widest"
+                            onClick={() => setAuthMode('email')}
+                            disabled={accountActionDisabled}
+                          >
+                            <Mail className="mr-2 h-4 w-4" />
+                            {language === 'en' ? 'Add email' : 'Añadir email'}
+                          </Button>
+                          <button
+                            type="button"
+                            onClick={syncNow}
+                            disabled={accountActionDisabled}
+                            className="min-h-12 rounded-2xl border border-white/10 bg-white/[0.04] px-3 text-[11px] font-black uppercase tracking-widest text-white/65 transition-colors hover:text-white disabled:opacity-50"
+                          >
+                            <RefreshCw className="mr-2 inline h-4 w-4" />
+                            {language === 'en' ? 'Sync now' : 'Sincronizar'}
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>

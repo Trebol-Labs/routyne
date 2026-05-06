@@ -109,7 +109,7 @@ export function getSupabaseClient(): SupabaseClient<Database> {
     auth: {
       autoRefreshToken: true,
       persistSession: true,
-      // Required for magic links and anonymous-email upgrades to complete in the browser.
+      // Required for magic links, anonymous-email upgrades, and OAuth redirects to complete in the browser.
       detectSessionInUrl: true,
     },
   });
