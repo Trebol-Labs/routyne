@@ -249,6 +249,7 @@ export interface WorkoutState {
   updateProfile: (patch: UserProfilePatch) => Promise<void>;
   resetAll: () => Promise<void>;
   updateActiveSessionExercises: (exercises: ParsedExercise[]) => Promise<void>;
+  refreshFromPersistence: () => Promise<void>;
 
   // ── Sync actions ──────────────────────────────────────────────────────────
   toggleSetCompletion: (

@@ -11,13 +11,14 @@ import { resetDBSingleton } from '@/lib/db/index';
 
 const mockUpsert = vi.fn().mockResolvedValue({ error: null });
 
-type QueryTable = 'history' | 'profiles' | 'bodyweight' | 'sync_cursors';
+type QueryTable = 'history' | 'profiles' | 'bodyweight' | 'routines' | 'sync_cursors';
 type QueryResult = { data: unknown; error: { message: string } | null };
 
 const queryResults: Record<QueryTable, QueryResult> = {
   history: { data: [], error: null },
   profiles: { data: [], error: null },
   bodyweight: { data: [], error: null },
+  routines: { data: [], error: null },
   sync_cursors: { data: null, error: null },
 };
 
@@ -32,6 +33,7 @@ function createBuilder(table: QueryTable) {
     gt: vi.fn(() => builder),
     order: vi.fn(() => builder),
     single: vi.fn(async () => queryResults.sync_cursors),
+    maybeSingle: vi.fn(async () => queryResults.sync_cursors),
     upsert: mockUpsert,
     update: vi.fn(() => builder),
     then: (
@@ -51,10 +53,14 @@ vi.mock('@/lib/supabase/client', () => ({
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 import { enqueue, dequeue, getPendingMutations, getPendingCount, pruneFailedMutations } from './queue';
-import { mergeRemoteHistory, mergeRemoteProfile, mergeRemoteBodyweight, historyEntryToRemote } from './merge';
+import { mergeRemoteHistory, mergeRemoteProfile, mergeRemoteBodyweight, mergeRemoteRoutine, historyEntryToRemote } from './merge';
 import { loadProfile, saveProfile } from '@/lib/db/profile';
 import { loadAllBodyweight, saveBodyweight } from '@/lib/db/bodyweight';
-import type { Bodyweight, HistoryEntry, UserProfile } from '@/types/workout';
+import { loadMetaValue } from '@/lib/db/meta';
+import { saveHistoryEntry } from '@/lib/db/history';
+import { loadAllRoutineRecords, saveRoutine } from '@/lib/db/routines';
+import { generateMarkdown } from '@/lib/markdown/generator';
+import type { Bodyweight, HistoryEntry, RoutineData, UserProfile } from '@/types/workout';
 
 const USER_ID = 'user-abc-123';
 
@@ -107,6 +113,33 @@ function makeBodyweight(overrides: Partial<Bodyweight> = {}): Bodyweight {
   };
 }
 
+function makeRoutine(overrides: Partial<RoutineData> = {}): RoutineData {
+  return {
+    id: 'routine-1',
+    title: 'Upper Day',
+    createdAt: new Date('2026-01-01T00:00:00.000Z'),
+    sessions: [
+      {
+        id: 'session-1',
+        title: 'Session 1',
+        exercises: [
+          {
+            id: 'exercise-1',
+            originalName: 'Bench Press',
+            cleanName: 'Bench Press',
+            sets: 3,
+            repsMin: 8,
+            repsMax: 10,
+            restSeconds: 90,
+            mediaUrl: null,
+          },
+        ],
+      },
+    ],
+    ...overrides,
+  };
+}
+
 // ── Test lifecycle ───────────────────────────────────────────────────────────
 
 beforeEach(() => {
@@ -116,6 +149,7 @@ beforeEach(() => {
   setQueryResult('history', { data: [], error: null });
   setQueryResult('profiles', { data: [], error: null });
   setQueryResult('bodyweight', { data: [], error: null });
+  setQueryResult('routines', { data: [], error: null });
   setQueryResult('sync_cursors', { data: null, error: null });
 });
 
@@ -189,10 +223,11 @@ describe('pushToCloud', () => {
   });
 
   it('pushes profile mutations to the profiles table', async () => {
+    await saveProfile(makeProfile({ displayName: 'Latest Local Profile' }));
     await enqueue({
       table: 'profile',
       operation: 'upsert',
-      payload: makeProfile({ displayName: 'Sync Me' }),
+      payload: makeProfile({ displayName: 'Stale Queued Profile' }),
     });
 
     const { pushToCloud } = await import('./syncEngine');
@@ -202,17 +237,18 @@ describe('pushToCloud', () => {
     expect(mockUpsert).toHaveBeenCalledWith(
       expect.objectContaining({
         user_id: USER_ID,
-        display_name: 'Sync Me',
+        display_name: 'Latest Local Profile',
       }),
       { onConflict: 'user_id' }
     );
   });
 
   it('pushes bodyweight upserts and delete tombstones', async () => {
+    await saveBodyweight(makeBodyweight({ id: 'bw-upsert', date: '2026-01-10' }));
     await enqueue({
       table: 'bodyweight',
       operation: 'upsert',
-      payload: makeBodyweight({ id: 'bw-upsert' }),
+      payload: makeBodyweight({ id: 'bw-upsert', date: '2026-01-10' }),
     });
     await enqueue({
       table: 'bodyweight',
@@ -240,6 +276,41 @@ describe('pushToCloud', () => {
     );
     expect(await getPendingCount()).toBe(0);
   });
+
+  it('keeps a failed mutation in the queue and increments retries', async () => {
+    await enqueue({ table: 'history', operation: 'upsert', payload: { id: 'e1' } });
+    mockUpsert.mockResolvedValueOnce({ error: { message: 'boom' } });
+
+    const { pushToCloud } = await import('./syncEngine');
+    await pushToCloud(USER_ID);
+
+    const pending = await getPendingMutations();
+    expect(pending).toHaveLength(1);
+    expect(pending[0].retries).toBe(1);
+  });
+
+  it('pushes routine mutations to the routines table', async () => {
+    const routine = makeRoutine();
+    await saveRoutine(routine, generateMarkdown(routine));
+    await enqueue({
+      table: 'routines',
+      operation: 'upsert',
+      payload: { id: routine.id },
+    });
+
+    const { pushToCloud } = await import('./syncEngine');
+    await pushToCloud(USER_ID);
+
+    expect(mockFrom).toHaveBeenCalledWith('routines');
+    expect(mockUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: routine.id,
+        user_id: USER_ID,
+        title: routine.title,
+      }),
+      { onConflict: 'id' }
+    );
+  });
 });
 
 // ── pullFromCloud tests ──────────────────────────────────────────────────────
@@ -251,6 +322,7 @@ describe('pullFromCloud', () => {
     setQueryResult('history', { data: [], error: null });
     setQueryResult('profiles', { data: [], error: null });
     setQueryResult('bodyweight', { data: [], error: null });
+    setQueryResult('routines', { data: [], error: null });
 
     const { pullFromCloud } = await import('./syncEngine');
     const merged = await pullFromCloud(USER_ID);
@@ -276,10 +348,79 @@ describe('pullFromCloud', () => {
     setQueryResult('history', { data: [remoteRow], error: null });
     setQueryResult('profiles', { data: [], error: null });
     setQueryResult('bodyweight', { data: [], error: null });
+    setQueryResult('routines', { data: [], error: null });
 
     const { pullFromCloud } = await import('./syncEngine');
     const merged = await pullFromCloud(USER_ID);
     expect(merged).toBe(1);
+  });
+
+  it('merges remote routines into the local library', async () => {
+    const routine = makeRoutine({ id: 'routine-remote', title: 'Remote Routine' });
+    const remoteRoutine = {
+      id: routine.id,
+      user_id: USER_ID,
+      title: routine.title,
+      source_md: generateMarkdown(routine),
+      created_at: '2026-01-01T00:00:00.000Z',
+      updated_at: '2026-01-02T00:00:00.000Z',
+      deleted_at: null,
+    };
+
+    setQueryResult('sync_cursors', { data: null, error: null });
+    setQueryResult('history', { data: [], error: null });
+    setQueryResult('profiles', { data: [], error: null });
+    setQueryResult('bodyweight', { data: [], error: null });
+    setQueryResult('routines', { data: [remoteRoutine], error: null });
+
+    const { pullFromCloud } = await import('./syncEngine');
+    const merged = await pullFromCloud(USER_ID);
+
+    expect(merged).toBe(1);
+    const saved = await loadAllRoutineRecords();
+    expect(saved).toHaveLength(1);
+    expect(saved[0].title).toBe('Remote Routine');
+  });
+
+  it('throws when a remote table errors during pull', async () => {
+    setQueryResult('sync_cursors', { data: null, error: null });
+    setQueryResult('history', { data: [], error: null });
+    setQueryResult('profiles', { data: [], error: { message: 'profiles exploded' } });
+    setQueryResult('bodyweight', { data: [], error: null });
+    setQueryResult('routines', { data: [], error: null });
+
+    const { pullFromCloud } = await import('./syncEngine');
+    await expect(pullFromCloud(USER_ID)).rejects.toThrow('profiles exploded');
+  });
+});
+
+describe('syncCloudData', () => {
+  it('bootstraps existing local data on the first authenticated sync', async () => {
+    await saveProfile(makeProfile({ displayName: 'Bootstrap Profile' }));
+    const entry = makeEntry({ id: 'history-bootstrap' });
+    const routine = makeRoutine({ id: 'routine-bootstrap', title: 'Bootstrap Routine' });
+    await saveRoutine(routine, generateMarkdown(routine));
+    await saveHistoryEntry(entry, 'routine-1', 'session-1');
+    await saveBodyweight(makeBodyweight({ id: 'bw-bootstrap', date: '2026-02-01' }));
+
+    setQueryResult('sync_cursors', { data: null, error: null });
+    setQueryResult('history', { data: [], error: null });
+    setQueryResult('profiles', { data: [], error: null });
+    setQueryResult('bodyweight', { data: [], error: null });
+    setQueryResult('routines', { data: [], error: null });
+
+    const { syncCloudData } = await import('./syncEngine');
+    await syncCloudData(USER_ID);
+
+    const upsertTables = mockFrom.mock.calls
+      .filter(([table]) => table === 'profiles' || table === 'history' || table === 'bodyweight' || table === 'routines')
+      .map(([table]) => table);
+
+    expect(upsertTables).toContain('profiles');
+    expect(upsertTables).toContain('history');
+    expect(upsertTables).toContain('bodyweight');
+    expect(upsertTables).toContain('routines');
+    expect(await loadMetaValue(`cloud-sync-initialized:${USER_ID}`)).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 });
 
@@ -464,6 +605,28 @@ describe('mergeRemoteBodyweight', () => {
 
     const saved = await loadAllBodyweight();
     expect(saved).toHaveLength(0);
+  });
+});
+
+describe('mergeRemoteRoutine', () => {
+  it('writes a newer remote routine into the local library', async () => {
+    const routine = makeRoutine({ id: 'routine-merge', title: 'Merged Routine' });
+    const remoteRoutine = {
+      id: routine.id,
+      user_id: USER_ID,
+      title: routine.title,
+      source_md: generateMarkdown(routine),
+      created_at: '2026-01-01T00:00:00.000Z',
+      updated_at: '2026-01-03T00:00:00.000Z',
+      deleted_at: null,
+    };
+
+    const changed = await mergeRemoteRoutine(remoteRoutine as never, new Map());
+    expect(changed).toBe(true);
+
+    const saved = await loadAllRoutineRecords();
+    expect(saved).toHaveLength(1);
+    expect(saved[0].updatedAt).toBe('2026-01-03T00:00:00.000Z');
   });
 });
 

@@ -4,16 +4,22 @@ import type { RoutineData, RoutineSummary } from '@/types/workout';
 
 // ── Converters ────────────────────────────────────────────────────────────────
 
-function routineToRecord(routine: RoutineData, sourceMarkdown?: string): RoutineRecord {
+function routineToRecord(
+  routine: RoutineData,
+  sourceMarkdown: string,
+  timestamps?: Partial<Pick<RoutineRecord, 'createdAt' | 'updatedAt'>>
+): RoutineRecord {
   const now = new Date().toISOString();
   return {
     id: routine.id,
     title: routine.title,
-    createdAt: routine.createdAt instanceof Date
-      ? routine.createdAt.toISOString()
-      : String(routine.createdAt),
-    updatedAt: now,
-    sourceMarkdown: sourceMarkdown ?? '',
+    createdAt: timestamps?.createdAt ?? (
+      routine.createdAt instanceof Date
+        ? routine.createdAt.toISOString()
+        : String(routine.createdAt)
+    ),
+    updatedAt: timestamps?.updatedAt ?? now,
+    sourceMarkdown,
     sessionCount: routine.sessions.length,
     exerciseCount: routine.sessions.reduce((sum, s) => sum + s.exercises.length, 0),
   };
@@ -30,27 +36,17 @@ function recordToSummary(r: RoutineRecord): RoutineSummary {
   };
 }
 
-// ── Operations ────────────────────────────────────────────────────────────────
-
-/**
- * Save a full RoutineData into IDB (routines + sessions + exercises).
- * Atomic: uses a single transaction.
- */
-export async function saveRoutine(routine: RoutineData, sourceMarkdown?: string): Promise<void> {
+async function persistRoutine(
+  routine: RoutineData,
+  record: RoutineRecord
+): Promise<void> {
   const db = await getDB();
   const tx = db.transaction(['routines', 'sessions', 'exercises'], 'readwrite');
   const routineStore = tx.objectStore('routines');
   const sessionStore = tx.objectStore('sessions');
   const exerciseStore = tx.objectStore('exercises');
 
-  let finalMarkdown = sourceMarkdown;
-  if (finalMarkdown === undefined) {
-    const existing = await routineStore.get(routine.id);
-    finalMarkdown = existing?.sourceMarkdown ?? '';
-  }
-
-  // Upsert routine record
-  await routineStore.put(routineToRecord(routine, finalMarkdown));
+  await routineStore.put(record);
 
   // Delete existing sessions + exercises for this routine to avoid stale data
   {
@@ -94,6 +90,41 @@ export async function saveRoutine(routine: RoutineData, sourceMarkdown?: string)
   }
 
   await tx.done;
+}
+
+// ── Operations ────────────────────────────────────────────────────────────────
+
+/**
+ * Save a full RoutineData into IDB (routines + sessions + exercises).
+ * Atomic: uses a single transaction.
+ */
+export async function saveRoutine(routine: RoutineData, sourceMarkdown?: string): Promise<void> {
+  const db = await getDB();
+  const tx = db.transaction(['routines'], 'readonly');
+  const routineStore = tx.objectStore('routines');
+
+  let finalMarkdown = sourceMarkdown;
+  if (finalMarkdown === undefined) {
+    const existing = await routineStore.get(routine.id);
+    finalMarkdown = existing?.sourceMarkdown ?? '';
+  }
+  await tx.done;
+
+  await persistRoutine(
+    routine,
+    routineToRecord(routine, finalMarkdown ?? '')
+  );
+}
+
+export async function saveRoutineFromRemote(
+  routine: RoutineData,
+  sourceMarkdown: string,
+  timestamps: Pick<RoutineRecord, 'createdAt' | 'updatedAt'>
+): Promise<void> {
+  await persistRoutine(
+    routine,
+    routineToRecord(routine, sourceMarkdown, timestamps)
+  );
 }
 
 /**
@@ -146,6 +177,16 @@ export async function listRoutines(): Promise<RoutineSummary[]> {
   return all
     .map(recordToSummary)
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
+
+export async function loadRoutineRecord(routineId: string): Promise<RoutineRecord | null> {
+  const db = await getDB();
+  return (await db.get('routines', routineId)) ?? null;
+}
+
+export async function loadAllRoutineRecords(): Promise<RoutineRecord[]> {
+  const db = await getDB();
+  return db.getAll('routines');
 }
 
 /**

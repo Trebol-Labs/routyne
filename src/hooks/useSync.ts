@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { pushToCloud, pullFromCloud } from '@/lib/sync/syncEngine';
+import { syncCloudData } from '@/lib/sync/syncEngine';
 import { getPendingCount } from '@/lib/sync/queue';
 import { loadMetaValue, saveMetaValue } from '@/lib/db/meta';
+import { useWorkoutStore } from '@/store/useWorkoutStore';
 
 export type SyncStatus = 'idle' | 'syncing' | 'synced' | 'error' | 'offline';
 
@@ -43,12 +44,12 @@ export function useSync(userId?: string): UseSyncResult {
     setLastError(null);
 
     try {
-      await pushToCloud(currentUserId);
-      await pullFromCloud(currentUserId);
+      await syncCloudData(currentUserId);
       const now = new Date().toISOString();
       setLastSyncAt(now);
       setStatus('synced');
       await saveMetaValue(`${LAST_SYNC_KEY_PREFIX}${currentUserId}`, now);
+      await useWorkoutStore.getState().refreshFromPersistence();
       await refreshPendingCount();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'No se pudo sincronizar';

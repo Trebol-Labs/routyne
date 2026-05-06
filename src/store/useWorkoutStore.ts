@@ -184,6 +184,15 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
     // Ensure IDB write completes before import is considered done
     try {
       await saveRoutine(routine, sourceMarkdown);
+
+      if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+        const { enqueue } = await import('@/lib/sync/queue');
+        enqueue({
+          table: 'routines',
+          operation: 'upsert',
+          payload: { id: routine.id },
+        }).catch((err) => console.error('[useWorkoutStore] routine enqueue failed', err));
+      }
     } catch (err) {
       console.error('[useWorkoutStore] importRoutine IDB write failed', err);
       throw err;
@@ -214,6 +223,17 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
         ? { currentRoutine: null, currentView: 'uploader' as WorkoutView }
         : {}),
     }));
+
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      import('@/lib/sync/queue')
+        .then(({ enqueue }) => enqueue({
+          table: 'routines',
+          operation: 'delete',
+          payload: { id: routineId },
+        }))
+        .catch((err) => console.error('[useWorkoutStore] routine delete enqueue failed', err));
+    }
+
     deleteRoutine(routineId).catch(console.error);
   },
 
@@ -422,7 +442,18 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
     };
 
     set({ currentRoutine: updatedRoutine });
-    saveRoutine(updatedRoutine).catch(console.error);
+    saveRoutine(updatedRoutine)
+      .then(async () => {
+        if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+          const { enqueue } = await import('@/lib/sync/queue');
+          enqueue({
+            table: 'routines',
+            operation: 'upsert',
+            payload: { id: updatedRoutine.id },
+          }).catch((err) => console.error('[useWorkoutStore] routine enqueue failed', err));
+        }
+      })
+      .catch(console.error);
   },
 
   // ── Misc sync ──────────────────────────────────────────────────────────────
@@ -454,6 +485,49 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
       routineLibrary: [summary, ...state.routineLibrary],
     }));
     await saveRoutine(copy, '');
+
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      const { enqueue } = await import('@/lib/sync/queue');
+      enqueue({
+        table: 'routines',
+        operation: 'upsert',
+        payload: { id: copy.id },
+      }).catch((err) => console.error('[useWorkoutStore] routine enqueue failed', err));
+    }
+  },
+
+  refreshFromPersistence: async () => {
+    try {
+      const [profile, library, historyResult] = await Promise.all([
+        loadProfile(),
+        listRoutines(),
+        loadHistory(50),
+      ]);
+
+      const state = get();
+      const nextState: Partial<WorkoutState> = {
+        profile,
+        routineLibrary: library,
+        history: historyResult.entries,
+        historyHasMore: historyResult.hasMore,
+      };
+
+      if (state.activeSessionIdx === null && state.currentRoutine) {
+        const refreshedRoutine = await loadRoutine(state.currentRoutine.id);
+        if (refreshedRoutine) {
+          nextState.currentRoutine = refreshedRoutine;
+        } else {
+          nextState.currentRoutine = null;
+          if (state.currentView === 'routine-overview') {
+            nextState.currentView = 'uploader';
+          }
+        }
+      }
+
+      set(nextState);
+    } catch (err) {
+      console.error('[useWorkoutStore] refreshFromPersistence failed', err);
+    }
   },
 
   // ── resetAll ───────────────────────────────────────────────────────────────

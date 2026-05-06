@@ -7,7 +7,10 @@
 import { saveHistoryEntry } from '@/lib/db/history';
 import { saveBodyweight, deleteBodyweightEntriesByDate } from '@/lib/db/bodyweight';
 import { loadProfile, saveProfile, normalizeProfileRecord } from '@/lib/db/profile';
+import { deleteRoutine, saveRoutineFromRemote } from '@/lib/db/routines';
+import { parseRoutine } from '@/lib/markdown/parser';
 import type { BodyweightRecord } from '@/lib/db/schema';
+import type { RoutineRecord } from '@/lib/db/schema';
 import type { Database } from '@/lib/supabase/client';
 import type {
   HistoryEntry,
@@ -18,6 +21,7 @@ import type {
 type RemoteHistory = Database['public']['Tables']['history']['Row'];
 type RemoteProfile = Database['public']['Tables']['profiles']['Row'];
 type RemoteBodyweight = Database['public']['Tables']['bodyweight']['Row'];
+type RemoteRoutine = Database['public']['Tables']['routines']['Row'];
 
 // ── History ────────────────────────────────────────────────────────────────────
 
@@ -158,6 +162,79 @@ export async function mergeRemoteBodyweight(
   }
 
   return false;
+}
+
+// ── Routines ──────────────────────────────────────────────────────────────────
+
+export function routineToRemote(
+  record: RoutineRecord,
+  sourceMarkdown: string,
+  userId: string
+): Database['public']['Tables']['routines']['Insert'] {
+  return {
+    id: record.id,
+    user_id: userId,
+    title: record.title,
+    source_md: sourceMarkdown,
+    created_at: record.createdAt,
+    updated_at: record.updatedAt,
+    deleted_at: null,
+  };
+}
+
+function remoteToLocalRoutine(remote: RemoteRoutine) {
+  if (!remote.source_md?.trim()) {
+    return null;
+  }
+
+  try {
+    const parsed = parseRoutine(remote.source_md);
+    return {
+      ...parsed,
+      id: remote.id,
+      title: remote.title,
+      createdAt: new Date(remote.created_at),
+    };
+  } catch (error) {
+    console.error('[Sync] routine parse failed', remote.id, error);
+    return null;
+  }
+}
+
+export async function mergeRemoteRoutine(
+  remote: RemoteRoutine,
+  localById: Map<string, RoutineRecord>
+): Promise<boolean> {
+  const local = localById.get(remote.id);
+  const remoteUpdatedAt = new Date(remote.updated_at).getTime();
+
+  if (remote.deleted_at) {
+    const remoteDeletedAt = new Date(remote.deleted_at).getTime();
+    const localUpdatedAt = local ? new Date(local.updatedAt).getTime() : 0;
+    if (local && remoteDeletedAt > localUpdatedAt) {
+      await deleteRoutine(remote.id);
+      return true;
+    }
+    return false;
+  }
+
+  if (local) {
+    const localUpdatedAt = new Date(local.updatedAt).getTime();
+    if (remoteUpdatedAt <= localUpdatedAt) {
+      return false;
+    }
+  }
+
+  const routine = remoteToLocalRoutine(remote);
+  if (!routine) {
+    return false;
+  }
+
+  await saveRoutineFromRemote(routine, remote.source_md ?? '', {
+    createdAt: remote.created_at,
+    updatedAt: remote.updated_at,
+  });
+  return true;
 }
 
 // ── History payload builder ────────────────────────────────────────────────────

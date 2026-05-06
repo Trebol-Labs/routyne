@@ -20,6 +20,12 @@ export async function loadAllBodyweight(): Promise<BodyweightRecord[]> {
   return db.getAllFromIndex('bodyweight', 'by-date');
 }
 
+export async function loadBodyweightByDate(date: string): Promise<BodyweightRecord | null> {
+  const db = await getDB();
+  const entries = await db.getAllFromIndex('bodyweight', 'by-date', date);
+  return entries[0] ?? null;
+}
+
 export async function getLatestBodyweight(): Promise<BodyweightRecord | null> {
   const db = await getDB();
   const all = await db.getAllFromIndex('bodyweight', 'by-date');
