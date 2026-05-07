@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 
 function text(codes) {
   return String.fromCharCode(...codes);
@@ -19,9 +19,39 @@ const blockedPrefix = text([99, 111, 45, 97, 117, 116, 104, 111, 114, 101, 100, 
 const messageFileIndex = process.argv.indexOf('--message-file');
 const messageFile = messageFileIndex === -1 ? null : process.argv[messageFileIndex + 1];
 
+function githubEventRange() {
+  const eventPath = process.env.GITHUB_EVENT_PATH;
+  if (!eventPath || !existsSync(eventPath)) return null;
+
+  try {
+    const event = JSON.parse(readFileSync(eventPath, 'utf8'));
+    const pullRequest = event.pull_request;
+    if (pullRequest?.base?.sha && pullRequest?.head?.sha) {
+      return `${pullRequest.base.sha}..${pullRequest.head.sha}`;
+    }
+
+    const before = typeof event.before === 'string' ? event.before : '';
+    const after = typeof event.after === 'string' ? event.after : '';
+    const zeroSha = /^0+$/.test(before);
+    if (before && after && !zeroSha) {
+      return `${before}..${after}`;
+    }
+    if (after) return after;
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+const commitRange = process.env.COMMIT_MESSAGE_RANGE || githubEventRange() || 'HEAD';
+const logArgs = commitRange.includes('..')
+  ? ['log', '--format=%H%x00%B%x00---END---', commitRange]
+  : ['log', '-n', '1', '--format=%H%x00%B%x00---END---', commitRange];
+
 const log = messageFile
   ? `pending\0${readFileSync(messageFile, 'utf8')}\0---END---\n`
-  : execFileSync('git', ['log', '--format=%H%x00%B%x00---END---', 'HEAD'], {
+  : execFileSync('git', logArgs, {
       encoding: 'utf8',
     });
 
