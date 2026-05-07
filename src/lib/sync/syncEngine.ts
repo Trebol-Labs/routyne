@@ -143,6 +143,23 @@ function isProfileSchemaError(error: SyncError | null | undefined): boolean {
   return mentionsProfileColumn && looksLikeSchemaError;
 }
 
+function dedupeBodyweightByDate(entries: BodyweightRecord[]): BodyweightRecord[] {
+  const byDate = new Map<string, BodyweightRecord>();
+  for (const entry of entries) {
+    const existing = byDate.get(entry.date);
+    if (!existing) {
+      byDate.set(entry.date, entry);
+      continue;
+    }
+    const existingTs = Date.parse(existing.updatedAt) || 0;
+    const candidateTs = Date.parse(entry.updatedAt) || 0;
+    if (candidateTs >= existingTs) {
+      byDate.set(entry.date, entry);
+    }
+  }
+  return Array.from(byDate.values());
+}
+
 function bodyweightToRemoteCompat(entry: BodyweightRecord, userId: string) {
   return {
     id: entry.id,
@@ -250,7 +267,9 @@ async function seedLocalSnapshotToCloud(userId: string): Promise<void> {
     }
   }
 
-  for (const batch of chunk(bodyweight, SYNC_BATCH_SIZE)) {
+  const dedupedBodyweight = dedupeBodyweightByDate(bodyweight);
+
+  for (const batch of chunk(dedupedBodyweight, SYNC_BATCH_SIZE)) {
     const rows = batch.map((entry) => bodyweightToRemote(entry, userId));
     let { error } = await sb.from('bodyweight').upsert(rows as never, {
       onConflict: 'user_id,date',
