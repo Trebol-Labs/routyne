@@ -416,9 +416,14 @@ async function applyMutation(
 
 // ── Pull ───────────────────────────────────────────────────────────────────────
 
-export async function pullFromCloud(userId: string): Promise<number> {
+const EPOCH_CURSOR = '1970-01-01T00:00:00.000Z';
+
+export async function pullFromCloud(
+  userId: string,
+  options: { fullPull?: boolean } = {}
+): Promise<number> {
   const sb = getSupabaseClient();
-  const cursor = await getCursor(userId);
+  const cursor = options.fullPull ? EPOCH_CURSOR : await getCursor(userId);
   const pullStart = new Date().toISOString();
 
   const [historyResult, profileResult, bodyweightResult, routinesResult] = await Promise.all([
@@ -565,7 +570,11 @@ export async function syncCloudData(userId: string): Promise<void> {
     const initialSyncAt = await loadMetaValue(initialSyncKey);
 
     if (!initialSyncAt) {
-      await pullFromCloud(userId);
+      // First sync on this device. The remote sync_cursors row may already
+      // be advanced from another device, so we ignore it and pull every
+      // row owned by this user — otherwise a fresh install with the same
+      // account would render an empty IDB.
+      await pullFromCloud(userId, { fullPull: true });
       await pushToCloud(userId);
       await seedLocalSnapshotToCloud(userId);
 
