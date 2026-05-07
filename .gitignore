@@ -64,3 +64,6 @@ TestRoutine.md
 # Playwright MCP logs & screenshots
 .playwright-mcp/
 .env*.local
+
+#Claude
+.claude/
