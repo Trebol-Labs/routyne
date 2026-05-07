@@ -16,13 +16,13 @@ interface BackupJson {
 test('landing loads and opens the app', async ({ page }) => {
   await page.goto('/landing');
 
-  await expect(page.getByRole('heading', { name: /ENTRENA/i })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /ENTRENA.*PROGRESA.*DOMINA/i })).toBeVisible();
   await expect(page.getByText('routyne-nu.vercel.app')).toBeVisible();
 
   await page.getByRole('link', { name: /Abrir app/i }).first().click();
 
   await expect(page).toHaveURL('/');
-  await expect(page.getByRole('heading', { name: /GET STARTED/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /EMPIEZA AHORA|GET STARTED/i })).toBeVisible();
 });
 
 test('core workout flow records history, stats, and backup export', async ({ page }, testInfo) => {
@@ -30,12 +30,12 @@ test('core workout flow records history, stats, and backup export', async ({ pag
 
   await page.goto('/');
 
-  await expect(page.getByRole('heading', { name: /GET STARTED/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /EMPIEZA AHORA|GET STARTED/i })).toBeVisible();
 
   await page.getByRole('button', { name: /Starting Strength/i }).click();
   await expect(page.getByRole('heading', { name: /Starting Strength/i })).toBeVisible();
 
-  await page.getByRole('button', { name: /START SESSION 1/i }).click();
+  await page.getByRole('button', { name: /INICIAR SESIÓN 1|START SESSION 1/i }).click();
   await expect(page.getByRole('button', { name: /Finish Workout/i })).toBeVisible();
 
   await page.getByRole('button', { name: /Set 1 target/i }).first().click();
@@ -44,24 +44,24 @@ test('core workout flow records history, stats, and backup export', async ({ pag
   const setInputs = page.getByRole('spinbutton');
   await setInputs.first().fill('8');
   await setInputs.nth(1).fill('60');
-  await page.getByRole('button', { name: /Log Set/i }).click();
-  await page.getByRole('button', { name: /Close rest timer/i }).click();
+  await page.getByRole('button', { name: /Registrar serie|Log Set/i }).click();
+  await page.getByRole('button', { name: /Cerrar temporizador de descanso|Close rest timer/i }).click();
 
   await page.getByRole('button', { name: /Finish Workout/i }).click();
-  await expect(page.getByText(/Workout Complete|New Personal Record/i)).toBeVisible();
+  await expect(page.getByText(/Entrenamiento completado|Nuevo récord personal|Workout Complete|New Personal Record/i)).toBeVisible();
 
-  await page.getByRole('button', { name: /View History/i }).click();
-  await expect(page.getByRole('heading', { name: /History/i })).toBeVisible();
-  await expect(page.getByText(/Today/i)).toBeVisible();
+  await page.getByRole('button', { name: /Ver historial|View History/i }).click();
+  await expect(page.getByRole('heading', { name: /Historial|History/i })).toBeVisible();
+  await expect(page.getByText(/Hoy|Today/i)).toBeVisible();
 
-  await page.getByRole('button', { name: 'Stats' }).click();
-  await expect(page.getByRole('heading', { name: /Stats/i })).toBeVisible();
-  await expect(page.getByText('Sessions', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: /Estadísticas|Stats/i }).click();
+  await expect(page.getByRole('heading', { name: /Estadísticas|Stats/i })).toBeVisible();
+  await expect(page.getByText(/Sesiones|Sessions/i).first()).toBeVisible();
 
-  await page.getByRole('button', { name: /Profile settings/i }).click();
-  await expect(page.getByRole('dialog', { name: /Profile/i })).toBeVisible();
+  await page.getByRole('button', { name: /Perfil|Profile/i }).click();
+  await expect(page.getByRole('dialog', { name: /Cuenta y personalización|Profile/i })).toBeVisible();
 
-  const exportButton = page.getByRole('button', { name: /Export/i });
+  const exportButton = page.getByRole('button', { name: /Exportar|Export/i });
   await exportButton.scrollIntoViewIfNeeded();
 
   const [download] = await Promise.all([
