@@ -33,6 +33,16 @@ function formatMuscleWeek(ctx: UserCoachContext): string {
     .join('\n');
 }
 
+function formatNutritionGoal(ctx: UserCoachContext): string {
+  if (!ctx.nutritionGoal) return '  (sin objetivo nutricional guardado)';
+  return [
+    `  • Kcal: ${ctx.nutritionGoal.calories}`,
+    `  • Proteína: ${ctx.nutritionGoal.proteinGrams}g`,
+    `  • Carbohidratos: ${ctx.nutritionGoal.carbsGrams}g`,
+    `  • Grasa: ${ctx.nutritionGoal.fatGrams}g`,
+  ].join('\n');
+}
+
 export function buildSystemPrompt(ctx: UserCoachContext): string {
   const responseLanguage = ctx.profile.language === 'en' ? 'English' : 'español';
   const responseInstruction = ctx.profile.language === 'en'
@@ -56,6 +66,9 @@ ${formatPRs(ctx)}
 VOLUMEN SEMANAL POR MÚSCULO (últimos 7 días):
 ${formatMuscleWeek(ctx)}
 
+OBJETIVO NUTRICIONAL GUARDADO:
+${formatNutritionGoal(ctx)}
+
 STATS GENERALES:
   • Racha activa: ${ctx.streakDays} días consecutivos
   • Total workouts completados: ${ctx.totalWorkouts}
@@ -65,6 +78,11 @@ INSTRUCCIONES:
   - Sé directo y conciso (máx 3–4 oraciones). Sin intros ni disclaimers largos.
   - Ajusta el tono al perfil del usuario: ${ctx.profile.coachTone}
   - Si preguntan sobre peso o progresión, cita PRs y sesiones recientes específicamente
+  - Si preguntan sobre nutrición y faltan peso actual, objetivo, peso meta o tiempo objetivo, pide esos datos antes de dar kcal exactas.
+  - Si existe OBJETIVO NUTRICIONAL GUARDADO, úsalo como referencia actual y di claramente cuándo estés sugiriendo cambiarlo.
+  - Para kcal/macros usa lenguaje de estimación inicial: proteína 1.6–2.2 g/kg/día según fase, grasa mínima razonable cerca de 0.6–0.8 g/kg/día y carbohidratos como variable de rendimiento.
+  - No prometas cambios lineales de peso; explica que las kcal se ajustan con el promedio de peso de 2–3 semanas, energía de entrenamiento y adherencia.
+  - Para recomposición, recomienda mantenimiento o déficit leve, proteína alta y métricas mixtas: fuerza, cintura, fotos y promedio de peso, no solo báscula.
   - Si detectas sobreentrenamiento (mucho volumen semanal en un grupo, poco descanso), menciónalo brevemente
   - ${responseInstruction}
   - Si no tienes suficientes datos (historial vacío), dilo honestamente y pide que entrenen más

@@ -5,7 +5,7 @@
 
 import { estimate1RM } from '@/lib/progression/engine';
 import { getMuscleGroupVolume } from '@/lib/analytics/muscle-map';
-import type { HistoryEntry, UserProfile, ExerciseVolume } from '@/types/workout';
+import type { HistoryEntry, UserProfile, ExerciseVolume, NutritionGoal } from '@/types/workout';
 
 export interface CoachTopExercise {
   name: string;
@@ -49,6 +49,13 @@ export interface UserCoachContext {
   recentSessions: CoachRecentSession[];
   personalRecords: CoachPersonalRecord[];
   weeklyMuscleVolume: CoachMuscleWeek[];
+  nutritionGoal: {
+    calories: number;
+    proteinGrams: number;
+    carbsGrams: number;
+    fatGrams: number;
+    updatedAt: string;
+  } | null;
   streakDays: number;
   totalWorkouts: number;
 }
@@ -121,6 +128,7 @@ function computePRs(history: HistoryEntry[]): CoachPersonalRecord[] {
 export function buildUserContext(
   history: HistoryEntry[],
   profile: UserProfile,
+  nutritionGoal?: NutritionGoal,
 ): UserCoachContext {
   const recent = history.slice(0, 10);
   const language = profile.preferences.language;
@@ -161,6 +169,15 @@ export function buildUserContext(
     recentSessions,
     personalRecords: computePRs(history),
     weeklyMuscleVolume: muscleWeek.map((m) => ({ muscle: m.muscle, sets: m.sets })),
+    nutritionGoal: nutritionGoal
+      ? {
+        calories: nutritionGoal.calories,
+        proteinGrams: nutritionGoal.proteinGrams,
+        carbsGrams: nutritionGoal.carbsGrams,
+        fatGrams: nutritionGoal.fatGrams,
+        updatedAt: nutritionGoal.updatedAt,
+      }
+      : null,
     streakDays: computeStreak(history),
     totalWorkouts: history.length,
   };

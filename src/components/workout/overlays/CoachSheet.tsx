@@ -21,7 +21,7 @@ interface CoachSheetProps {
 }
 
 export function CoachSheet({ onClose }: CoachSheetProps) {
-  const { history, profile } = useWorkoutStore();
+  const { history, profile, nutritionGoal } = useWorkoutStore();
   const { t, language } = useI18n();
   const [messages, setMessages] = useState<CoachMessage[]>([]);
   const [input, setInput] = useState('');
@@ -71,7 +71,7 @@ export function CoachSheet({ onClose }: CoachSheetProps) {
     setIsLoading(true);
 
     try {
-      const ctx = buildUserContext(history, profile);
+      const ctx = buildUserContext(history, profile, nutritionGoal);
       const res = await fetch('/api/coach', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
