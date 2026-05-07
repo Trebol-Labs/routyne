@@ -7,6 +7,7 @@ import { useWorkoutStore } from '@/store/useWorkoutStore';
 import { ExerciseBrowseItem } from '@/types/workout';
 import { Dumbbell, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/components/i18n/LanguageProvider';
 
 const BODY_PARTS = [
   { value: 'All', label: 'Todos' },
@@ -47,6 +48,7 @@ function ExerciseBrowseCard({ item, onClick }: { item: ExerciseBrowseItem; onCli
 
 export function SearchSheet({ onClose, onSelectExercise }: SearchSheetProps) {
   const { history, profile } = useWorkoutStore();
+  const { t } = useI18n();
   const [tab, setTab] = useState<'exercises' | 'history'>('exercises');
   const [query, setQuery] = useState('');
   const [selectedBodyPart, setSelectedBodyPart] = useState<(typeof BODY_PARTS)[number]['value']>('All');
@@ -85,7 +87,7 @@ export function SearchSheet({ onClose, onSelectExercise }: SearchSheetProps) {
   );
 
   return (
-    <Sheet onClose={onClose} title="Buscar">
+    <Sheet onClose={onClose} title={t.search.title}>
       {/*
         Layout — fixed-height panel, only the results list scrolls:
         Row 1: Tabs (shrink-0)                     ~32px
@@ -97,19 +99,19 @@ export function SearchSheet({ onClose, onSelectExercise }: SearchSheetProps) {
 
         {/* Row 1 — Tabs */}
         <div className="shrink-0 flex gap-1">
-          {(['exercises', 'history'] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={cn(
-                'flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all',
-                tab === t ? 'active-glass-btn text-white' : 'bg-white/5 text-white/30 hover:text-white/50'
-              )}
-            >
-              {t === 'exercises' ? 'Ejercicios' : 'Historial'}
-            </button>
-          ))}
-        </div>
+              {(['exercises', 'history'] as const).map((tabId) => (
+                <button
+                  key={tabId}
+                  onClick={() => setTab(tabId)}
+                  className={cn(
+                    'flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all',
+                    tab === tabId ? 'active-glass-btn text-white' : 'bg-white/5 text-white/30 hover:text-white/50'
+                  )}
+                >
+                  {tabId === 'exercises' ? t.search.exercisesTab : t.search.historyTab}
+                </button>
+              ))}
+            </div>
 
         {/* Row 2 — Search input */}
         <div className="shrink-0 relative">
@@ -119,7 +121,7 @@ export function SearchSheet({ onClose, onSelectExercise }: SearchSheetProps) {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={tab === 'exercises' ? 'Buscar ejercicios...' : 'Buscar sesiones...'}
+            placeholder={tab === 'exercises' ? t.search.searchExercises : t.search.searchSessions}
             className="sunken-glass rounded-lg pl-8 pr-3 py-2 text-sm font-black text-white w-full bg-transparent border-none outline-none placeholder:text-white/20"
           />
         </div>
@@ -153,7 +155,7 @@ export function SearchSheet({ onClose, onSelectExercise }: SearchSheetProps) {
               ) : results.length === 0 ? (
                 <div className="py-8 flex flex-col items-center gap-2 text-center">
                   <Dumbbell className="w-6 h-6 text-white/10" />
-                  <p className="text-[10px] font-black text-white/25 uppercase tracking-widest">No se encontraron ejercicios</p>
+                  <p className="text-[10px] font-black text-white/25 uppercase tracking-widest">{t.search.noExercises}</p>
                 </div>
               ) : (
                 results.map((item) => (
@@ -178,7 +180,7 @@ export function SearchSheet({ onClose, onSelectExercise }: SearchSheetProps) {
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain no-scrollbar space-y-1.5">
             {filteredHistory.length === 0 ? (
               <div className="py-8 flex flex-col items-center gap-2 text-center">
-                <p className="text-[10px] font-black text-white/25 uppercase tracking-widest">No se encontraron sesiones</p>
+                <p className="text-[10px] font-black text-white/25 uppercase tracking-widest">{t.search.noSessions}</p>
               </div>
             ) : (
               filteredHistory.map((entry) => (

@@ -1,11 +1,12 @@
 'use client';
 
-import type { WorkoutSummary } from '@/types/workout';
+import type { AppLanguage, WorkoutSummary } from '@/types/workout';
 import { SITE_HOST } from '@/lib/site';
 
 interface ShareCardProps {
   summary: WorkoutSummary;
   weightUnit: string;
+  language: AppLanguage;
 }
 
 function formatDuration(s: number): string {
@@ -20,10 +21,35 @@ function formatDuration(s: number): string {
  * Standalone share card — designed to be captured by html-to-image.
  * Uses only inline styles so capture is hermetic (no CSS variable lookups).
  */
-export function ShareCard({ summary, weightUnit }: ShareCardProps) {
+export function ShareCard({ summary, weightUnit, language }: ShareCardProps) {
   const { entry, durationSeconds, totalSets, newPRs, volumeDeltaPercent } = summary;
   const hasPRs = newPRs.length > 0;
   const topExercises = entry.volumeData.slice(0, 4);
+  const copy = language === 'en'
+    ? {
+        brand: 'Routyne',
+        done: 'Done',
+        pr: 'PR!',
+        duration: 'Duration',
+        volume: 'Volume',
+        sets: 'Sets',
+        prs: 'Personal records',
+        exercises: 'Exercises',
+        more: 'more',
+        firstPr: 'New PR!',
+      }
+    : {
+        brand: 'Routyne',
+        done: 'Hecho',
+        pr: 'PR!',
+        duration: 'Duración',
+        volume: 'Volumen',
+        sets: 'Series',
+        prs: 'Récords personales',
+        exercises: 'Ejercicios',
+        more: 'más',
+        firstPr: '¡Nuevo PR!',
+      };
 
   const card: React.CSSProperties = {
     width: 390,
@@ -74,7 +100,7 @@ export function ShareCard({ summary, weightUnit }: ShareCardProps) {
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20, position: 'relative' }}>
         <div>
           <p style={{ fontSize: 11, fontWeight: 900, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.35em', textTransform: 'uppercase', marginBottom: 6 }}>
-            Routyne
+            {copy.brand}
           </p>
           <h2 style={{ fontSize: 22, fontWeight: 900, color: '#ffffff', letterSpacing: '-0.03em', lineHeight: 1.1, margin: 0, maxWidth: 260 }}>
             {entry.sessionTitle}
@@ -93,7 +119,7 @@ export function ShareCard({ summary, weightUnit }: ShareCardProps) {
         }}>
           <span style={{ fontSize: 18, lineHeight: 1 }}>{hasPRs ? '🏆' : '✅'}</span>
           <span style={{ fontSize: 9, fontWeight: 900, color: hasPRs ? 'rgba(251,191,36,0.8)' : 'rgba(52,211,153,0.7)', letterSpacing: '0.2em', marginTop: 4, textTransform: 'uppercase' }}>
-            {hasPRs ? 'PR!' : 'Hecho'}
+            {hasPRs ? copy.pr : copy.done}
           </span>
         </div>
       </div>
@@ -101,18 +127,18 @@ export function ShareCard({ summary, weightUnit }: ShareCardProps) {
       {/* ── Stats row ── */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, position: 'relative' }}>
         <div style={statPanelStyle}>
-          <p style={{ fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.25em', textTransform: 'uppercase', margin: 0 }}>Duración</p>
+          <p style={{ fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.25em', textTransform: 'uppercase', margin: 0 }}>{copy.duration}</p>
           <p style={{ fontSize: 20, fontWeight: 900, color: '#60a5fa', letterSpacing: '-0.02em', margin: 0 }}>{formatDuration(durationSeconds)}</p>
         </div>
         <div style={statPanelStyle}>
-          <p style={{ fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.25em', textTransform: 'uppercase', margin: 0 }}>Volumen</p>
+          <p style={{ fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.25em', textTransform: 'uppercase', margin: 0 }}>{copy.volume}</p>
           <p style={{ fontSize: 20, fontWeight: 900, color: '#818cf8', letterSpacing: '-0.02em', margin: 0 }}>
             {entry.totalVolume > 0 ? `${Math.round(entry.totalVolume).toLocaleString()}` : '—'}
             {entry.totalVolume > 0 && <span style={{ fontSize: 13, color: 'rgba(129,140,248,0.7)' }}>{weightUnit}</span>}
           </p>
         </div>
         <div style={statPanelStyle}>
-          <p style={{ fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.25em', textTransform: 'uppercase', margin: 0 }}>Series</p>
+          <p style={{ fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.25em', textTransform: 'uppercase', margin: 0 }}>{copy.sets}</p>
           <p style={{ fontSize: 20, fontWeight: 900, color: '#34d399', letterSpacing: '-0.02em', margin: 0 }}>{totalSets}</p>
           {volumeDeltaPercent !== null && (
             <p style={{ fontSize: 9, fontWeight: 900, color: volumeDeltaPercent >= 0 ? '#34d399' : '#f87171', margin: 0 }}>
@@ -135,7 +161,7 @@ export function ShareCard({ summary, weightUnit }: ShareCardProps) {
                   {pr.exerciseName}
                 </span>
                 <span style={{ fontSize: 11, fontWeight: 900, color: '#fbbf24' }}>
-                  {pr.weightDelta > 0 ? `+${pr.weightDelta.toFixed(1)}${weightUnit}` : pr.repsDelta > 0 ? `+${pr.repsDelta} reps` : '¡Nuevo PR!'}
+                  {pr.weightDelta > 0 ? `+${pr.weightDelta.toFixed(1)}${weightUnit}` : pr.repsDelta > 0 ? `+${pr.repsDelta} reps` : copy.firstPr}
                 </span>
               </div>
             ))}
@@ -147,7 +173,7 @@ export function ShareCard({ summary, weightUnit }: ShareCardProps) {
       {topExercises.length > 0 && (
         <div style={{ flex: 1, position: 'relative' }}>
           <p style={{ fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.3em', textTransform: 'uppercase', margin: '0 0 8px' }}>
-            Ejercicios
+            {copy.exercises}
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             {topExercises.map((ev) => (
@@ -162,7 +188,7 @@ export function ShareCard({ summary, weightUnit }: ShareCardProps) {
             ))}
             {entry.volumeData.length > 4 && (
               <p style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.2)', margin: 0 }}>
-                +{entry.volumeData.length - 4} más
+                +{entry.volumeData.length - 4} {copy.more}
               </p>
             )}
           </div>
@@ -175,7 +201,7 @@ export function ShareCard({ summary, weightUnit }: ShareCardProps) {
           Routyne · {SITE_HOST}
         </span>
         <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.2)' }}>
-          {new Date(entry.completedAt).toLocaleDateString('es-ES', { month: 'short', day: 'numeric', year: 'numeric' })}
+          {new Date(entry.completedAt).toLocaleDateString(language === 'en' ? 'en-US' : 'es-ES', { month: 'short', day: 'numeric', year: 'numeric' })}
         </span>
       </div>
     </div>

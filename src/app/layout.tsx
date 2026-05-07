@@ -1,7 +1,10 @@
 import type { Metadata, Viewport } from 'next';
+import { cookies } from 'next/headers';
 import { Barlow_Condensed, Inter } from 'next/font/google';
 import './globals.css';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { LanguageProvider } from '@/components/i18n/LanguageProvider';
+import { DEFAULT_LANGUAGE, LANGUAGE_COOKIE, normalizeLanguage } from '@/lib/i18n/language';
 import { SITE_URL } from '@/lib/site';
 
 const barlowCondensed = Barlow_Condensed({
@@ -45,17 +48,23 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const cookieLanguage = cookieStore.get(LANGUAGE_COOKIE)?.value;
+  const language = normalizeLanguage(cookieLanguage ?? DEFAULT_LANGUAGE);
+
   return (
-    <html lang="es" style={{ colorScheme: 'dark' }}>
+    <html lang={language} style={{ colorScheme: 'dark' }} suppressHydrationWarning>
       <body
         className={`${barlowCondensed.variable} ${inter.variable} antialiased`}
       >
-        <ErrorBoundary>{children}</ErrorBoundary>
+        <LanguageProvider initialLanguage={language}>
+          <ErrorBoundary>{children}</ErrorBoundary>
+        </LanguageProvider>
       </body>
     </html>
   );

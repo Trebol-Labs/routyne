@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Plus, Calendar, Dumbbell, TrendingUp, Library, Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { WorkoutView } from '@/types/workout';
+import { useI18n } from '@/components/i18n/LanguageProvider';
 
 interface BottomNavProps {
   currentView: WorkoutView;
@@ -63,18 +64,19 @@ const NavButton = memo(({
 NavButton.displayName = 'NavButton';
 
 export const BottomNav = memo(({ currentView, onNavigate, hasRoutine, onCoachClick }: BottomNavProps) => {
+  const { t } = useI18n();
   const navItems = useMemo(() => {
     const baseItems = [
-      { id: 'overview', view: 'routine-overview' as WorkoutView, icon: Dumbbell, label: 'Resumen', matchViews: ['routine-overview', 'active-session'], isPrimary: false },
-      { id: 'history', view: 'history' as WorkoutView, icon: Calendar, label: 'Historial', matchViews: ['history'], isPrimary: false },
-      { id: 'stats', view: 'stats' as WorkoutView, icon: TrendingUp, label: 'Estadísticas', matchViews: ['stats'], isPrimary: false },
+      { id: 'overview', view: 'routine-overview' as WorkoutView, icon: Dumbbell, label: t.navigation.overview, matchViews: ['routine-overview', 'active-session'], isPrimary: false },
+      { id: 'history', view: 'history' as WorkoutView, icon: Calendar, label: t.navigation.history, matchViews: ['history'], isPrimary: false },
+      { id: 'stats', view: 'stats' as WorkoutView, icon: TrendingUp, label: t.navigation.stats, matchViews: ['stats'], isPrimary: false },
     ];
 
     const importItem = {
       id: 'library',
       view: (hasRoutine ? 'routine-manager' : 'uploader') as WorkoutView,
       icon: hasRoutine ? Library : Plus,
-      label: hasRoutine ? 'Rutinas' : 'Añadir rutina',
+      label: hasRoutine ? t.navigation.routines : t.navigation.create,
       matchViews: ['uploader', 'routine-manager'],
       isPrimary: !hasRoutine,
     };
@@ -82,7 +84,7 @@ export const BottomNav = memo(({ currentView, onNavigate, hasRoutine, onCoachCli
     // If there's a routine, put the import item at the end (far right).
     // If there's no routine, put it at the beginning (far left) as the primary action.
     return hasRoutine ? [...baseItems, importItem] : [importItem, ...baseItems];
-  }, [hasRoutine]);
+  }, [hasRoutine, t.navigation.create, t.navigation.history, t.navigation.overview, t.navigation.routines, t.navigation.stats]);
 
   return (
     <>
@@ -121,7 +123,7 @@ export const BottomNav = memo(({ currentView, onNavigate, hasRoutine, onCoachCli
           {onCoachClick && (
             <NavButton
               icon={Bot}
-              label="Coach IA"
+              label={t.navigation.coach}
               isActive={false}
               onClick={onCoachClick}
             />

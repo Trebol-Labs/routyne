@@ -5,14 +5,23 @@ interface LegalSection {
   body: string[];
 }
 
+interface LegalLabels {
+  openApp: string;
+  privacy: string;
+  terms: string;
+  support: string;
+  home: string;
+}
+
 interface LegalPageProps {
   eyebrow: string;
   title: string;
   intro: string;
   sections: LegalSection[];
+  labels: LegalLabels;
 }
 
-export function LegalPage({ eyebrow, title, intro, sections }: LegalPageProps) {
+export function LegalPage({ eyebrow, title, intro, sections, labels }: LegalPageProps) {
   return (
     <main className="min-h-[100dvh] liquid-bg-dark text-white">
       <div className="mx-auto flex min-h-[100dvh] w-full max-w-3xl flex-col px-5 py-8 sm:px-8">
@@ -24,7 +33,7 @@ export function LegalPage({ eyebrow, title, intro, sections }: LegalPageProps) {
             href="/"
             className="active-glass-btn rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest"
           >
-            Abrir app
+            {labels.openApp}
           </Link>
         </nav>
 
@@ -61,10 +70,10 @@ export function LegalPage({ eyebrow, title, intro, sections }: LegalPageProps) {
 
         <footer className="border-t border-white/[0.06] py-5">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[10px] font-black uppercase tracking-widest text-white/30">
-            <Link href="/privacy" className="hover:text-white/60 transition-colors">Privacidad</Link>
-            <Link href="/terms" className="hover:text-white/60 transition-colors">Términos</Link>
-            <Link href="/support" className="hover:text-white/60 transition-colors">Soporte</Link>
-            <Link href="/landing" className="hover:text-white/60 transition-colors">Inicio</Link>
+            <Link href="/privacy" className="hover:text-white/60 transition-colors">{labels.privacy}</Link>
+            <Link href="/terms" className="hover:text-white/60 transition-colors">{labels.terms}</Link>
+            <Link href="/support" className="hover:text-white/60 transition-colors">{labels.support}</Link>
+            <Link href="/landing" className="hover:text-white/60 transition-colors">{labels.home}</Link>
           </div>
         </footer>
       </div>

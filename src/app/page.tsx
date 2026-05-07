@@ -22,6 +22,7 @@ import { useHydration } from '@/hooks/useHydration';
 import { useStoragePersist } from '@/hooks/useStoragePersist';
 import { useSync } from '@/hooks/useSync';
 import { useAuth } from '@/hooks/useAuth';
+import { useI18n } from '@/components/i18n/LanguageProvider';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { AchievementToast } from '@/components/workout/AchievementToast';
 import { COACH_ENABLED } from '@/lib/feature-flags';
@@ -40,12 +41,7 @@ function applyAppearancePreferences(profile: UserProfile['preferences']): void {
   const accent = ACCENT_TOKENS[profile.accentColor];
   root.style.setProperty('--accent-primary-rgb', accent.primary);
   root.style.setProperty('--accent-secondary-rgb', accent.secondary);
-  root.style.setProperty('--space-page-x', profile.uiDensity === 'compact' ? '0.75rem' : '1rem');
-  root.style.setProperty('--space-card', profile.uiDensity === 'compact' ? '1rem' : '1.25rem');
-  root.style.setProperty('--space-section', profile.uiDensity === 'compact' ? '1.25rem' : '1.5rem');
-  root.style.setProperty('--space-nav-clear', profile.uiDensity === 'compact' ? '9rem' : '10rem');
-  root.dataset.uiDensity = profile.uiDensity;
-  root.dataset.motionLevel = profile.motionLevel;
+  root.dataset.motionLevel = profile.reducedMotion ? 'reduced' : 'system';
   root.dataset.accentColor = profile.accentColor;
 }
 
@@ -58,6 +54,7 @@ export default function Home() {
 }
 
 function LoadingScreen() {
+  const { t } = useI18n();
   return (
     <main className="min-h-[100dvh] liquid-bg-dark flex items-center justify-center">
       <motion.div
@@ -73,7 +70,9 @@ function LoadingScreen() {
             </div>
           </div>
         </div>
-        <p className="text-[11px] text-white/40 font-black uppercase tracking-[0.3em]">Loading...</p>
+        <p className="text-[11px] text-white/40 font-black uppercase tracking-[0.3em]">
+          {t.loading.app}
+        </p>
       </motion.div>
     </main>
   );
@@ -97,6 +96,7 @@ function HomeContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { language, setLanguage } = useI18n();
   const [accountSection, setAccountSection] = useState<AccountSheetSection | null>(
     searchParams.get('account') === 'sync' ? 'sync' : null
   );
@@ -109,6 +109,13 @@ function HomeContent() {
     if (!isReady) return;
     applyAppearancePreferences(profile.preferences);
   }, [isReady, profile.preferences]);
+
+  useEffect(() => {
+    if (!isReady) return;
+    if (profile.preferences.language !== language) {
+      setLanguage(profile.preferences.language);
+    }
+  }, [isReady, language, profile.preferences.language, setLanguage]);
 
   useEffect(() => {
     if (searchParams.get('account') !== 'sync') return;
@@ -228,7 +235,9 @@ function HomeContent() {
                 animate={{ opacity: 1 }}
                 className="flex-grow flex flex-col items-center justify-center py-40 text-center"
               >
-                <p className="text-zinc-700 font-black uppercase tracking-widest text-sm">{currentView}</p>
+                <p className="text-zinc-700 font-black uppercase tracking-widest text-sm">
+                  {currentView}
+                </p>
               </motion.div>
             )}
           </AnimatePresence>

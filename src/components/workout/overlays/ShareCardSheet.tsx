@@ -6,6 +6,7 @@ import { X, Download, Share2, Loader2 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { ShareCard } from '@/components/workout/ShareCard';
 import { SITE_URL } from '@/lib/site';
+import { useI18n } from '@/components/i18n/LanguageProvider';
 import type { WorkoutSummary } from '@/types/workout';
 
 const EASE = [0.23, 1, 0.32, 1] as const;
@@ -24,6 +25,7 @@ export function ShareCardSheet({ summary, weightUnit, onClose }: ShareCardSheetP
   const cardRef = useRef<HTMLDivElement>(null);
   const panOffset = useMotionValue(0);
   const [captureState, setCaptureState] = useState<CaptureState>('idle');
+  const { t, language } = useI18n();
 
   const handlePan = useCallback(
     (_e: PointerEvent, info: PanInfo) => {
@@ -76,13 +78,15 @@ export function ShareCardSheet({ summary, weightUnit, onClose }: ShareCardSheetP
       if (!blob) throw new Error('capture failed');
 
       const file = new File([blob], 'routyne-workout.png', { type: 'image/png' });
-      const text = `Acabo de terminar ${summary.entry.sessionTitle}. ${summary.totalSets} series · ${Math.round(summary.entry.totalVolume)} ${weightUnit} de volumen${summary.newPRs.length > 0 ? ` · ${summary.newPRs.length} PR nuevo${summary.newPRs.length > 1 ? 's' : ''}! 🏆` : ' 💪'} ${SITE_URL}`;
+      const text = language === 'en'
+        ? `I just finished ${summary.entry.sessionTitle}. ${summary.totalSets} sets · ${Math.round(summary.entry.totalVolume)} ${weightUnit} of volume${summary.newPRs.length > 0 ? ` · ${summary.newPRs.length} new PR${summary.newPRs.length > 1 ? 's' : ''}! 🏆` : ' 💪'} ${SITE_URL}`
+        : `Acabo de terminar ${summary.entry.sessionTitle}. ${summary.totalSets} series · ${Math.round(summary.entry.totalVolume)} ${weightUnit} de volumen${summary.newPRs.length > 0 ? ` · ${summary.newPRs.length} PR nuevo${summary.newPRs.length > 1 ? 's' : ''}! 🏆` : ' 💪'} ${SITE_URL}`;
 
       if (navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file], text });
       } else if (navigator.share) {
         // Fallback: share text only (files not supported on this device)
-        await navigator.share({ title: 'Entrenamiento Routyne', text });
+        await navigator.share({ title: language === 'en' ? 'Routyne workout' : 'Entrenamiento Routyne', text });
       }
     } catch (err) {
       // User cancelled or share API not available — silent
@@ -117,7 +121,7 @@ export function ShareCardSheet({ summary, weightUnit, onClose }: ShareCardSheetP
         ref={panelRef}
         role="dialog"
         aria-modal="true"
-        aria-label="Compartir tarjeta de entrenamiento"
+        aria-label={t.share.title}
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
@@ -138,7 +142,7 @@ export function ShareCardSheet({ summary, weightUnit, onClose }: ShareCardSheetP
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30 mb-1">Compartir</p>
             <h3 className="font-display text-xl font-black uppercase leading-tight tracking-tight text-white">
-              Tarjeta de entrenamiento
+              {t.share.title}
             </h3>
           </div>
           <button
@@ -161,7 +165,7 @@ export function ShareCardSheet({ summary, weightUnit, onClose }: ShareCardSheetP
               }}
             >
               <div ref={cardRef}>
-                <ShareCard summary={summary} weightUnit={weightUnit} />
+                <ShareCard summary={summary} weightUnit={weightUnit} language={language} />
               </div>
             </div>
           </div>
@@ -169,17 +173,17 @@ export function ShareCardSheet({ summary, weightUnit, onClose }: ShareCardSheetP
           {/* Actions */}
           <div className="flex gap-3">
             {canShare && (
-              <button
-                onClick={handleShare}
-                disabled={isBusy}
-                className="active-glass-btn flex flex-1 items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-black uppercase tracking-wider disabled:opacity-50"
-              >
+                <button
+                  onClick={handleShare}
+                  disabled={isBusy}
+                  className="active-glass-btn flex flex-1 items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-black uppercase tracking-wider disabled:opacity-50"
+                >
                 {captureState === 'sharing' ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <Share2 className="h-4 w-4" />
                 )}
-                Compartir
+                {t.share.share}
               </button>
             )}
             <button
@@ -192,13 +196,13 @@ export function ShareCardSheet({ summary, weightUnit, onClose }: ShareCardSheetP
               ) : (
                 <Download className="h-4 w-4" />
               )}
-              Guardar PNG
+              {t.share.savePng}
             </button>
           </div>
 
           {!canShare && (
             <p className="text-center text-[10px] font-black uppercase tracking-widest text-white/25">
-              Compartir web no disponible · usa Guardar PNG
+              {t.share.shareUnavailable}
             </p>
           )}
         </div>

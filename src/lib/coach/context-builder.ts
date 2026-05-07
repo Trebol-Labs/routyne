@@ -43,6 +43,8 @@ export interface UserCoachContext {
     experienceLevel: string;
     coachTone: string;
     effortTracking: string;
+    language: 'es' | 'en';
+    timezone: string;
   };
   recentSessions: CoachRecentSession[];
   personalRecords: CoachPersonalRecord[];
@@ -121,10 +123,12 @@ export function buildUserContext(
   profile: UserProfile,
 ): UserCoachContext {
   const recent = history.slice(0, 10);
+  const language = profile.preferences.language;
+  const timezone = profile.preferences.timezone;
 
   const recentSessions: CoachRecentSession[] = recent.map((h) => ({
     sessionTitle: h.sessionTitle,
-    completedAt: new Date(h.completedAt).toLocaleDateString('es-ES', {
+    completedAt: new Date(h.completedAt).toLocaleDateString(language === 'en' ? 'en-US' : 'es-ES', {
       day: 'numeric', month: 'short',
     }),
     totalVolume: Math.round(h.totalVolume),
@@ -151,6 +155,8 @@ export function buildUserContext(
       experienceLevel: profile.preferences.experienceLevel,
       coachTone: profile.preferences.coachTone,
       effortTracking: profile.preferences.effortTracking,
+      language,
+      timezone,
     },
     recentSessions,
     personalRecords: computePRs(history),

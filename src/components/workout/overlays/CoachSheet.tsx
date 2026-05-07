@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
 import { buildUserContext } from '@/lib/coach/context-builder';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/components/i18n/LanguageProvider';
 
 interface CoachMessage {
   role: 'user' | 'assistant';
@@ -19,16 +20,9 @@ interface CoachSheetProps {
   onClose: () => void;
 }
 
-const SUGGESTIONS = [
-  '¿Debería subir el peso mañana?',
-  '¿Cuál es mi músculo más débil?',
-  '¿Cuántos días descansar esta semana?',
-  '¿Cómo está mi progresión de fuerza?',
-];
-
-
 export function CoachSheet({ onClose }: CoachSheetProps) {
   const { history, profile } = useWorkoutStore();
+  const { t, language } = useI18n();
   const [messages, setMessages] = useState<CoachMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -38,14 +32,28 @@ export function CoachSheet({ onClose }: CoachSheetProps) {
 
   const welcomeMessage = useMemo(() => {
     if (history.length === 0) {
-      return '¡Hola! Completa tu primer entrenamiento y podré darte consejos personalizados basados en tus datos reales.';
+      return t.coach.welcomeEmpty;
     }
     const last = history[0];
     const name = profile.displayName && profile.displayName !== 'Atleta'
-      ? ` ${profile.displayName}`
+      ? profile.displayName
       : '';
-    return `¡Hola${name}! Tu último entreno fue **${last.sessionTitle}**. ¿En qué puedo ayudarte?`;
-  }, [history, profile]);
+    if (!name) {
+      return language === 'en'
+        ? `Hi! Your last workout was **${last.sessionTitle}**. How can I help?`
+        : `¡Hola! Tu último entreno fue **${last.sessionTitle}**. ¿En qué puedo ayudarte?`;
+    }
+    return t.coach.welcomeWithName
+      .replace('{name}', name)
+      .replace('{session}', last.sessionTitle);
+  }, [history, language, profile, t.coach.welcomeEmpty, t.coach.welcomeWithName]);
+
+  const suggestions = [
+    t.coach.suggestion1,
+    t.coach.suggestion2,
+    t.coach.suggestion3,
+    t.coach.suggestion4,
+  ];
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -77,7 +85,7 @@ export function CoachSheet({ onClose }: CoachSheetProps) {
         setLimitReached(true);
         setMessages((prev) => [
           ...prev,
-          { role: 'assistant', content: 'Has alcanzado el límite diario. Vuelve mañana.', isError: true },
+          { role: 'assistant', content: t.coach.dailyLimit, isError: true },
         ]);
         return;
       }
@@ -85,7 +93,7 @@ export function CoachSheet({ onClose }: CoachSheetProps) {
       if (res.status === 503) {
         setMessages((prev) => [
           ...prev,
-          { role: 'assistant', content: 'El coach IA no está disponible en este momento.', isError: true },
+          { role: 'assistant', content: t.coach.unavailable, isError: true },
         ]);
         return;
       }
@@ -95,7 +103,7 @@ export function CoachSheet({ onClose }: CoachSheetProps) {
       if (data.error || !data.reply) {
         setMessages((prev) => [
           ...prev,
-          { role: 'assistant', content: data.error ?? 'Error inesperado. Inténtalo de nuevo.', isError: true },
+          { role: 'assistant', content: data.error ?? t.coach.sendError, isError: true },
         ]);
         return;
       }
@@ -104,7 +112,7 @@ export function CoachSheet({ onClose }: CoachSheetProps) {
     } catch {
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', content: 'Error de conexión. Inténtalo de nuevo.', isError: true },
+        { role: 'assistant', content: t.coach.connectionError, isError: true },
       ]);
     } finally {
       setIsLoading(false);
@@ -119,7 +127,7 @@ export function CoachSheet({ onClose }: CoachSheetProps) {
   };
 
   return (
-    <Sheet onClose={onClose} title="Coach IA">
+    <Sheet onClose={onClose} title={t.coach.title}>
       <div className="h-full flex flex-col overflow-hidden px-4 pb-4">
 
         {/* Chat area */}
@@ -136,7 +144,7 @@ export function CoachSheet({ onClose }: CoachSheetProps) {
               transition={{ delay: 0.15, duration: 0.3 }}
               className="flex flex-col gap-1.5 pt-1"
             >
-              {SUGGESTIONS.map((s) => (
+              {suggestions.map((s) => (
                 <button
                   key={s}
                   onClick={() => sendMessage(s)}
@@ -198,7 +206,7 @@ export function CoachSheet({ onClose }: CoachSheetProps) {
             className="flex items-center gap-1 self-center mb-2 text-white/20 hover:text-white/40 text-[10px] font-black uppercase tracking-widest transition-colors"
           >
             <RotateCcw className="w-2.5 h-2.5" />
-            Nueva conversación
+            {t.coach.reset}
           </button>
         )}
 
@@ -209,7 +217,7 @@ export function CoachSheet({ onClose }: CoachSheetProps) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={limitReached ? 'Límite diario alcanzado' : 'Pregúntame algo...'}
+            placeholder={limitReached ? t.coach.dailyLimit : t.coach.placeholder}
             disabled={isLoading || limitReached}
             rows={1}
             className={cn(
@@ -223,7 +231,7 @@ export function CoachSheet({ onClose }: CoachSheetProps) {
             onClick={() => sendMessage(input)}
             disabled={!input.trim() || isLoading || limitReached}
             className="active-glass-btn h-11 w-11 p-0 rounded-xl shrink-0"
-            aria-label="Enviar mensaje"
+            aria-label={language === 'en' ? 'Send message' : 'Enviar mensaje'}
           >
             {isLoading
               ? <Loader2 className="w-4 h-4 animate-spin" />

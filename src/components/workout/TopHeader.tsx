@@ -4,6 +4,7 @@ import { memo } from 'react';
 import { User, Dumbbell, Cloud } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { AccountSheetSection } from '@/components/workout/overlays/AccountSheet';
+import { useI18n } from '@/components/i18n/LanguageProvider';
 
 interface TopHeaderProps {
   onAccountClick: (section: AccountSheetSection) => void;
@@ -22,9 +23,9 @@ const BrandLogo = memo(() => (
 
 BrandLogo.displayName = 'BrandLogo';
 
-const BrandInfo = memo(() => (
+const BrandInfo = memo(({ tagline }: { tagline: string }) => (
   <div className="min-w-0 flex-1 flex flex-col">
-    <h1 className="sr-only">Routyne · entrenamiento y progreso</h1>
+    <h1 className="sr-only">Routyne</h1>
     <span
       className="text-xl sm:text-2xl font-black tracking-tighter leading-none text-white font-display"
       aria-hidden="true"
@@ -32,7 +33,7 @@ const BrandInfo = memo(() => (
       ROUTYNE
     </span>
     <p className="mt-1 max-w-[7rem] text-[10px] font-semibold uppercase tracking-[0.22em] leading-tight whitespace-normal text-white/42 sm:max-w-[12rem] sm:text-[11px] sm:tracking-[0.24em]">
-      Lift. Log. Progress.
+      {tagline}
     </p>
   </div>
 ));
@@ -69,6 +70,8 @@ ActionButton.displayName = 'ActionButton';
 export const TopHeader = memo(({
   onAccountClick,
 }: TopHeaderProps) => {
+  const { t } = useI18n();
+
   return (
     <>
       {/* Gradient backdrop - precisely sized to header height */}
@@ -90,19 +93,19 @@ export const TopHeader = memo(({
           {/* Brand Section */}
           <div className="flex min-w-0 flex-1 items-start gap-2.5 sm:items-center">
             <BrandLogo />
-            <BrandInfo />
+            <BrandInfo tagline={t.app.tagline} />
           </div>
 
           {/* Action Buttons */}
           <nav className="flex items-center gap-1.5">
             <ActionButton
               icon={Cloud}
-              label="Abrir sincronización"
+              label={t.account.sync}
               onClick={() => onAccountClick('sync')}
             />
             <ActionButton
               icon={User}
-              label="Abrir cuenta"
+              label={t.account.profile}
               onClick={() => onAccountClick('profile')}
             />
           </nav>

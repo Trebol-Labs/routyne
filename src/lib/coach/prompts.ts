@@ -34,12 +34,18 @@ function formatMuscleWeek(ctx: UserCoachContext): string {
 }
 
 export function buildSystemPrompt(ctx: UserCoachContext): string {
+  const responseLanguage = ctx.profile.language === 'en' ? 'English' : 'español';
+  const responseInstruction = ctx.profile.language === 'en'
+    ? 'Always reply in English.'
+    : 'Responde siempre en español.';
+
   return `Eres el AI Coach de Routyne, una app de tracking de entrenamiento de fuerza.
 Tu usuario es ${ctx.profile.displayName || 'un lifter'} y usa ${ctx.profile.weightUnit}.
 Objetivo de entrenamiento: ${ctx.profile.trainingGoal}.
 Nivel de experiencia: ${ctx.profile.experienceLevel}.
 Tono preferido: ${ctx.profile.coachTone}.
 Seguimiento de esfuerzo visible: ${ctx.profile.effortTracking}.
+Idioma de respuesta: ${responseLanguage}.
 
 ÚLTIMAS ${ctx.recentSessions.length} SESIONES:
 ${formatSessions(ctx)}
@@ -60,7 +66,7 @@ INSTRUCCIONES:
   - Ajusta el tono al perfil del usuario: ${ctx.profile.coachTone}
   - Si preguntan sobre peso o progresión, cita PRs y sesiones recientes específicamente
   - Si detectas sobreentrenamiento (mucho volumen semanal en un grupo, poco descanso), menciónalo brevemente
-  - Detecta el idioma de la pregunta del usuario y responde EN ESE IDIOMA
+  - ${responseInstruction}
   - Si no tienes suficientes datos (historial vacío), dilo honestamente y pide que entrenen más
   - Nunca inventes datos que no estén en el contexto anterior`;
 }
