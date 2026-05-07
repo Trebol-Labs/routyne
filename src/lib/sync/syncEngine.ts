@@ -30,6 +30,7 @@ import { loadProfile } from '@/lib/db/profile';
 import { loadMetaValue, saveMetaValue } from '@/lib/db/meta';
 import { loadAllRoutineRecords, loadRoutine, loadRoutineRecord } from '@/lib/db/routines';
 import { generateMarkdown } from '@/lib/markdown/generator';
+import type { Database } from '@/lib/supabase/client';
 import type { SyncMutationRecord } from '@/lib/db/schema';
 import type { BodyweightRecord } from '@/lib/db/schema';
 import type { UserProfile } from '@/types/workout';
@@ -37,6 +38,9 @@ import type { UserProfile } from '@/types/workout';
 const INITIAL_SYNC_KEY_PREFIX = 'cloud-sync-initialized:';
 const SYNC_BATCH_SIZE = 100;
 const inFlightSyncs = new Map<string, Promise<void>>();
+type SyncError = { message: string; code?: string; details?: string; hint?: string };
+type RemoteBodyweightRow = Database['public']['Tables']['bodyweight']['Row'];
+type QueryResponse<T> = { data: T[] | null; error: SyncError | null };
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -73,6 +77,107 @@ function chunk<T>(items: T[], size: number): T[][] {
   return chunks;
 }
 
+function isBodyweightMetadataSchemaError(error: SyncError | null | undefined): boolean {
+  if (!error) return false;
+
+  const text = [
+    error.message,
+    error.details,
+    error.hint,
+    error.code,
+  ].filter(Boolean).join(' ').toLowerCase();
+
+  const mentionsMetadataColumn =
+    text.includes('updated_at') || text.includes('deleted_at') || text.includes('created_at');
+  const looksLikeMissingColumn =
+    text.includes('does not exist') ||
+    text.includes('schema cache') ||
+    text.includes('column') ||
+    text.includes('42703') ||
+    text.includes('pgrst204');
+
+  return mentionsMetadataColumn && looksLikeMissingColumn;
+}
+
+function bodyweightToRemoteCompat(entry: BodyweightRecord, userId: string) {
+  return {
+    id: entry.id,
+    user_id: userId,
+    date: entry.date,
+    weight: entry.weight,
+    unit: entry.unit,
+  };
+}
+
+async function upsertBodyweightToCloud(
+  sb: ReturnType<typeof getSupabaseClient>,
+  entry: BodyweightRecord,
+  userId: string
+): Promise<SyncError | null> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const result = await sb.from('bodyweight').upsert(bodyweightToRemote(entry, userId) as any, {
+    onConflict: 'user_id,date',
+  });
+  if (!isBodyweightMetadataSchemaError(result.error)) {
+    return result.error;
+  }
+
+  console.warn('[Sync] bodyweight metadata columns are missing in Supabase; retrying legacy upsert');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fallback = await sb.from('bodyweight').upsert(bodyweightToRemoteCompat(entry, userId) as any, {
+    onConflict: 'user_id,date',
+  });
+  return fallback.error;
+}
+
+async function deleteBodyweightFromCloud(
+  sb: ReturnType<typeof getSupabaseClient>,
+  entry: BodyweightRecord,
+  userId: string
+): Promise<SyncError | null> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const result = await sb.from('bodyweight').upsert(bodyweightToRemote(entry, userId) as any, {
+    onConflict: 'user_id,date',
+  });
+  if (!isBodyweightMetadataSchemaError(result.error)) {
+    return result.error;
+  }
+
+  console.warn('[Sync] bodyweight tombstone columns are missing in Supabase; retrying legacy hard delete');
+  const fallback = await sb
+    .from('bodyweight')
+    .delete()
+    .eq('user_id', userId)
+    .eq('date', entry.date);
+  return fallback.error;
+}
+
+async function pullBodyweightRows(
+  sb: ReturnType<typeof getSupabaseClient>,
+  userId: string,
+  cursor: string
+): Promise<QueryResponse<RemoteBodyweightRow>> {
+  const result = await sb
+    .from('bodyweight')
+    .select('*')
+    .eq('user_id', userId)
+    .gt('updated_at', cursor)
+    .order('updated_at', { ascending: true });
+
+  if (!isBodyweightMetadataSchemaError(result.error)) {
+    return result as QueryResponse<RemoteBodyweightRow>;
+  }
+
+  console.warn('[Sync] bodyweight updated_at is missing in Supabase; falling back to full date pull');
+  const fallback = await sb
+    .from('bodyweight')
+    .select('*')
+    .eq('user_id', userId)
+    .order('date', { ascending: true });
+
+  return fallback as QueryResponse<RemoteBodyweightRow>;
+}
+
 async function seedLocalSnapshotToCloud(userId: string): Promise<void> {
   const sb = getSupabaseClient();
   const [profile, history, bodyweight] = await Promise.all([
@@ -94,9 +199,17 @@ async function seedLocalSnapshotToCloud(userId: string): Promise<void> {
 
   for (const batch of chunk(bodyweight, SYNC_BATCH_SIZE)) {
     const rows = batch.map((entry) => bodyweightToRemote(entry, userId));
-    const { error } = await sb.from('bodyweight').upsert(rows as never, {
+    let { error } = await sb.from('bodyweight').upsert(rows as never, {
       onConflict: 'user_id,date',
     });
+    if (isBodyweightMetadataSchemaError(error)) {
+      console.warn('[Sync] bodyweight metadata columns are missing in Supabase; retrying legacy bootstrap');
+      const fallbackRows = batch.map((entry) => bodyweightToRemoteCompat(entry, userId));
+      const fallback = await sb.from('bodyweight').upsert(fallbackRows as never, {
+        onConflict: 'user_id,date',
+      });
+      error = fallback.error;
+    }
     if (error) {
       throw new Error(`[Sync] bodyweight bootstrap failed: ${error.message}`);
     }
@@ -214,22 +327,14 @@ async function applyMutation(
         return;
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await sb.from('bodyweight').upsert(bodyweightToRemote(currentEntry, userId) as any, {
-        onConflict: 'user_id,date',
-      });
+      const error = await upsertBodyweightToCloud(sb, currentEntry, userId);
       if (error) {
         throw new Error(`[Sync] bodyweight upsert failed: ${error.message}`);
       }
       return;
     }
 
-    // Bodyweight uses user_id + date as the logical conflict target.
-    // Deletes are soft-deleted tombstones so other devices can honor them.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await sb.from('bodyweight').upsert(bodyweightToRemote(payload, userId) as any, {
-      onConflict: 'user_id,date',
-    });
+    const error = await deleteBodyweightFromCloud(sb, payload, userId);
     if (error) {
       throw new Error(`[Sync] bodyweight delete failed: ${error.message}`);
     }
@@ -256,12 +361,7 @@ export async function pullFromCloud(userId: string): Promise<number> {
       .select('*')
       .eq('user_id', userId)
       .gt('updated_at', cursor),
-    sb
-      .from('bodyweight')
-      .select('*')
-      .eq('user_id', userId)
-      .gt('updated_at', cursor)
-      .order('updated_at', { ascending: true }),
+    pullBodyweightRows(sb, userId, cursor),
     sb
       .from('routines')
       .select('*')

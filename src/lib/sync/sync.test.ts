@@ -13,8 +13,9 @@ const mockUpsert = vi.fn().mockResolvedValue({ error: null });
 
 type QueryTable = 'history' | 'profiles' | 'bodyweight' | 'routines' | 'sync_cursors';
 type QueryResult = { data: unknown; error: { message: string } | null };
+type QueryResultState = QueryResult | QueryResult[];
 
-const queryResults: Record<QueryTable, QueryResult> = {
+const queryResults: Record<QueryTable, QueryResultState> = {
   history: { data: [], error: null },
   profiles: { data: [], error: null },
   bodyweight: { data: [], error: null },
@@ -22,8 +23,21 @@ const queryResults: Record<QueryTable, QueryResult> = {
   sync_cursors: { data: null, error: null },
 };
 
-function setQueryResult(table: QueryTable, result: QueryResult): void {
+function setQueryResult(table: QueryTable, result: QueryResultState): void {
   queryResults[table] = result;
+}
+
+function getQueryResult(table: QueryTable): QueryResult {
+  const result = queryResults[table];
+  if (!Array.isArray(result)) {
+    return result;
+  }
+
+  const next = result.shift();
+  if (!next) {
+    return { data: [], error: null };
+  }
+  return next;
 }
 
 function createBuilder(table: QueryTable) {
@@ -32,14 +46,15 @@ function createBuilder(table: QueryTable) {
     eq: vi.fn(() => builder),
     gt: vi.fn(() => builder),
     order: vi.fn(() => builder),
-    single: vi.fn(async () => queryResults.sync_cursors),
-    maybeSingle: vi.fn(async () => queryResults.sync_cursors),
+    single: vi.fn(async () => getQueryResult('sync_cursors')),
+    maybeSingle: vi.fn(async () => getQueryResult('sync_cursors')),
     upsert: mockUpsert,
     update: vi.fn(() => builder),
+    delete: vi.fn(() => builder),
     then: (
       onFulfilled?: (value: QueryResult) => unknown,
       onRejected?: (reason: unknown) => unknown
-    ) => Promise.resolve(queryResults[table]).then(onFulfilled, onRejected),
+    ) => Promise.resolve(getQueryResult(table)).then(onFulfilled, onRejected),
   };
   return builder;
 }
@@ -385,6 +400,43 @@ describe('pullFromCloud', () => {
     const saved = await loadAllRoutineRecords();
     expect(saved).toHaveLength(1);
     expect(saved[0].title).toBe('Remote Routine');
+  });
+
+  it('falls back to a full bodyweight pull when Supabase is missing updated_at', async () => {
+    const remoteBodyweight = {
+      id: 'bw-legacy',
+      user_id: USER_ID,
+      date: '2026-02-10',
+      weight: 81.5,
+      unit: 'kg',
+      created_at: '2026-02-10T09:00:00.000Z',
+      deleted_at: null,
+    };
+
+    setQueryResult('sync_cursors', { data: null, error: null });
+    setQueryResult('history', { data: [], error: null });
+    setQueryResult('profiles', { data: [], error: null });
+    setQueryResult('bodyweight', [
+      {
+        data: null,
+        error: { message: 'column bodyweight.updated_at does not exist' },
+      },
+      { data: [remoteBodyweight], error: null },
+    ]);
+    setQueryResult('routines', { data: [], error: null });
+
+    const { pullFromCloud } = await import('./syncEngine');
+    const merged = await pullFromCloud(USER_ID);
+
+    expect(merged).toBe(1);
+    const saved = await loadAllBodyweight();
+    expect(saved).toHaveLength(1);
+    expect(saved[0]).toMatchObject({
+      id: 'bw-legacy',
+      date: '2026-02-10',
+      weight: 81.5,
+      updatedAt: '2026-02-10T09:00:00.000Z',
+    });
   });
 
   it('throws when a remote table errors during pull', async () => {

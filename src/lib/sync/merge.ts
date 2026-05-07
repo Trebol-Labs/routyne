@@ -126,12 +126,13 @@ export async function mergeRemoteProfile(remote: RemoteProfile): Promise<boolean
 // ── Bodyweight ────────────────────────────────────────────────────────────────
 
 function remoteToLocalBodyweight(remote: RemoteBodyweight): BodyweightRecord {
+  const updatedAt = remote.updated_at ?? remote.created_at ?? new Date(0).toISOString();
   return {
     id: remote.id,
     date: remote.date,
     weight: remote.weight,
     unit: remote.unit as 'kg' | 'lbs',
-    updatedAt: remote.updated_at,
+    updatedAt,
     deletedAt: remote.deleted_at,
   };
 }
@@ -167,7 +168,7 @@ export async function mergeRemoteBodyweight(
     return false;
   }
 
-  const remoteUpdatedAt = new Date(remote.updated_at).getTime();
+  const remoteUpdatedAt = new Date(remote.updated_at ?? remote.created_at ?? 0).getTime();
   const localUpdatedAt = local ? new Date(local.updatedAt).getTime() : 0;
   if (!local || remoteUpdatedAt > localUpdatedAt) {
     await saveBodyweight(remoteToLocalBodyweight(remote));

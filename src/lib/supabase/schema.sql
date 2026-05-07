@@ -65,12 +65,20 @@ create table if not exists public.bodyweight (
   unique(user_id, date)
 );
 
+-- Keep existing projects created from older schema versions compatible.
+alter table public.bodyweight add column if not exists created_at timestamptz default now();
+alter table public.bodyweight add column if not exists updated_at timestamptz default now();
+alter table public.bodyweight add column if not exists deleted_at timestamptz;
+
 alter table public.bodyweight enable row level security;
 
 drop policy if exists "Users own their bodyweight" on public.bodyweight;
 create policy "Users own their bodyweight"
   on public.bodyweight for all
   using (auth.uid() = user_id);
+
+create index if not exists bodyweight_user_updated on public.bodyweight (user_id, updated_at);
+create index if not exists bodyweight_user_date on public.bodyweight (user_id, date);
 
 -- ── Profiles ──────────────────────────────────────────────────────────────────
 
