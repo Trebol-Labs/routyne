@@ -1,6 +1,6 @@
 # Routyne
 
-Routyne is a mobile-first Next.js PWA workout tracker. It stores workouts locally in IndexedDB, syncs profile, history, bodyweight, and routines to Supabase when configured, and includes stats, share cards, push notifications, and an optional AI coach.
+Routyne is a mobile-first Next.js PWA workout tracker. It stores workouts locally in IndexedDB, syncs profile, history, bodyweight, and routines to Supabase when configured, and includes stats, share cards, push notifications, a bilingual `es`/`en` UI, history session detail views, and an optional AI coach.
 
 ## Docs
 
@@ -27,12 +27,15 @@ Optional feature flags and integrations:
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `NEXT_PUBLIC_COACH_ENABLED`
+- `NEXT_PUBLIC_LOCAL_BACKUP_TOOLS`
 - `VERCEL_OIDC_TOKEN`
 - `COACH_DAILY_LIMIT_FREE`
 - `NEXT_PUBLIC_VAPID_PUBLIC_KEY`
 - `VAPID_PUBLIC_KEY`
 - `VAPID_PRIVATE_KEY`
 - `VAPID_SUBJECT`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `CRON_SECRET`
 
 ## Commands
 
@@ -51,6 +54,7 @@ pnpm import:exercises
 
 - Use pnpm only; `pnpm-lock.yaml` is the lockfile source.
 - The landing page lives at `/landing`.
+- The landing, privacy, terms, and support pages render from the same persisted language cookie as the main app shell.
 - Supabase magic links return to `/auth/callback`; browser redirects use the current origin, with `NEXT_PUBLIC_SITE_URL` as the server-side fallback.
-- Push subscriptions are shared between API routes through `src/lib/push/subscriptions.ts`, but still live in process memory on the Vercel Hobby tier.
+- Push subscriptions are persisted in Supabase when configured, and daily streak reminders run through `/api/cron/streak-reminders`.
 - The production deploy is connected to Vercel, but the latest workspace changes still need to be redeployed.
