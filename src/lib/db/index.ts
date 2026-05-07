@@ -2,12 +2,21 @@ import { openDB, IDBPDatabase } from 'idb';
 import type { RoutineDB } from './schema';
 
 const DB_NAME = 'routyne-db';
-const DB_VERSION = 4;
+const DB_VERSION = 6;
+const REQUIRED_STORES = ['nutritionEntries', 'nutritionGoals'] as const;
 
 let _db: IDBPDatabase<RoutineDB> | null = null;
 
+function hasRequiredStores(db: IDBPDatabase<RoutineDB>): boolean {
+  return REQUIRED_STORES.every((store) => db.objectStoreNames.contains(store));
+}
+
 export async function getDB(): Promise<IDBPDatabase<RoutineDB>> {
-  if (_db) return _db;
+  if (_db) {
+    if (hasRequiredStores(_db)) return _db;
+    _db.close();
+    _db = null;
+  }
 
   _db = await openDB<RoutineDB>(DB_NAME, DB_VERSION, {
     upgrade(db, oldVersion) {
@@ -59,8 +68,24 @@ export async function getDB(): Promise<IDBPDatabase<RoutineDB>> {
         const syncStore = db.createObjectStore('syncQueue', { keyPath: 'id' });
         syncStore.createIndex('by-timestamp', 'timestamp');
       }
+
+      if (oldVersion < 5 || !db.objectStoreNames.contains('nutritionEntries')) {
+        const nutritionStore = db.createObjectStore('nutritionEntries', { keyPath: 'id' });
+        nutritionStore.createIndex('by-date', 'date');
+        nutritionStore.createIndex('by-meal', 'mealType');
+      }
+
+      if (oldVersion < 5 || !db.objectStoreNames.contains('nutritionGoals')) {
+        db.createObjectStore('nutritionGoals', { keyPath: 'id' });
+      }
     },
   });
+
+  if (!hasRequiredStores(_db)) {
+    _db.close();
+    _db = null;
+    throw new Error('[IndexedDB] Database schema is missing required stores');
+  }
 
   return _db;
 }

@@ -10,6 +10,7 @@ import { useWorkoutStore } from '@/store/useWorkoutStore';
 import { RoutineOverviewView } from '@/components/workout/views/RoutineOverviewView';
 import { ActiveSessionView } from '@/components/workout/views/ActiveSessionView';
 import { HistoryView } from '@/components/workout/views/HistoryView';
+import { NutritionView } from '@/components/workout/views/NutritionView';
 import { StatsView } from '@/components/workout/views/StatsView';
 import { WorkoutSummaryView } from '@/components/workout/views/WorkoutSummaryView';
 import { RoutineBuilderView } from '@/components/workout/views/RoutineBuilderView';
@@ -224,6 +225,9 @@ function HomeContent() {
 
             ) : currentView === 'history' ? (
               <HistoryView />
+
+            ) : currentView === 'nutrition' ? (
+              <NutritionView />
 
             ) : currentView === 'stats' ? (
               <StatsView />

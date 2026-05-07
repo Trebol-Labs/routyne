@@ -5,6 +5,7 @@ import {
   HistoryEntry, ExerciseVolume, UserProfile, RoutineSummary,
   UserProfilePatch,
   WorkoutSummary,
+  NutritionEntry,
 } from '@/types/workout';
 
 // ── IDB imports (lazy-safe: only used in async actions) ──────────────────────
@@ -18,6 +19,15 @@ import {
   saveActiveSession, loadActiveSession, clearActiveSession,
 } from '@/lib/db/activeSession';
 import { DEFAULT_PROFILE, loadProfile, saveProfile } from '@/lib/db/profile';
+import {
+  DEFAULT_NUTRITION_GOAL,
+  deleteNutritionEntry as deleteNutritionEntryRecord,
+  loadNutritionEntriesByDate,
+  loadNutritionEntry,
+  loadNutritionGoal,
+  saveNutritionEntry as saveNutritionEntryRecord,
+  saveNutritionGoal,
+} from '@/lib/db/nutrition';
 import { clearWorkoutData } from '@/lib/db/index';
 
 function createInitialProfile(): UserProfile {
@@ -94,17 +104,22 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
   sessionStartTime: null,
   lastWorkoutSummary: null,
   pendingAchievements: [],
+  nutritionEntries: [],
+  nutritionGoal: DEFAULT_NUTRITION_GOAL,
 
   // ── hydrate ────────────────────────────────────────────────────────────────
   hydrate: async () => {
     try {
       await migrateLegacyData();
 
-      const [profile, library, historyResult, activeSession] = await Promise.all([
+      const today = new Date().toISOString().slice(0, 10);
+      const [profile, library, historyResult, activeSession, nutritionGoal, nutritionEntries] = await Promise.all([
         loadProfile(),
         listRoutines(),
         loadHistory(50),
         loadActiveSession(),
+        loadNutritionGoal(),
+        loadNutritionEntriesByDate(today),
       ]);
 
       // Base state update
@@ -113,6 +128,8 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
         routineLibrary: library,
         history: historyResult.entries,
         historyHasMore: historyResult.hasMore,
+        nutritionGoal,
+        nutritionEntries,
         isHydrated: true,
       });
 
@@ -437,6 +454,63 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
         console.error('[useWorkoutStore] profile sync enqueue failed', err);
       }
     }
+  },
+
+  // ── Nutrition ─────────────────────────────────────────────────────────────
+  loadNutritionDay: async (date: string) => {
+    const entries = await loadNutritionEntriesByDate(date);
+    set({ nutritionEntries: entries });
+  },
+
+  saveNutritionEntry: async (entry) => {
+    const now = new Date().toISOString();
+    const existing = entry.id ? await loadNutritionEntry(entry.id) : null;
+    const nextEntry: NutritionEntry = {
+      id: entry.id ?? uuidv4(),
+      date: entry.date,
+      mealType: entry.mealType,
+      foodName: entry.foodName.trim(),
+      servingLabel: entry.servingLabel.trim() || '1 porción',
+      calories: Math.max(0, Math.round(entry.calories)),
+      proteinGrams: Math.max(0, entry.proteinGrams),
+      carbsGrams: Math.max(0, entry.carbsGrams),
+      fatGrams: Math.max(0, entry.fatGrams),
+      notes: entry.notes?.trim() || undefined,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+      deletedAt: null,
+    };
+
+    await saveNutritionEntryRecord(nextEntry);
+    const entries = await loadNutritionEntriesByDate(nextEntry.date);
+    set({ nutritionEntries: entries });
+  },
+
+  deleteNutritionEntry: async (id: string) => {
+    const currentDate = get().nutritionEntries.find((entry) => entry.id === id)?.date;
+    await deleteNutritionEntryRecord(id);
+    if (currentDate) {
+      const entries = await loadNutritionEntriesByDate(currentDate);
+      set({ nutritionEntries: entries });
+    } else {
+      set((state) => ({
+        nutritionEntries: state.nutritionEntries.filter((entry) => entry.id !== id),
+      }));
+    }
+  },
+
+  updateNutritionGoal: async (patch) => {
+    const nextGoal = {
+      ...get().nutritionGoal,
+      ...patch,
+      calories: Math.max(0, Math.round(patch.calories ?? get().nutritionGoal.calories)),
+      proteinGrams: Math.max(0, patch.proteinGrams ?? get().nutritionGoal.proteinGrams),
+      carbsGrams: Math.max(0, patch.carbsGrams ?? get().nutritionGoal.carbsGrams),
+      fatGrams: Math.max(0, patch.fatGrams ?? get().nutritionGoal.fatGrams),
+      updatedAt: new Date().toISOString(),
+    };
+    set({ nutritionGoal: nextGoal });
+    await saveNutritionGoal(nextGoal);
   },
 
   // ── Active Session ─────────────────────────────────────────────────────────

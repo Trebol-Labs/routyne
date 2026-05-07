@@ -1,5 +1,5 @@
 import type { DBSchema } from 'idb';
-import type { SetType } from '@/types/workout';
+import type { MealType, SetType } from '@/types/workout';
 
 // ── Record types stored in IndexedDB ────────────────────────────────────────
 
@@ -128,6 +128,31 @@ export interface BodyweightRecord {
   deletedAt: string | null;
 }
 
+export interface NutritionEntryRecord {
+  id: string;
+  date: string;
+  mealType: MealType;
+  foodName: string;
+  servingLabel: string;
+  calories: number;
+  proteinGrams: number;
+  carbsGrams: number;
+  fatGrams: number;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+}
+
+export interface NutritionGoalRecord {
+  id: 'default';
+  calories: number;
+  proteinGrams: number;
+  carbsGrams: number;
+  fatGrams: number;
+  updatedAt: string;
+}
+
 // ── DBSchema for idb ─────────────────────────────────────────────────────────
 
 export interface RoutineDB extends DBSchema {
@@ -167,6 +192,15 @@ export interface RoutineDB extends DBSchema {
     key: string;
     value: BodyweightRecord;
     indexes: { 'by-date': string };
+  };
+  nutritionEntries: {
+    key: string;
+    value: NutritionEntryRecord;
+    indexes: { 'by-date': string; 'by-meal': MealType };
+  };
+  nutritionGoals: {
+    key: string;
+    value: NutritionGoalRecord;
   };
   achievements: {
     key: string;

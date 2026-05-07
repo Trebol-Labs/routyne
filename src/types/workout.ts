@@ -59,6 +59,7 @@ export type WorkoutView =
   | 'active-session'
   | 'workout-summary'   // ← NEW: post-workout summary screen
   | 'history'
+  | 'nutrition'
   | 'stats'
   | 'routine-builder'   // ← visual routine editor
   | 'routine-manager';  // ← routine library manager
@@ -208,6 +209,44 @@ export interface Bodyweight {
   deletedAt: string | null;
 }
 
+// ── Nutrition ────────────────────────────────────────────────────────────────
+
+export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+
+export interface NutritionEntry {
+  id: string;
+  date: string;     // YYYY-MM-DD
+  mealType: MealType;
+  foodName: string;
+  servingLabel: string;
+  calories: number;
+  proteinGrams: number;
+  carbsGrams: number;
+  fatGrams: number;
+  notes?: string;
+  createdAt: string;   // ISO 8601
+  updatedAt: string;   // ISO 8601
+  deletedAt: string | null;
+}
+
+export interface NutritionGoal {
+  id: 'default';
+  calories: number;
+  proteinGrams: number;
+  carbsGrams: number;
+  fatGrams: number;
+  updatedAt: string;   // ISO 8601
+}
+
+export type NutritionGoalPatch = Partial<Omit<NutritionGoal, 'id' | 'updatedAt'>>;
+
+export interface NutritionTotals {
+  calories: number;
+  proteinGrams: number;
+  carbsGrams: number;
+  fatGrams: number;
+}
+
 // ── Achievements ──────────────────────────────────────────────────────────────
 
 export interface AchievementDefinition {
@@ -234,6 +273,8 @@ export interface WorkoutState {
   historyHasMore: boolean;
   profile: UserProfile;
   routineLibrary: RoutineSummary[];
+  nutritionEntries: NutritionEntry[];
+  nutritionGoal: NutritionGoal;
 
   // Session timing
   sessionStartTime: Date | null;             // ← NEW
@@ -254,6 +295,12 @@ export interface WorkoutState {
   abandonSession: () => Promise<void>;
   loadMoreHistory: () => Promise<void>;
   updateProfile: (patch: UserProfilePatch) => Promise<void>;
+  loadNutritionDay: (date: string) => Promise<void>;
+  saveNutritionEntry: (
+    entry: Omit<NutritionEntry, 'id' | 'createdAt' | 'updatedAt' | 'deletedAt'> & { id?: string }
+  ) => Promise<void>;
+  deleteNutritionEntry: (id: string) => Promise<void>;
+  updateNutritionGoal: (patch: NutritionGoalPatch) => Promise<void>;
   resetAll: () => Promise<void>;
   updateActiveSessionExercises: (exercises: ParsedExercise[]) => Promise<void>;
   refreshFromPersistence: () => Promise<void>;
