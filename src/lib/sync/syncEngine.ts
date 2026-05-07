@@ -19,14 +19,17 @@ import {
   mergeRemoteProfile,
   mergeRemoteBodyweight,
   mergeRemoteRoutine,
+  mergeRemoteNutritionProfile,
   historyEntryToRemote,
   profileToRemote,
   bodyweightToRemote,
   routineToRemote,
+  nutritionProfileToRemote,
 } from './merge';
 import { loadAllHistory } from '@/lib/db/history';
 import { loadAllBodyweight, loadBodyweightByDate } from '@/lib/db/bodyweight';
 import { loadProfile } from '@/lib/db/profile';
+import { loadNutritionProfile } from '@/lib/db/nutritionProfile';
 import { loadMetaValue, saveMetaValue } from '@/lib/db/meta';
 import { loadAllRoutineRecords, loadRoutine, loadRoutineRecord } from '@/lib/db/routines';
 import { generateMarkdown } from '@/lib/markdown/generator';
@@ -301,6 +304,32 @@ async function seedLocalSnapshotToCloud(userId: string): Promise<void> {
       throw new Error(`[Sync] routine bootstrap failed: ${error.message}`);
     }
   }
+
+  const nutritionProfile = await loadNutritionProfile();
+  if (nutritionProfile) {
+    const { error } = await sb.from('nutrition_profiles').upsert(
+      nutritionProfileToRemote(nutritionProfile, userId) as never,
+      { onConflict: 'user_id' }
+    );
+    if (error && !isMissingNutritionTableError(error)) {
+      throw new Error(`[Sync] nutrition profile bootstrap failed: ${error.message}`);
+    }
+  }
+}
+
+function isMissingNutritionTableError(error: SyncError | null | undefined): boolean {
+  if (!error) return false;
+  const text = [error.message, error.details, error.hint, error.code]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  return (
+    text.includes('nutrition_profiles') &&
+    (text.includes('does not exist') ||
+      text.includes('schema cache') ||
+      text.includes('42p01') ||
+      text.includes('pgrst205'))
+  );
 }
 
 // ── Push ───────────────────────────────────────────────────────────────────────
@@ -412,6 +441,23 @@ async function applyMutation(
     return;
   }
 
+  if (mutation.table === 'nutritionProfile') {
+    const current = await loadNutritionProfile();
+    if (!current) return;
+    const { error } = await sb.from('nutrition_profiles').upsert(
+      nutritionProfileToRemote(current, userId) as never,
+      { onConflict: 'user_id' }
+    );
+    if (error) {
+      if (isMissingNutritionTableError(error)) {
+        console.warn('[Sync] nutrition_profiles table missing in Supabase; skipping push');
+        return;
+      }
+      throw new Error(`[Sync] nutrition profile upsert failed: ${error.message}`);
+    }
+    return;
+  }
+
   if (mutation.table === 'bodyweight') {
     const payload = mutation.payload as BodyweightRecord;
 
@@ -452,7 +498,7 @@ export async function pullFromCloud(
     logEvent(trace, 'pull:start', { cursor, fullPull: !!options.fullPull });
   }
 
-  const [historyResult, profileResult, bodyweightResult, routinesResult] = await Promise.all([
+  const [historyResult, profileResult, bodyweightResult, routinesResult, nutritionProfileResult] = await Promise.all([
     sb
       .from('history')
       .select('*')
@@ -471,12 +517,18 @@ export async function pullFromCloud(
       .eq('user_id', userId)
       .gt('updated_at', cursor)
       .order('updated_at', { ascending: true }),
+    sb
+      .from('nutrition_profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .gt('updated_at', cursor),
   ]);
 
   const historyError = historyResult.error;
   const profileError = profileResult.error;
   const bodyweightError = bodyweightResult.error;
   const routinesError = routinesResult.error;
+  const nutritionProfileError = nutritionProfileResult.error;
 
   if (historyError) {
     throw new Error(`[Sync] history pull failed: ${historyError.message}`);
@@ -490,11 +542,15 @@ export async function pullFromCloud(
   if (routinesError) {
     throw new Error(`[Sync] routine pull failed: ${routinesError.message}`);
   }
+  if (nutritionProfileError && !isMissingNutritionTableError(nutritionProfileError)) {
+    throw new Error(`[Sync] nutrition profile pull failed: ${nutritionProfileError.message}`);
+  }
 
   const remoteHistory = historyResult.data ?? [];
   const remoteProfiles = profileResult.data ?? [];
   const remoteBodyweight = bodyweightResult.data ?? [];
   const remoteRoutines = routinesResult.data ?? [];
+  const remoteNutritionProfiles = nutritionProfileResult.data ?? [];
 
   if (trace) {
     logEvent(trace, 'pull:fetched', {
@@ -502,6 +558,7 @@ export async function pullFromCloud(
       profiles: remoteProfiles.length,
       bodyweight: remoteBodyweight.length,
       routines: remoteRoutines.length,
+      nutritionProfiles: remoteNutritionProfiles.length,
     });
   }
 
@@ -510,6 +567,7 @@ export async function pullFromCloud(
   let profileMerged = 0;
   let bodyweightMerged = 0;
   let routinesMerged = 0;
+  let nutritionProfileMerged = 0;
 
   if (remoteHistory.length > 0) {
     const localHistory = await loadAllHistory();
@@ -558,6 +616,14 @@ export async function pullFromCloud(
     }
   }
 
+  for (const remote of remoteNutritionProfiles) {
+    const changed = await mergeRemoteNutritionProfile(remote);
+    if (changed) {
+      merged++;
+      nutritionProfileMerged++;
+    }
+  }
+
   await updateCursor(userId, pullStart);
 
   if (trace) {
@@ -566,6 +632,7 @@ export async function pullFromCloud(
       profileMerged,
       bodyweightMerged,
       routinesMerged,
+      nutritionProfileMerged,
       cursorAdvancedTo: pullStart,
     });
   }

@@ -23,6 +23,7 @@ import { useHydration } from '@/hooks/useHydration';
 import { useStoragePersist } from '@/hooks/useStoragePersist';
 import { useSync } from '@/hooks/useSync';
 import { useAuth } from '@/hooks/useAuth';
+import { useOnboardingGate } from '@/hooks/useOnboardingGate';
 import { useI18n } from '@/components/i18n/LanguageProvider';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { AchievementToast } from '@/components/workout/AchievementToast';
@@ -94,6 +95,11 @@ function HomeContent() {
 
   const auth = useAuth();
   useSync(auth.user?.id);
+  useOnboardingGate({
+    userId: auth.user?.id ?? null,
+    isLoadingAuth: auth.isLoading,
+    isHydrated: isReady,
+  });
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();

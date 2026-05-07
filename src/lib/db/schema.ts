@@ -112,7 +112,7 @@ export interface AchievementRecord {
 
 export interface SyncMutationRecord {
   id: string;       // uuidv4
-  table: 'history' | 'routines' | 'bodyweight' | 'profile';
+  table: 'history' | 'routines' | 'bodyweight' | 'profile' | 'nutritionProfile';
   operation: 'upsert' | 'delete';
   payload: unknown;
   timestamp: number; // Date.now() — for ordering

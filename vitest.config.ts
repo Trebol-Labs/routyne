@@ -5,7 +5,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    setupFiles: ['src/test/setup.ts', '@testing-library/jest-dom/vitest'],
+    setupFiles: ['src/test/setup.ts'],
     exclude: ['**/node_modules/**', '**/.worktrees/**', '**/.claude/**', 'e2e/**'],
     coverage: {
       provider: 'v8',

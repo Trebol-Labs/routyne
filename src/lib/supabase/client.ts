@@ -88,6 +88,51 @@ export interface Database {
         Insert: { user_id: string; last_pulled?: string; last_pushed?: string };
         Update: Partial<Database['public']['Tables']['sync_cursors']['Row']>;
       };
+      nutrition_profiles: {
+        Row: {
+          user_id: string;
+          weight_kg: number;
+          height_cm: number;
+          age_years: number;
+          sex: 'male' | 'female';
+          activity_level: string;
+          goal: 'bulk' | 'cut' | 'recomp';
+          experience: string;
+          body_fat_pct: number | null;
+          training_days: number | null;
+          training_type: string | null;
+          training_time: string | null;
+          dietary_restrictions: string[];
+          custom_restrictions: string[];
+          budget: string | null;
+          bmr_kcal: number;
+          tdee_kcal: number;
+          target_kcal: number;
+          protein_g: number;
+          fats_g: number;
+          carbs_g: number;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: Partial<Database['public']['Tables']['nutrition_profiles']['Row']> & {
+          user_id: string;
+          weight_kg: number;
+          height_cm: number;
+          age_years: number;
+          sex: 'male' | 'female';
+          activity_level: string;
+          goal: 'bulk' | 'cut' | 'recomp';
+          experience: string;
+          bmr_kcal: number;
+          tdee_kcal: number;
+          target_kcal: number;
+          protein_g: number;
+          fats_g: number;
+          carbs_g: number;
+        };
+        Update: Partial<Database['public']['Tables']['nutrition_profiles']['Row']>;
+      };
     };
   };
 }

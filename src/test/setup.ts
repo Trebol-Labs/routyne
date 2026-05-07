@@ -1,6 +1,7 @@
 // Global test setup — runs before every test file.
 // Must be first: patches ALL IDB globals (indexedDB, IDBRequest, IDBKeyRange, IDBCursor, etc.)
 import 'fake-indexeddb/auto';
+import '@testing-library/jest-dom/vitest';
 import { IDBFactory } from 'fake-indexeddb';
 import { vi } from 'vitest';
 import { resetDBSingleton } from '@/lib/db/index';
