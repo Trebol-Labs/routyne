@@ -4,6 +4,13 @@ import { saveRoutine, loadRoutine, listRoutines, deleteRoutine } from './routine
 import { saveHistoryEntry, loadHistory } from './history';
 import { saveActiveSession, loadActiveSession, clearActiveSession } from './activeSession';
 import { loadProfile, saveProfile } from './profile';
+import {
+  deleteNutritionEntry,
+  loadNutritionEntriesByDate,
+  loadNutritionGoal,
+  saveNutritionEntry,
+  saveNutritionGoal,
+} from './nutrition';
 import type { RoutineData, HistoryEntry } from '@/types/workout';
 
 const mockRoutine: RoutineData = {
@@ -194,6 +201,11 @@ describe('profile', () => {
         accentColor: 'blue',
         uiDensity: 'comfortable',
         motionLevel: 'system',
+        reducedMotion: false,
+        language: 'es',
+        streakReminderEnabled: false,
+        timerNotificationsEnabled: false,
+        timezone: 'UTC',
       },
       updatedAt: new Date('2026-03-01T10:00:00Z').toISOString(),
     });
@@ -201,5 +213,66 @@ describe('profile', () => {
     expect(p.displayName).toBe('Sierra');
     expect(p.weightUnit).toBe('lbs');
     expect(p.defaultRestSeconds).toBe(120);
+  });
+});
+
+// ── Nutrition ────────────────────────────────────────────────────────────────
+
+describe('nutrition', () => {
+  it('returns default nutrition goals when none saved', async () => {
+    const goal = await loadNutritionGoal();
+    expect(goal.calories).toBe(2200);
+    expect(goal.proteinGrams).toBe(160);
+  });
+
+  it('saves and loads nutrition goals', async () => {
+    await saveNutritionGoal({
+      id: 'default',
+      calories: 2500,
+      proteinGrams: 180,
+      carbsGrams: 280,
+      fatGrams: 80,
+      updatedAt: new Date('2026-04-01T10:00:00Z').toISOString(),
+    });
+    const goal = await loadNutritionGoal();
+    expect(goal.calories).toBe(2500);
+    expect(goal.carbsGrams).toBe(280);
+  });
+
+  it('loads nutrition entries by date in created order and hides deleted entries', async () => {
+    await saveNutritionEntry({
+      id: 'n-1',
+      date: '2026-05-07',
+      mealType: 'breakfast',
+      foodName: 'Greek yogurt',
+      servingLabel: '200g',
+      calories: 160,
+      proteinGrams: 20,
+      carbsGrams: 8,
+      fatGrams: 4,
+      createdAt: '2026-05-07T08:00:00.000Z',
+      updatedAt: '2026-05-07T08:00:00.000Z',
+      deletedAt: null,
+    });
+    await saveNutritionEntry({
+      id: 'n-2',
+      date: '2026-05-07',
+      mealType: 'lunch',
+      foodName: 'Rice bowl',
+      servingLabel: '1 bowl',
+      calories: 620,
+      proteinGrams: 42,
+      carbsGrams: 72,
+      fatGrams: 18,
+      createdAt: '2026-05-07T13:00:00.000Z',
+      updatedAt: '2026-05-07T13:00:00.000Z',
+      deletedAt: null,
+    });
+
+    await deleteNutritionEntry('n-1');
+
+    const entries = await loadNutritionEntriesByDate('2026-05-07');
+    expect(entries).toHaveLength(1);
+    expect(entries[0].id).toBe('n-2');
   });
 });

@@ -224,6 +224,7 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const canUseLocalBackup = process.env.NODE_ENV !== 'production' || process.env.NEXT_PUBLIC_LOCAL_BACKUP_TOOLS === 'true';
+  const localOnlyMode = process.env.NEXT_PUBLIC_LOCAL_ONLY === 'true';
   const supabaseEnabled = !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const accountActionDisabled = authLoading || syncStatus === 'syncing';
   const sectionRefs = useRef<Record<AccountSheetSection, HTMLElement | null>>({
@@ -278,6 +279,7 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
   })();
 
   const syncStateLabel = (() => {
+    if (!supabaseEnabled && localOnlyMode) return language === 'en' ? 'Local-only mode' : 'Modo local';
     if (!supabaseEnabled) return t.account.syncPaused;
     if (authLoading) return language === 'en' ? 'Checking account...' : 'Comprobando cuenta...';
     if (!user) return t.account.signedOut;
@@ -289,6 +291,9 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
   })();
 
   const syncStateDetail = (() => {
+    if (!supabaseEnabled && localOnlyMode) return language === 'en'
+      ? 'Your data stays in this browser. Cloud sync is intentionally hidden locally.'
+      : 'Tus datos se quedan en este navegador. La sincronización cloud está oculta en local.';
     if (!supabaseEnabled) return language === 'en'
       ? 'Supabase variables are missing, so sync is disabled.'
       : 'Faltan variables de Supabase, así que la sincronización está desactivada.';
@@ -560,7 +565,28 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
               )}
 
               <div className="rounded-[1.75rem] border border-sky-300/20 bg-[linear-gradient(135deg,rgba(14,165,233,0.18),rgba(59,130,246,0.08)_48%,rgba(255,255,255,0.04))] p-3 shadow-[0_18px_60px_-35px_rgba(56,189,248,0.95)] sm:p-4">
-                {!supabaseEnabled ? (
+                {!supabaseEnabled && localOnlyMode ? (
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-emerald-300/20 bg-emerald-300/10 text-emerald-100">
+                        <HardDrive className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-50/75">
+                          {language === 'en' ? 'Local development' : 'Desarrollo local'}
+                        </p>
+                        <p className="mt-1 text-xl font-black leading-none text-white font-display sm:text-2xl">
+                          {language === 'en' ? 'Local storage active' : 'Almacenamiento local activo'}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-sm font-medium leading-relaxed text-emerald-50/78">
+                      {language === 'en'
+                        ? 'Routyne will save workouts, nutrition, profile, and history in this browser. Add Supabase variables later to test sync.'
+                        : 'Routyne guardará entrenamientos, nutrición, perfil e historial en este navegador. Agrega variables de Supabase después para probar sync.'}
+                    </p>
+                  </div>
+                ) : !supabaseEnabled ? (
                   <div className="space-y-3">
                     <div className="flex items-start gap-3">
                       <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-amber-300/20 bg-amber-300/10 text-amber-100">

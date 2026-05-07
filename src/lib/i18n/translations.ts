@@ -15,6 +15,7 @@ const translationSource = {
     navigation: {
       overview: 'Resumen',
       history: 'Historial',
+      nutrition: 'Nutrición',
       stats: 'Estadísticas',
       create: 'Crear',
       routines: 'Rutinas',
@@ -300,6 +301,7 @@ const translationSource = {
     navigation: {
       overview: 'Overview',
       history: 'History',
+      nutrition: 'Nutrition',
       stats: 'Stats',
       create: 'Create',
       routines: 'Routines',

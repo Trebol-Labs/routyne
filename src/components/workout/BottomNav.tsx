@@ -2,7 +2,7 @@
 
 import { memo, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Calendar, Dumbbell, TrendingUp, Library, Bot } from 'lucide-react';
+import { Plus, Calendar, Dumbbell, TrendingUp, Library, Bot, Apple } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { WorkoutView } from '@/types/workout';
 import { useI18n } from '@/components/i18n/LanguageProvider';
@@ -69,6 +69,7 @@ export const BottomNav = memo(({ currentView, onNavigate, hasRoutine, onCoachCli
     const baseItems = [
       { id: 'overview', view: 'routine-overview' as WorkoutView, icon: Dumbbell, label: t.navigation.overview, matchViews: ['routine-overview', 'active-session'], isPrimary: false },
       { id: 'history', view: 'history' as WorkoutView, icon: Calendar, label: t.navigation.history, matchViews: ['history'], isPrimary: false },
+      { id: 'nutrition', view: 'nutrition' as WorkoutView, icon: Apple, label: t.navigation.nutrition, matchViews: ['nutrition'], isPrimary: false },
       { id: 'stats', view: 'stats' as WorkoutView, icon: TrendingUp, label: t.navigation.stats, matchViews: ['stats'], isPrimary: false },
     ];
 
@@ -84,7 +85,7 @@ export const BottomNav = memo(({ currentView, onNavigate, hasRoutine, onCoachCli
     // If there's a routine, put the import item at the end (far right).
     // If there's no routine, put it at the beginning (far left) as the primary action.
     return hasRoutine ? [...baseItems, importItem] : [importItem, ...baseItems];
-  }, [hasRoutine, t.navigation.create, t.navigation.history, t.navigation.overview, t.navigation.routines, t.navigation.stats]);
+  }, [hasRoutine, t.navigation.create, t.navigation.history, t.navigation.nutrition, t.navigation.overview, t.navigation.routines, t.navigation.stats]);
 
   return (
     <>
@@ -101,7 +102,7 @@ export const BottomNav = memo(({ currentView, onNavigate, hasRoutine, onCoachCli
           role="navigation"
           className={cn(
             'relative flex items-center justify-between gap-1.5 p-2',
-            'w-full max-w-xs',
+            'w-full max-w-sm',
             'glass-panel rounded-[20px] border-white/10',
             'shadow-[0_20px_50px_-15px_rgba(0,0,0,0.8)]',
             'backdrop-blur-2xl'
