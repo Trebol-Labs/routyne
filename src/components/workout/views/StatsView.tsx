@@ -13,6 +13,7 @@ import { RecoveryIndicator } from '@/components/stats/RecoveryIndicator';
 import { BodyWeightSheet } from '@/components/workout/overlays/BodyWeightSheet';
 import { loadBodyweightHistory } from '@/lib/db/bodyweight';
 import { getMuscleGroupVolume } from '@/lib/analytics/muscle-map';
+import { useAnalyticsWorker } from '@/hooks/useAnalyticsWorker';
 import { loadEarnedAchievements } from '@/lib/db/achievements';
 import { ACHIEVEMENTS } from '@/lib/achievements/definitions';
 import { cn } from '@/lib/utils';
@@ -97,6 +98,7 @@ type Tab = 'overview' | 'progress' | 'trophies';
 
 export function StatsView() {
   const { history, profile } = useWorkoutStore();
+  const { prs, loading: prsLoading } = useAnalyticsWorker(history);
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [volumeLimit, setVolumeLimit] = useState<7 | 30>(7);
   const [showBodyWeightSheet, setShowBodyWeightSheet] = useState(false);
@@ -345,7 +347,7 @@ export function StatsView() {
 
                     <div className="glass-panel rounded-[var(--radius-lg)] p-5 border-white/5 space-y-4">
                       <p className={sectionLabel}>Récords personales</p>
-                      <PersonalRecordsTable history={history} weightUnit={profile.weightUnit} />
+                      <PersonalRecordsTable prs={prs} weightUnit={profile.weightUnit} loading={prsLoading} />
                     </div>
 
                     <div className="glass-panel rounded-[var(--radius-lg)] p-5 border-white/5 space-y-4">

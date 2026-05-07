@@ -1,95 +1,24 @@
 'use client';
 
-import { useMemo } from 'react';
-import { HistoryEntry } from '@/types/workout';
 import { Trophy } from 'lucide-react';
-
-interface PRRow {
-  cleanName: string;
-  sessions: number;
-  bestSetVolume: number;
-  bestWeight: number;
-  bestReps: number;
-  bestBodyweightReps: number;
-  hasWeightedSet: boolean;
-}
+import type { PRRow } from '@/hooks/useAnalyticsWorker';
 
 interface PersonalRecordsTableProps {
-  history: HistoryEntry[];
+  prs: PRRow[];
   weightUnit: string;
+  loading?: boolean;
 }
 
-export function PersonalRecordsTable({ history, weightUnit }: PersonalRecordsTableProps) {
-  const rows = useMemo(() => {
-    const prMap = new Map<string, PRRow>();
-
-    for (const entry of history) {
-      for (const ev of entry.volumeData) {
-        const existing = prMap.get(ev.cleanName);
-        if (!existing) {
-          prMap.set(ev.cleanName, {
-            cleanName: ev.cleanName,
-            sessions: 1,
-            bestSetVolume: 0,
-            bestWeight: 0,
-            bestReps: 0,
-            bestBodyweightReps: 0,
-            hasWeightedSet: false,
-          });
-        } else {
-          existing.sessions += 1;
-        }
-
-        const row = prMap.get(ev.cleanName);
-        if (!row) {
-          continue;
-        }
-
-        for (const setDetail of ev.setDetails ?? []) {
-          const repsDone = setDetail.repsDone ?? 0;
-          const weight = setDetail.weight ?? 0;
-
-          if (repsDone <= 0) {
-            continue;
-          }
-
-          if (weight > 0) {
-            const weightedScore = weight * repsDone;
-            if (weightedScore > row.bestSetVolume) {
-              row.bestSetVolume = weightedScore;
-              row.bestWeight = weight;
-              row.bestReps = repsDone;
-              row.hasWeightedSet = true;
-            }
-          } else if (repsDone > row.bestBodyweightReps) {
-            row.bestBodyweightReps = repsDone;
-          }
-        }
-      }
-    }
-
-    return Array.from(prMap.values()).sort((a, b) => {
-      if (a.hasWeightedSet !== b.hasWeightedSet) {
-        return Number(b.hasWeightedSet) - Number(a.hasWeightedSet);
-      }
-
-      if (a.hasWeightedSet && b.hasWeightedSet) {
-        if (b.bestSetVolume !== a.bestSetVolume) {
-          return b.bestSetVolume - a.bestSetVolume;
-        }
-
-        if (b.bestWeight !== a.bestWeight) {
-          return b.bestWeight - a.bestWeight;
-        }
-      }
-
-      if (b.bestBodyweightReps !== a.bestBodyweightReps) {
-        return b.bestBodyweightReps - a.bestBodyweightReps;
-      }
-
-      return b.sessions - a.sessions;
-    });
-  }, [history]);
+export function PersonalRecordsTable({ prs: rows, weightUnit, loading }: PersonalRecordsTableProps) {
+  if (loading) {
+    return (
+      <div className="space-y-2">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="h-10 rounded-2xl bg-white/[0.03] animate-pulse" />
+        ))}
+      </div>
+    );
+  }
 
   if (rows.length === 0) return null;
 
