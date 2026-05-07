@@ -4,18 +4,24 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Apple,
+  Activity,
   Beef,
   CalendarDays,
   Flame,
   Pencil,
   Plus,
   Save,
+  Target,
   Trash2,
+  TrendingDown,
+  TrendingUp,
   Wheat,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
 import { cn } from '@/lib/utils';
+import { buildNutritionPlanRecommendation, type NutritionPlanGoal } from '@/lib/nutrition/planner';
+import { getLatestBodyweight } from '@/lib/db/bodyweight';
 import type { MealType, NutritionEntry, NutritionTotals } from '@/types/workout';
 import type { NutritionProfile } from '@/types/nutrition';
 import { loadNutritionProfile } from '@/lib/db/nutritionProfile';
@@ -58,11 +64,29 @@ type GoalForm = {
   fatGrams: string;
 };
 
+type PlannerForm = {
+  goal: NutritionPlanGoal;
+  currentWeight: string;
+  targetWeight: string;
+  weeks: string;
+};
+
 const GOAL_FIELDS: { key: keyof GoalForm; label: string }[] = [
   { key: 'calories', label: 'Kcal' },
   { key: 'proteinGrams', label: 'Proteína' },
   { key: 'carbsGrams', label: 'Carbos' },
   { key: 'fatGrams', label: 'Grasa' },
+];
+
+const PLAN_GOALS: {
+  value: NutritionPlanGoal;
+  label: string;
+  caption: string;
+  icon: LucideIcon;
+}[] = [
+  { value: 'cut', label: 'Perder grasa', caption: 'Déficit con proteína alta', icon: TrendingDown },
+  { value: 'gain', label: 'Ganar músculo', caption: 'Superávit controlado', icon: TrendingUp },
+  { value: 'recomp', label: 'Recomposición', caption: 'Mantenimiento o déficit leve', icon: Activity },
 ];
 
 const ENTRY_MACRO_FIELDS: { key: keyof Pick<EntryForm, 'calories' | 'proteinGrams' | 'carbsGrams' | 'fatGrams'>; label: string; icon: LucideIcon }[] = [
@@ -108,6 +132,15 @@ function createFormFromEntry(entry: NutritionEntry): EntryForm {
   };
 }
 
+function createInitialPlannerForm(): PlannerForm {
+  return {
+    goal: 'recomp',
+    currentWeight: '',
+    targetWeight: '',
+    weeks: '12',
+  };
+}
+
 function ProgressBar({ value, total, className }: { value: number; total: number; className: string }) {
   const pct = total > 0 ? Math.min(100, (value / total) * 100) : 0;
   return (
@@ -147,6 +180,7 @@ function MacroCard({
 
 export function NutritionView() {
   const {
+    profile,
     nutritionEntries,
     nutritionGoal,
     loadNutritionDay,
@@ -166,6 +200,7 @@ export function NutritionView() {
   const [coachProfile, setCoachProfile] = useState<NutritionProfile | null>(null);
   const [coachLoaded, setCoachLoaded] = useState(() => !NUTRITION_ENABLED);
   const adaptive = useAdaptiveCheck();
+  const [plannerForm, setPlannerForm] = useState<PlannerForm>(() => createInitialPlannerForm());
 
   useEffect(() => {
     loadNutritionDay(selectedDate).catch(console.error);
@@ -189,6 +224,23 @@ export function NutritionView() {
     };
   }, [selectedDate]);
 
+  useEffect(() => {
+    getLatestBodyweight()
+      .then((entry) => {
+        if (!entry) return;
+        setPlannerForm((form) => {
+          if (form.currentWeight.trim()) return form;
+          const weight = String(entry.weight);
+          return {
+            ...form,
+            currentWeight: weight,
+            targetWeight: form.goal === 'recomp' ? weight : form.targetWeight,
+          };
+        });
+      })
+      .catch(console.error);
+  }, []);
+
   const totals = useMemo(
     () => nutritionEntries.reduce<NutritionTotals>((acc, entry) => ({
       calories: acc.calories + entry.calories,
@@ -207,6 +259,28 @@ export function NutritionView() {
   }, [nutritionEntries]);
 
   const calorieRemaining = nutritionGoal.calories - totals.calories;
+
+  const planRecommendation = useMemo(() => {
+    const currentWeight = toNumber(plannerForm.currentWeight);
+    const targetWeight = plannerForm.goal === 'recomp'
+      ? currentWeight
+      : toNumber(plannerForm.targetWeight);
+    return buildNutritionPlanRecommendation({
+      goal: plannerForm.goal,
+      experienceLevel: profile.preferences.experienceLevel,
+      weight: currentWeight,
+      weightUnit: profile.weightUnit,
+      targetWeight,
+      weeks: toNumber(plannerForm.weeks),
+    });
+  }, [
+    plannerForm.currentWeight,
+    plannerForm.goal,
+    plannerForm.targetWeight,
+    plannerForm.weeks,
+    profile.preferences.experienceLevel,
+    profile.weightUnit,
+  ]);
 
   const submitEntry = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -248,6 +322,30 @@ export function NutritionView() {
       });
     }
     setIsGoalOpen((value) => !value);
+  };
+
+  const updatePlannerGoal = (goal: NutritionPlanGoal) => {
+    setPlannerForm((form) => ({
+      ...form,
+      goal,
+      targetWeight: goal === 'recomp' ? form.currentWeight : form.targetWeight,
+    }));
+  };
+
+  const applyPlanRecommendation = async () => {
+    if (!planRecommendation) return;
+    await updateNutritionGoal({
+      calories: planRecommendation.calories,
+      proteinGrams: planRecommendation.proteinGrams,
+      carbsGrams: planRecommendation.carbsGrams,
+      fatGrams: planRecommendation.fatGrams,
+    });
+    setGoalForm({
+      calories: String(planRecommendation.calories),
+      proteinGrams: String(planRecommendation.proteinGrams),
+      carbsGrams: String(planRecommendation.carbsGrams),
+      fatGrams: String(planRecommendation.fatGrams),
+    });
   };
 
   return (
@@ -358,6 +456,165 @@ export function NutritionView() {
               Guardar objetivos
             </button>
           </form>
+        )}
+      </section>
+
+      <section className="glass-panel rounded-[var(--radius-xl)] border-white/5 p-4 space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.34em]">Coach nutricional</p>
+            <h4 className="text-white font-black text-xl tracking-tighter font-display leading-none mt-1">
+              Objetivo por bloques
+            </h4>
+          </div>
+          <div className={cn(
+            'px-3 py-1.5 rounded-lg border text-[10px] font-black uppercase tracking-[0.18em]',
+            planRecommendation?.isWithinRecommendedRange
+              ? 'bg-emerald-400/10 border-emerald-300/20 text-emerald-200'
+              : 'bg-orange-400/10 border-orange-300/20 text-orange-200',
+          )}>
+            {planRecommendation?.paceLabel ?? 'Configura'}
+          </div>
+        </div>
+
+        <div className="grid gap-2 sm:grid-cols-3">
+          {PLAN_GOALS.map(({ value, label, caption, icon: Icon }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => updatePlannerGoal(value)}
+              aria-pressed={plannerForm.goal === value}
+              className={cn(
+                'min-h-[76px] rounded-lg border p-3 text-left transition-colors',
+                plannerForm.goal === value
+                  ? 'bg-emerald-400/15 border-emerald-300/30 text-white'
+                  : 'bg-white/[0.04] border-white/10 text-white/50 hover:text-white/80',
+              )}
+            >
+              <div className="flex items-center gap-2">
+                <Icon className="w-4 h-4" />
+                <span className="text-[11px] font-black uppercase tracking-tight">{label}</span>
+              </div>
+              <p className="mt-1.5 text-[10px] font-bold text-white/35 leading-snug">{caption}</p>
+            </button>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <label className="space-y-1">
+            <span className="text-[9px] font-black uppercase tracking-[0.24em] text-white/35">Peso actual</span>
+            <input
+              inputMode="decimal"
+              value={plannerForm.currentWeight}
+              onChange={(event) => setPlannerForm((form) => ({
+                ...form,
+                currentWeight: event.target.value,
+                targetWeight: form.goal === 'recomp' ? event.target.value : form.targetWeight,
+              }))}
+              placeholder={profile.weightUnit}
+              className="w-full rounded-lg bg-black/30 border border-white/10 px-3 py-2 text-sm font-bold text-white outline-none focus:border-emerald-300/50"
+            />
+          </label>
+
+          <label className={cn('space-y-1', plannerForm.goal === 'recomp' && 'opacity-50')}>
+            <span className="text-[9px] font-black uppercase tracking-[0.24em] text-white/35">Peso meta</span>
+            <input
+              inputMode="decimal"
+              disabled={plannerForm.goal === 'recomp'}
+              value={plannerForm.goal === 'recomp' ? plannerForm.currentWeight : plannerForm.targetWeight}
+              onChange={(event) => setPlannerForm((form) => ({ ...form, targetWeight: event.target.value }))}
+              placeholder={profile.weightUnit}
+              className="w-full rounded-lg bg-black/30 border border-white/10 px-3 py-2 text-sm font-bold text-white outline-none focus:border-emerald-300/50 disabled:cursor-not-allowed"
+            />
+          </label>
+
+          <label className="space-y-1 col-span-2 sm:col-span-1">
+            <span className="text-[9px] font-black uppercase tracking-[0.24em] text-white/35">Tiempo</span>
+            <div className="flex items-center gap-2">
+              <input
+                type="range"
+                min="4"
+                max="52"
+                step="1"
+                value={Math.max(4, Math.min(52, toNumber(plannerForm.weeks) || 4))}
+                onChange={(event) => setPlannerForm((form) => ({ ...form, weeks: event.target.value }))}
+                className="min-w-0 flex-1 accent-emerald-300"
+              />
+              <input
+                inputMode="numeric"
+                value={plannerForm.weeks}
+                onChange={(event) => setPlannerForm((form) => ({ ...form, weeks: event.target.value }))}
+                className="w-16 rounded-lg bg-black/30 border border-white/10 px-2 py-2 text-sm font-black text-white outline-none focus:border-emerald-300/50"
+              />
+            </div>
+          </label>
+
+          <div className="rounded-lg bg-white/[0.04] border border-white/10 px-3 py-2">
+            <p className="text-[9px] font-black uppercase tracking-[0.22em] text-white/30">Rango recomendado</p>
+            <p className="text-sm font-black text-white mt-1">
+              {planRecommendation
+                ? `${planRecommendation.recommendedWeeksMin}-${planRecommendation.recommendedWeeksMax} sem`
+                : 'Completa datos'}
+            </p>
+            <p className="text-[10px] font-bold text-white/35 mt-0.5">
+              {profile.preferences.experienceLevel}
+            </p>
+          </div>
+        </div>
+
+        {planRecommendation ? (
+          <div className="rounded-lg bg-black/25 border border-white/10 p-3 space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.28em] text-white/35">Preview en vivo</p>
+                <p className="text-3xl font-black font-display tracking-tighter text-white leading-none mt-1">
+                  {planRecommendation.calories}
+                  <span className="text-sm text-white/35 ml-1">kcal</span>
+                </p>
+              </div>
+              <Target className="w-5 h-5 text-emerald-300/70" />
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <div className="rounded-lg bg-white/[0.04] px-3 py-2">
+                <p className="text-blue-300 text-lg font-black">{planRecommendation.proteinGrams}g</p>
+                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-white/30">Proteína</p>
+              </div>
+              <div className="rounded-lg bg-white/[0.04] px-3 py-2">
+                <p className="text-amber-300 text-lg font-black">{planRecommendation.carbsGrams}g</p>
+                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-white/30">Carbos</p>
+              </div>
+              <div className="rounded-lg bg-white/[0.04] px-3 py-2">
+                <p className="text-rose-300 text-lg font-black">{planRecommendation.fatGrams}g</p>
+                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-white/30">Grasa</p>
+              </div>
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              <p className="text-[11px] font-bold text-white/45 leading-relaxed">
+                {planRecommendation.summary}
+              </p>
+              <p className="text-[11px] font-bold text-white/45 leading-relaxed">
+                Mantenimiento estimado: {planRecommendation.maintenanceCalories} kcal.
+                {plannerForm.goal !== 'recomp' && ` Ritmo: ${planRecommendation.weeklyRatePercent.toFixed(2)}%/sem.`}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => applyPlanRecommendation().catch(console.error)}
+              className="w-full h-11 rounded-lg active-glass-btn flex items-center justify-center gap-2 text-sm font-black"
+            >
+              <Save className="w-4 h-4" />
+              Usar estos objetivos
+            </button>
+          </div>
+        ) : (
+          <div className="rounded-lg bg-white/[0.04] border border-white/10 p-4 text-center">
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-white/35">
+              Ingresa peso actual, peso meta y semanas para calcular kcal y macros.
+            </p>
+          </div>
         )}
       </section>
 
