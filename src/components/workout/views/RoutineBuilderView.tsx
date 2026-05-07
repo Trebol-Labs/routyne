@@ -29,6 +29,7 @@ import {
   Search,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useI18n } from '@/components/i18n/LanguageProvider';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
 import { generateMarkdown } from '@/lib/markdown/generator';
 import type { RoutineData, ExerciseBrowseItem } from '@/types/workout';
@@ -66,10 +67,10 @@ function makeExercise(): DraftExercise {
   };
 }
 
-function makeSession(n: number): DraftSession {
+function makeSession(n: number, language: 'es' | 'en'): DraftSession {
   return {
     id: uuidv4(),
-    title: `Día ${n}`,
+    title: language === 'en' ? `Day ${n}` : `Día ${n}`,
     exercises: [makeExercise()],
   };
 }
@@ -85,6 +86,7 @@ interface ExerciseRowProps {
 }
 
 function ExerciseRow({ exercise, showError, onChange, onDelete, onSearchExercise }: ExerciseRowProps) {
+  const { t } = useI18n();
   const {
     attributes,
     listeners,
@@ -120,7 +122,7 @@ function ExerciseRow({ exercise, showError, onChange, onDelete, onSearchExercise
           {...attributes}
           {...listeners}
           className="touch-none text-white/30 hover:text-white/60 transition-colors flex-shrink-0 cursor-grab active:cursor-grabbing"
-          aria-label="Arrastrar para reordenar"
+          aria-label={t.builder.dragHandle}
           type="button"
         >
           <GripVertical size={18} />
@@ -131,7 +133,7 @@ function ExerciseRow({ exercise, showError, onChange, onDelete, onSearchExercise
             <input
               type="text"
               value={exercise.name}
-              placeholder="Nombre del ejercicio"
+              placeholder={t.builder.exerciseName}
               onChange={(e) => onChange(exercise.id, { name: e.target.value })}
               className={[
                 'flex-1 bg-transparent border-b pb-0.5 text-sm text-white placeholder-white/40',
@@ -145,14 +147,14 @@ function ExerciseRow({ exercise, showError, onChange, onDelete, onSearchExercise
               type="button"
               onClick={() => onSearchExercise(exercise.id)}
               className="text-white/30 hover:text-blue-400 transition-colors flex-shrink-0 pb-0.5"
-              aria-label="Buscar en la biblioteca de ejercicios"
+              aria-label={t.builder.searchExercise}
             >
               <Search size={14} />
             </button>
           </div>
           {showError && exercise.name.trim() === '' && (
             <span className="text-[11px] text-red-400 leading-tight">
-              El nombre del ejercicio es obligatorio
+              {t.builder.exerciseRequired}
             </span>
           )}
         </div>
@@ -161,7 +163,7 @@ function ExerciseRow({ exercise, showError, onChange, onDelete, onSearchExercise
           type="button"
           onClick={() => onDelete(exercise.id)}
           className="text-white/30 hover:text-red-400 transition-colors flex-shrink-0"
-          aria-label="Eliminar ejercicio"
+          aria-label={t.builder.deleteExercise}
         >
           <X size={16} />
         </button>
@@ -171,12 +173,12 @@ function ExerciseRow({ exercise, showError, onChange, onDelete, onSearchExercise
       <div className="flex items-center gap-3 flex-wrap pl-6">
         {/* Sets */}
         <div className="flex items-center gap-1.5">
-          <span className="text-[11px] text-white/50 uppercase tracking-wide w-7">Series</span>
+          <span className="text-[11px] text-white/50 uppercase tracking-wide w-7">{t.summary.setPlural}</span>
           <button
             type="button"
             onClick={() => onChange(exercise.id, { sets: clampSets(exercise.sets - 1) })}
             className="w-6 h-6 rounded-md glass-panel flex items-center justify-center text-white/70 hover:text-white transition-colors"
-            aria-label="Disminuir series"
+            aria-label={t.builder.decreaseSets}
           >
             <Minus size={12} />
           </button>
@@ -187,7 +189,7 @@ function ExerciseRow({ exercise, showError, onChange, onDelete, onSearchExercise
             type="button"
             onClick={() => onChange(exercise.id, { sets: clampSets(exercise.sets + 1) })}
             className="w-6 h-6 rounded-md glass-panel flex items-center justify-center text-white/70 hover:text-white transition-colors"
-            aria-label="Aumentar series"
+            aria-label={t.builder.increaseSets}
           >
             <Plus size={12} />
           </button>
@@ -195,7 +197,7 @@ function ExerciseRow({ exercise, showError, onChange, onDelete, onSearchExercise
 
         {/* Reps */}
         <div className="flex items-center gap-1.5">
-          <span className="text-[11px] text-white/50 uppercase tracking-wide w-7">Reps</span>
+          <span className="text-[11px] text-white/50 uppercase tracking-wide w-7">{t.summary.reps}</span>
           <input
             type="number"
             min={1}
@@ -209,7 +211,7 @@ function ExerciseRow({ exercise, showError, onChange, onDelete, onSearchExercise
               });
             }}
             className="w-10 bg-transparent border border-white/20 rounded-md px-1.5 py-0.5 text-center text-sm text-white focus:outline-none focus:border-blue-400"
-            aria-label="Reps mínimas"
+            aria-label={t.builder.repsMin}
           />
           <span className="text-white/40 text-xs">–</span>
           <input
@@ -225,14 +227,14 @@ function ExerciseRow({ exercise, showError, onChange, onDelete, onSearchExercise
               });
             }}
             className="w-10 bg-transparent border border-white/20 rounded-md px-1.5 py-0.5 text-center text-sm text-white focus:outline-none focus:border-blue-400"
-            aria-label="Reps máximas"
+            aria-label={t.builder.repsMax}
           />
         </div>
       </div>
 
       {/* Row 3: rest pills */}
       <div className="flex items-center gap-2 pl-6 flex-wrap">
-        <span className="text-[11px] text-white/50 uppercase tracking-wide">Descanso</span>
+        <span className="text-[11px] text-white/50 uppercase tracking-wide">{t.builder.rest}</span>
         {REST_OPTIONS.map((s) => (
           <button
             key={s}
@@ -280,6 +282,7 @@ function SessionCard({
   onDragEnd,
   onSearchExercise,
 }: SessionCardProps) {
+  const { t } = useI18n();
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
@@ -298,19 +301,19 @@ function SessionCard({
         <input
           type="text"
           value={session.title}
-          placeholder="Título de la sesión"
+          placeholder={t.builder.sessionTitle}
           onChange={(e) => onTitleChange(session.id, e.target.value)}
           className="flex-1 bg-transparent border-b border-white/20 pb-0.5 text-base font-display font-semibold text-white placeholder-white/30 focus:outline-none focus:border-blue-400 transition-colors"
         />
         {canDelete && (
-          <button
-            type="button"
-            onClick={() => onDeleteSession(session.id)}
-            className="text-white/30 hover:text-red-400 transition-colors"
-            aria-label="Eliminar sesión"
-          >
-            <Trash2 size={16} />
-          </button>
+        <button
+          type="button"
+          onClick={() => onDeleteSession(session.id)}
+          className="text-white/30 hover:text-red-400 transition-colors"
+          aria-label={t.builder.deleteSession}
+        >
+          <Trash2 size={16} />
+        </button>
         )}
       </div>
 
@@ -348,7 +351,7 @@ function SessionCard({
         className="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 transition-colors self-start mt-1"
       >
         <PlusCircle size={15} />
-        Añadir ejercicio
+        {t.builder.addExercise}
       </button>
     </motion.div>
   );
@@ -357,11 +360,12 @@ function SessionCard({
 // ── Main view ─────────────────────────────────────────────────────────────────
 
 export function RoutineBuilderView() {
+  const { t, language } = useI18n();
   const setCurrentView = useWorkoutStore((s) => s.setCurrentView);
   const importRoutine = useWorkoutStore((s) => s.importRoutine);
 
-  const [title, setTitle] = useState('Mi rutina');
-  const [sessions, setSessions] = useState<DraftSession[]>([makeSession(1)]);
+  const [title, setTitle] = useState(() => t.builder.routineName);
+  const [sessions, setSessions] = useState<DraftSession[]>(() => [makeSession(1, language)]);
   const [showErrors, setShowErrors] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [searchTarget, setSearchTarget] = useState<{ sessionId: string; exerciseId: string } | null>(null);
@@ -376,8 +380,8 @@ export function RoutineBuilderView() {
   // ── Session mutations ───────────────────────────────────────────────────────
 
   const handleAddSession = useCallback(() => {
-    setSessions((prev) => [...prev, makeSession(prev.length + 1)]);
-  }, []);
+    setSessions((prev) => [...prev, makeSession(prev.length + 1, language)]);
+  }, [language]);
 
   const handleDeleteSession = useCallback((sessionId: string) => {
     setSessions((prev) => prev.filter((s) => s.id !== sessionId));
@@ -466,11 +470,11 @@ export function RoutineBuilderView() {
     try {
       const routine: RoutineData = {
         id: uuidv4(),
-          title: title.trim(),
-          createdAt: new Date(),
-          sessions: sessions.map((s) => ({
-            id: s.id,
-            title: s.title.trim() || 'Día',
+        title: title.trim(),
+        createdAt: new Date(),
+        sessions: sessions.map((s) => ({
+          id: s.id,
+          title: s.title.trim() || t.builder.session,
           exercises: s.exercises.map((ex) => ({
             id: ex.id,
             originalName: ex.name.trim(),
@@ -503,13 +507,13 @@ export function RoutineBuilderView() {
           type="button"
           onClick={() => setCurrentView('routine-overview')}
           className="text-white/60 hover:text-white transition-colors p-1 -ml-1"
-          aria-label="Volver"
+          aria-label={t.builder.back}
         >
           <ArrowLeft size={22} />
         </button>
 
         <h1 className="font-display uppercase tracking-tight text-sm font-bold text-white/80 flex-1 text-center">
-          Constructor de rutinas
+          {t.builder.title}
         </h1>
 
         <Button
@@ -518,7 +522,7 @@ export function RoutineBuilderView() {
           disabled={isSaving}
           className="active-glass-btn text-white text-xs px-4 py-1.5 rounded-xl font-semibold disabled:opacity-50"
         >
-          {isSaving ? 'Guardando…' : 'Guardar'}
+          {isSaving ? t.builder.saving : t.builder.save}
         </Button>
       </div>
 
@@ -527,7 +531,7 @@ export function RoutineBuilderView() {
         <input
           type="text"
           value={title}
-          placeholder="Título de la rutina"
+          placeholder={t.builder.routineName}
           onChange={(e) => setTitle(e.target.value)}
           className={[
             'w-full bg-transparent text-xl font-display font-bold text-white',
@@ -536,7 +540,7 @@ export function RoutineBuilderView() {
           ].join(' ')}
         />
         {showErrors && title.trim() === '' && (
-          <p className="text-[11px] text-red-400 mt-1">El título de la rutina es obligatorio</p>
+          <p className="text-[11px] text-red-400 mt-1">{t.builder.routineTitleRequired}</p>
         )}
       </div>
 
@@ -567,7 +571,7 @@ export function RoutineBuilderView() {
         className="glass-panel rounded-2xl py-3.5 flex items-center justify-center gap-2 text-sm text-white/60 hover:text-white transition-colors"
       >
         <Plus size={16} />
-        Añadir sesión
+        {t.builder.addSession}
       </motion.button>
 
       {/* Validation summary (only shown after first save attempt) */}
@@ -579,7 +583,7 @@ export function RoutineBuilderView() {
             exit={{ opacity: 0 }}
             className="text-center text-xs text-red-400"
           >
-            Completa todos los nombres de ejercicio antes de guardar.
+            {t.builder.exerciseRequired}
           </motion.p>
         )}
       </AnimatePresence>

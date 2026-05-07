@@ -9,10 +9,10 @@ import { SetInputSheet } from '@/components/workout/overlays/SetInputSheet';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
 import { useWakeLock } from '@/hooks/useWakeLock';
-import type { HistoryEntry, WorkoutState } from '@/types/workout';
 import { ChevronLeft, Clock, Zap, CheckCircle2, MousePointerClick, ChevronsRight, X, CheckCheck, Pencil } from 'lucide-react';
 import { EditSessionSheet } from '@/components/workout/overlays/EditSessionSheet';
 import { ExerciseDetailSheet } from '@/components/workout/overlays/ExerciseDetailSheet';
+import { getAutoSetSuggestion } from '@/lib/workout/suggestions';
 
 interface PendingSet {
   exerciseId: string;
@@ -25,98 +25,6 @@ interface PendingSet {
 interface ArmedPreview {
   key: string;
   suggestion: AutoSuggestion;
-}
-
-function normalizeExerciseName(name: string): string {
-  return name.trim().toLowerCase();
-}
-
-function toPositiveNumber(value: number | null | undefined): number | undefined {
-  if (value == null || Number.isNaN(value) || value <= 0) {
-    return undefined;
-  }
-
-  return value;
-}
-
-function getSameSessionPreviousSetSuggestion(
-  setCompletion: WorkoutState['setCompletion'],
-  sessionIdx: number,
-  exerciseId: string,
-  setIdx: number
-): AutoSuggestion | null {
-  for (let i = setIdx - 1; i >= 0; i -= 1) {
-    const status = setCompletion[`${sessionIdx}-${exerciseId}-${i}`];
-    if (status?.completed && (status.repsDone ?? 0) > 0) {
-      return {
-        repsDone: status.repsDone ?? 0,
-        weight: toPositiveNumber(status.weight),
-      };
-    }
-  }
-
-  return null;
-}
-
-function getHistorySetSuggestion(
-  history: HistoryEntry[],
-  exerciseId: string,
-  exerciseName: string,
-  setIdx: number
-): AutoSuggestion | null {
-  const normalizedExerciseName = normalizeExerciseName(exerciseName);
-
-  for (const entry of history) {
-    const matchingExercise =
-      entry.volumeData.find((ev) => ev.exerciseId === exerciseId) ??
-      entry.volumeData.find((ev) => normalizeExerciseName(ev.cleanName) === normalizedExerciseName);
-
-    if (!matchingExercise?.setDetails?.length) {
-      continue;
-    }
-
-    const matchingSet = matchingExercise.setDetails.find(
-      (setDetail) => setDetail.setIdx === setIdx && setDetail.repsDone > 0
-    );
-
-    if (!matchingSet) {
-      continue;
-    }
-
-    return {
-      repsDone: matchingSet.repsDone,
-      weight: toPositiveNumber(matchingSet.weight),
-    };
-  }
-
-  return null;
-}
-
-function getAutoSetSuggestion(params: {
-  setCompletion: WorkoutState['setCompletion'];
-  history: HistoryEntry[];
-  sessionIdx: number;
-  exerciseId: string;
-  exerciseName: string;
-  setIdx: number;
-}): AutoSuggestion | null {
-  const sameSessionSuggestion = getSameSessionPreviousSetSuggestion(
-    params.setCompletion,
-    params.sessionIdx,
-    params.exerciseId,
-    params.setIdx
-  );
-
-  if (sameSessionSuggestion) {
-    return sameSessionSuggestion;
-  }
-
-  return getHistorySetSuggestion(
-    params.history,
-    params.exerciseId,
-    params.exerciseName,
-    params.setIdx
-  );
 }
 
 const HINT_KEY = 'routyne-gesture-hint-v1';
@@ -240,7 +148,6 @@ export function ActiveSessionView() {
     suggestion?: AutoSuggestion | null
   ) => {
     clearArmedPreview();
-    setShowRestTimer(false);
     setRestDuration(restSeconds || profile.defaultRestSeconds);
     setPendingSet({
       exerciseId,
@@ -339,6 +246,7 @@ export function ActiveSessionView() {
     if (activeSessionIdx === null) return;
 
     let anyCompleted = false;
+    let restSeconds = profile.defaultRestSeconds;
 
     for (let setIdx = 0; setIdx < sets; setIdx++) {
       const key = `${activeSessionIdx}-${exerciseId}-${setIdx}`;
@@ -359,11 +267,16 @@ export function ActiveSessionView() {
 
       toggleSetCompletion(activeSessionIdx, exerciseId, setIdx, repsDone, weight);
       anyCompleted = true;
+      const exercise = activeSession.exercises.find((item) => item.id === exerciseId);
+      restSeconds = exercise?.restSeconds ?? restSeconds;
     }
 
     if (anyCompleted) {
       clearArmedPreview();
       setPendingSet(null);
+      setRestDuration(restSeconds || profile.defaultRestSeconds);
+      setRestTimerKey((prev) => prev + 1);
+      setShowRestTimer(true);
       if ('vibrate' in navigator) navigator.vibrate([30, 50, 30]);
     }
   };

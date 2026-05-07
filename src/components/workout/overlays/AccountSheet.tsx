@@ -1,13 +1,14 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowRight,
+  Bell,
+  CheckCircle2,
   Download,
   Flame,
   HardDrive,
-  CheckCircle2,
   Loader2,
   LockKeyhole,
   LogOut,
@@ -26,6 +27,8 @@ import { EmojiPicker } from '@/components/ui/EmojiPicker';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
 import { useSync } from '@/hooks/useSync';
 import { useAuth } from '@/hooks/useAuth';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { useI18n } from '@/components/i18n/LanguageProvider';
 import { cn } from '@/lib/utils';
 import {
   exportAllData,
@@ -34,52 +37,51 @@ import {
   type ExportFile,
 } from '@/lib/db/export';
 import type {
-  HistoryEntry,
   AccentColor,
+  AppLanguage,
   CoachTone,
   EffortTrackingMode,
-  ExperienceLevel,
-  MotionLevel,
+  HistoryEntry,
   TrainingGoal,
-  UiDensity,
+  UserProfilePreferences,
 } from '@/types/workout';
 
-export type AccountSheetSection = 'profile' | 'sync' | 'training' | 'appearance' | 'data';
+export type AccountSheetSection =
+  | 'profile'
+  | 'sync'
+  | 'training'
+  | 'appearance'
+  | 'notifications'
+  | 'data';
 
 interface AccountSheetProps {
   onClose: () => void;
   initialSection?: AccountSheetSection;
 }
 
-const TRAINING_GOALS: Array<{ value: TrainingGoal; label: string }> = [
-  { value: 'strength', label: 'Fuerza' },
-  { value: 'hypertrophy', label: 'Hipertrofia' },
-  { value: 'general', label: 'General' },
-  { value: 'endurance', label: 'Resistencia' },
+const TRAINING_GOALS: Array<{ value: TrainingGoal; labelEs: string; labelEn: string }> = [
+  { value: 'strength', labelEs: 'Fuerza', labelEn: 'Strength' },
+  { value: 'hypertrophy', labelEs: 'Hipertrofia', labelEn: 'Hypertrophy' },
+  { value: 'general', labelEs: 'General', labelEn: 'General' },
+  { value: 'endurance', labelEs: 'Resistencia', labelEn: 'Endurance' },
 ];
 
-const EXPERIENCE_LEVELS: Array<{ value: ExperienceLevel; label: string }> = [
-  { value: 'beginner', label: 'Principiante' },
-  { value: 'intermediate', label: 'Intermedio' },
-  { value: 'advanced', label: 'Avanzado' },
+const WEEK_STARTS: Array<{ value: 0 | 1; labelEs: string; labelEn: string }> = [
+  { value: 0, labelEs: 'Domingo', labelEn: 'Sunday' },
+  { value: 1, labelEs: 'Lunes', labelEn: 'Monday' },
 ];
 
-const WEEK_STARTS: Array<{ value: 0 | 1; label: string }> = [
-  { value: 0, label: 'Domingo' },
-  { value: 1, label: 'Lunes' },
+const EFFORT_TRACKING: Array<{ value: EffortTrackingMode; labelEs: string; labelEn: string }> = [
+  { value: 'off', labelEs: 'Sin seguimiento', labelEn: 'Off' },
+  { value: 'rpe', labelEs: 'RPE', labelEn: 'RPE' },
+  { value: 'rir', labelEs: 'RIR', labelEn: 'RIR' },
+  { value: 'both', labelEs: 'Ambos', labelEn: 'Both' },
 ];
 
-const EFFORT_TRACKING: Array<{ value: EffortTrackingMode; label: string }> = [
-  { value: 'off', label: 'Sin seguimiento' },
-  { value: 'rpe', label: 'RPE' },
-  { value: 'rir', label: 'RIR' },
-  { value: 'both', label: 'Ambos' },
-];
-
-const COACH_TONES: Array<{ value: CoachTone; label: string }> = [
-  { value: 'direct', label: 'Directo' },
-  { value: 'supportive', label: 'Cercano' },
-  { value: 'technical', label: 'Técnico' },
+const COACH_TONES: Array<{ value: CoachTone; labelEs: string; labelEn: string }> = [
+  { value: 'direct', labelEs: 'Directo', labelEn: 'Direct' },
+  { value: 'supportive', labelEs: 'Cercano', labelEn: 'Supportive' },
+  { value: 'technical', labelEs: 'Técnico', labelEn: 'Technical' },
 ];
 
 const ACCENTS: Array<{ value: AccentColor; label: string; className: string }> = [
@@ -90,26 +92,16 @@ const ACCENTS: Array<{ value: AccentColor; label: string; className: string }> =
   { value: 'mono', label: 'Mono', className: 'bg-white/60' },
 ];
 
-const DENSITIES: Array<{ value: UiDensity; label: string }> = [
-  { value: 'comfortable', label: 'Cómodo' },
-  { value: 'compact', label: 'Compacto' },
-];
-
-const MOTION_LEVELS: Array<{ value: MotionLevel; label: string }> = [
-  { value: 'system', label: 'Sistema' },
-  { value: 'reduced', label: 'Reducido' },
-  { value: 'full', label: 'Completo' },
-];
-
+const AVATAR_PRESETS = ['💪', '🏋️', '🔥', '⚡', '🎯', '🦾', '🏃', '🥊'];
 const DEFAULT_REST_PRESETS = [60, 90, 120, 150];
 const DAY_OPTIONS = [
-  { value: 0, label: 'D' },
-  { value: 1, label: 'L' },
-  { value: 2, label: 'M' },
-  { value: 3, label: 'X' },
-  { value: 4, label: 'J' },
-  { value: 5, label: 'V' },
-  { value: 6, label: 'S' },
+  { value: 0, labelEs: 'D', labelEn: 'S' },
+  { value: 1, labelEs: 'L', labelEn: 'M' },
+  { value: 2, labelEs: 'M', labelEn: 'T' },
+  { value: 3, labelEs: 'X', labelEn: 'W' },
+  { value: 4, labelEs: 'J', labelEn: 'T' },
+  { value: 5, labelEs: 'V', labelEn: 'F' },
+  { value: 6, labelEs: 'S', labelEn: 'S' },
 ];
 
 function computeStreak(history: HistoryEntry[], restDays: number[]): number {
@@ -123,7 +115,7 @@ function computeStreak(history: HistoryEntry[], restDays: number[]): number {
   let streak = 0;
   const check = new Date(startDate);
   while (isFulfilled(check)) {
-    streak++;
+    streak += 1;
     check.setDate(check.getDate() - 1);
   }
   return streak;
@@ -147,12 +139,65 @@ function isExportFile(value: unknown): value is ExportFile {
   );
 }
 
-function formatDateTime(value: string | null): string {
-  if (!value) return 'Nunca';
-  return new Date(value).toLocaleString('es-ES', {
+function formatDateTime(value: string | null, language: AppLanguage): string {
+  if (!value) return language === 'en' ? 'Never' : 'Nunca';
+  return new Date(value).toLocaleString(language === 'en' ? 'en-US' : 'es-ES', {
     dateStyle: 'medium',
     timeStyle: 'short',
   });
+}
+
+function formatTimezoneLabel(timezone: string): string {
+  return timezone || 'UTC';
+}
+
+function PreferenceButton({
+  active,
+  children,
+  onClick,
+}: {
+  active: boolean;
+  children: ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'min-h-11 rounded-2xl border px-3 py-2 text-[11px] font-black uppercase tracking-widest transition-all',
+        active ? 'active-glass-btn text-white' : 'sunken-glass text-white/45 hover:text-white/70',
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function SectionTitle({
+  eyebrow,
+  title,
+  description,
+}: {
+  eyebrow: string;
+  title: string;
+  description?: string;
+}) {
+  return (
+    <div>
+      <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/30">
+        {eyebrow}
+      </p>
+      <p className="mt-1 text-sm font-medium text-white/45">
+        {title}
+      </p>
+      {description && (
+        <p className="mt-1 text-xs font-medium leading-relaxed text-white/30">
+          {description}
+        </p>
+      )}
+    </div>
+  );
 }
 
 export function AccountSheet({ onClose, initialSection = 'profile' }: AccountSheetProps) {
@@ -162,8 +207,11 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
     history,
     hydrate,
   } = useWorkoutStore();
-  const { user, isAnonymous, isLoading: authLoading, signInAnonymously, signInWithEmail, signOut } = useAuth();
+  const { user, session, isAnonymous, isLoading: authLoading, signInAnonymously, signInWithEmail, signOut } = useAuth();
   const { status: syncStatus, pendingCount, lastSyncAt, lastError, syncNow } = useSync(user?.id);
+  const { language, setLanguage, t } = useI18n();
+  const push = usePushNotifications(session?.access_token);
+
   const [isPersisted, setIsPersisted] = useState<boolean | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -171,13 +219,18 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
   const [accountMessage, setAccountMessage] = useState<string | null>(null);
   const [email, setEmail] = useState('');
   const [authMode, setAuthMode] = useState<'setup' | 'email' | 'sent'>('setup');
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const canUseLocalBackup = process.env.NODE_ENV !== 'production' || process.env.NEXT_PUBLIC_LOCAL_BACKUP_TOOLS === 'true';
   const supabaseEnabled = !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const accountActionDisabled = authLoading || syncStatus === 'syncing';
   const sectionRefs = useRef<Record<AccountSheetSection, HTMLElement | null>>({
     profile: null,
     sync: null,
     training: null,
     appearance: null,
+    notifications: null,
     data: null,
   });
 
@@ -192,12 +245,8 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
   useEffect(() => {
     if (!user) {
       setAuthMode('setup');
-      return;
     }
-    if (!isAnonymous) {
-      setAuthMode('setup');
-    }
-  }, [isAnonymous, user]);
+  }, [user]);
 
   const totalSessions = history.length;
   const totalVolume = history.reduce((sum, entry) => sum + entry.totalVolume, 0);
@@ -212,25 +261,51 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
     ),
     [profile.preferences.weekStartsOn]
   );
-  const trainingGoalLabel = TRAINING_GOALS.find((option) => option.value === profile.preferences.trainingGoal)?.label ?? 'Fuerza';
+
+  const pushStateLabel = (() => {
+    if (push.state === 'active') return t.account.pushStateOn;
+    if (push.state === 'denied') return t.account.pushStateDenied;
+    if (push.state === 'unsupported') return t.account.pushStateUnsupported;
+    return t.account.pushStateOff;
+  })();
+
+  const pushPermissionLabel = (() => {
+    if (push.permission === 'granted') return language === 'en' ? 'Granted' : 'Concedido';
+    if (push.permission === 'denied') return language === 'en' ? 'Denied' : 'Denegado';
+    if (push.permission === 'unsupported') return language === 'en' ? 'Unsupported' : 'No compatible';
+    return language === 'en' ? 'Default' : 'Predeterminado';
+  })();
 
   const syncStateLabel = (() => {
-    if (!supabaseEnabled) return 'Sincronización no configurada';
-    if (authLoading) return 'Comprobando cuenta...';
-    if (!user) return 'Sin cuenta conectada';
-    if (syncStatus === 'syncing') return 'Sincronizando...';
-    if (syncStatus === 'offline') return 'Sin conexión';
-    if (syncStatus === 'error') return 'Error de sincronización';
-    if (isAnonymous) return 'Cuenta anónima activa';
-    return 'Sincronización activa';
+    if (!supabaseEnabled) return t.account.syncPaused;
+    if (authLoading) return language === 'en' ? 'Checking account...' : 'Comprobando cuenta...';
+    if (!user) return t.account.signedOut;
+    if (syncStatus === 'syncing') return language === 'en' ? 'Syncing...' : 'Sincronizando...';
+    if (syncStatus === 'offline') return language === 'en' ? 'Offline' : 'Sin conexión';
+    if (syncStatus === 'error') return language === 'en' ? 'Sync error' : 'Error de sincronización';
+    if (isAnonymous) return t.account.syncAnonymous;
+    return t.account.syncActive;
   })();
 
   const syncStateDetail = (() => {
-    if (!supabaseEnabled) return 'Faltan las variables de Supabase para activar la sincronización.';
-    if (!user) return 'Inicia sesión para activar la sincronización entre dispositivos.';
-    if (isAnonymous) return 'Puedes añadir email para conservar el acceso en otros dispositivos.';
-    return user.email ?? 'Cuenta sin email visible';
+    if (!supabaseEnabled) return language === 'en'
+      ? 'Supabase variables are missing, so sync is disabled.'
+      : 'Faltan variables de Supabase, así que la sincronización está desactivada.';
+    if (!user) return language === 'en'
+      ? 'Sign in to sync across devices.'
+      : 'Inicia sesión para sincronizar entre dispositivos.';
+    if (isAnonymous) return language === 'en'
+      ? 'Add an email to make this account recoverable.'
+      : 'Añade un email para volver recuperable esta cuenta.';
+    return user.email ?? (language === 'en' ? 'Connected account' : 'Cuenta conectada');
   })();
+
+  const updatePreferences = (patch: Partial<UserProfilePreferences>) => {
+    if (patch.language) {
+      setLanguage(patch.language);
+    }
+    updateProfile({ preferences: patch });
+  };
 
   const handleExport = async () => {
     setIsExporting(true);
@@ -238,10 +313,10 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
     try {
       const data = await exportAllData();
       downloadExportFile(data);
-      setBackupStatus('Copia exportada');
+      setBackupStatus(t.account.exportReady);
     } catch (err) {
       console.error('[AccountSheet] export failed', err);
-      setBackupStatus('No se pudo exportar');
+      setBackupStatus(language === 'en' ? 'Could not export backup.' : 'No se pudo exportar la copia.');
     } finally {
       setIsExporting(false);
     }
@@ -257,15 +332,17 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
     try {
       const parsed: unknown = JSON.parse(await file.text());
       if (!isExportFile(parsed)) {
-        throw new Error('El archivo de copia de Routyne no es válido');
+        throw new Error(language === 'en'
+          ? 'The Routyne backup file is invalid.'
+          : 'El archivo de copia de Routyne no es válido.');
       }
 
       await importAllData(parsed);
       await hydrate();
-      setBackupStatus('Copia importada');
+      setBackupStatus(t.account.restored);
     } catch (err) {
       console.error('[AccountSheet] import failed', err);
-      setBackupStatus('No se pudo importar');
+      setBackupStatus(language === 'en' ? 'Could not import backup.' : 'No se pudo importar la copia.');
     } finally {
       input.value = '';
       setIsImporting(false);
@@ -274,7 +351,7 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
 
   const handleSaveEmail = async () => {
     if (!email.trim() || !email.includes('@')) {
-      setAccountMessage('Escribe un email válido.');
+      setAccountMessage(language === 'en' ? 'Enter a valid email.' : 'Escribe un email válido.');
       return;
     }
 
@@ -288,13 +365,26 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
     setAuthMode('sent');
   };
 
-  const accountActionDisabled = authLoading || syncStatus === 'syncing';
+  const toggleReducedMotion = () => {
+    const next = !profile.preferences.reducedMotion;
+    updatePreferences({
+      reducedMotion: next,
+      motionLevel: next ? 'reduced' : 'system',
+    });
+  };
 
+  const setTimezoneToDevice = () => {
+    const deviceTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (deviceTimezone) {
+      updatePreferences({ timezone: deviceTimezone });
+    }
+  };
+
+  const deviceTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || profile.preferences.timezone;
   return (
-    <Sheet onClose={onClose} title="Cuenta y personalización">
+    <Sheet onClose={onClose} title={t.account.title}>
       <div className="h-full overflow-y-auto px-4 pb-6">
         <div className="space-y-4">
-          {/* Profile */}
           <motion.section
             ref={(node) => { sectionRefs.current.profile = node; }}
             initial={{ opacity: 0, y: 12 }}
@@ -309,25 +399,22 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
               <div className="min-w-0 flex-1 space-y-2">
                 <div className="space-y-1">
                   <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/30">
-                    Perfil
+                    {t.account.profile}
                   </p>
                   <input
                     type="text"
                     value={profile.displayName}
                     onChange={(e) => updateProfile({ displayName: e.target.value })}
                     className="sunken-glass w-full rounded-2xl border-none bg-transparent px-3 py-3 text-lg font-black text-white outline-none placeholder:text-white/18"
-                    placeholder="Atleta"
+                    placeholder={language === 'en' ? 'Athlete' : 'Atleta'}
                     maxLength={24}
                   />
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-white/45">
-                    {user ? (isAnonymous ? 'Cuenta anónima' : (user.email ?? 'Conectado')) : 'Sin cuenta'}
-                  </span>
-                  <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-white/45">
-                    {trainingGoalLabel}
-                  </span>
-                </div>
+                <p className="text-xs font-medium leading-relaxed text-white/35">
+                  {user
+                    ? (isAnonymous ? t.account.anonymous : (user.email ?? t.account.connected))
+                    : t.account.signedOut}
+                </p>
               </div>
             </div>
 
@@ -336,7 +423,9 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
                 <p className="text-xl font-black text-sky-300 font-display leading-none">
                   {totalSessions.toLocaleString()}
                 </p>
-                <p className="mt-1 text-[9px] font-black uppercase tracking-[0.25em] text-white/35">Sesiones</p>
+                <p className="mt-1 text-[9px] font-black uppercase tracking-[0.25em] text-white/35">
+                  {language === 'en' ? 'Sessions' : 'Sesiones'}
+                </p>
               </div>
               <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-3 text-center">
                 <p className="text-xl font-black text-indigo-300 font-display leading-none">
@@ -351,22 +440,72 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
                   {streak}
                   <Flame className="h-4 w-4" />
                 </p>
-                <p className="mt-1 text-[9px] font-black uppercase tracking-[0.25em] text-white/35">Racha</p>
+                <p className="mt-1 text-[9px] font-black uppercase tracking-[0.25em] text-white/35">
+                  {t.stats.streak}
+                </p>
               </div>
             </div>
 
             <div className="space-y-2">
-              <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/30">
-                Avatar
-              </p>
-              <EmojiPicker
-                value={profile.avatarEmoji}
-                onChange={(emoji) => updateProfile({ avatarEmoji: emoji })}
-              />
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/30">
+                  {t.account.avatar}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowAvatarPicker((current) => !current)}
+                  className="text-[10px] font-black uppercase tracking-[0.22em] text-white/35 hover:text-white/60 transition-colors"
+                >
+                  {showAvatarPicker
+                    ? (language === 'en' ? 'Compact' : 'Compacto')
+                    : (language === 'en' ? 'More' : 'Más')}
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {AVATAR_PRESETS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => updateProfile({ avatarEmoji: emoji })}
+                    className={cn(
+                      'flex h-11 w-11 items-center justify-center rounded-2xl border text-2xl transition-all',
+                      profile.avatarEmoji === emoji
+                        ? 'active-glass-btn scale-105'
+                        : 'border-white/10 bg-white/[0.04] hover:bg-white/[0.08]',
+                    )}
+                    aria-label={`Select ${emoji}`}
+                    aria-pressed={profile.avatarEmoji === emoji}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setShowAvatarPicker((current) => !current)}
+                  className="flex h-11 w-11 items-center justify-center rounded-2xl border border-dashed border-white/15 bg-white/[0.03] text-white/45 hover:text-white/70"
+                  aria-label={language === 'en' ? 'Expand avatar picker' : 'Expandir selector de avatar'}
+                >
+                  {showAvatarPicker ? '−' : '+'}
+                </button>
+              </div>
+              <AnimatePresence>
+                {showAvatarPicker && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    className="rounded-2xl border border-white/8 bg-white/[0.03] p-3"
+                  >
+                    <EmojiPicker
+                      value={profile.avatarEmoji}
+                      onChange={(emoji) => updateProfile({ avatarEmoji: emoji })}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </motion.section>
 
-          {/* Account & Sync */}
           <motion.section
             ref={(node) => { sectionRefs.current.sync = node; }}
             initial={{ opacity: 0, y: 12 }}
@@ -374,18 +513,14 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
             transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
             className="glass-panel overflow-hidden rounded-3xl border-white/10 p-4 sm:p-5"
           >
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_20%_0%,rgba(56,189,248,0.22),transparent_35%),radial-gradient(circle_at_85%_20%,rgba(99,102,241,0.16),transparent_32%)]" />
-
             <div className="relative space-y-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/30">
-                    Cuenta y sincronización
-                  </p>
-                  <p className="mt-1 text-sm font-medium text-white/45">
-                    {syncStateLabel}
-                  </p>
-                </div>
+              <SectionTitle
+                eyebrow={t.account.sync}
+                title={syncStateLabel}
+                description={syncStateDetail}
+              />
+
+              <div className="flex flex-wrap items-center gap-2">
                 <span
                   className={cn(
                     'w-fit rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.2em]',
@@ -400,7 +535,12 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
                             : 'border-white/10 bg-white/[0.04] text-white/45',
                   )}
                 >
-                  {pendingCount > 0 ? `${pendingCount} pendientes` : '0 pendientes'}
+                  {pendingCount > 0
+                    ? `${pendingCount} ${language === 'en' ? 'pending' : 'pendientes'}`
+                    : `0 ${language === 'en' ? 'pending' : 'pendientes'}`}
+                </span>
+                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-white/45">
+                  {formatDateTime(lastSyncAt, language)}
                 </span>
               </div>
 
@@ -409,7 +549,7 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
                   <XCircle className="mt-0.5 h-4 w-4 shrink-0" />
                   <div className="min-w-0">
                     <p className="text-[10px] font-black uppercase tracking-[0.22em] text-red-100/80">
-                      La sincronización necesita atención
+                      {language === 'en' ? 'Sync needs attention' : 'La sincronización necesita atención'}
                     </p>
                     <p className="mt-1 text-sm font-medium leading-relaxed text-red-100/80">
                       {lastError}
@@ -427,15 +567,17 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
                       </div>
                       <div className="min-w-0">
                         <p className="text-[10px] font-black uppercase tracking-[0.24em] text-amber-50/75">
-                          Login no disponible
+                          {language === 'en' ? 'Login unavailable' : 'Login no disponible'}
                         </p>
                         <p className="mt-1 text-xl font-black leading-none text-white font-display sm:text-2xl">
-                          Falta configurar Supabase
+                          {language === 'en' ? 'Supabase is not configured' : 'Falta configurar Supabase'}
                         </p>
                       </div>
                     </div>
                     <p className="text-sm font-medium leading-relaxed text-amber-50/78">
-                      Esta build no tiene las variables necesarias para mostrar el inicio de sesión y sincronizar entre dispositivos.
+                      {language === 'en'
+                        ? 'This build cannot sync between devices yet.'
+                        : 'Esta build no puede sincronizar entre dispositivos todavía.'}
                     </p>
                   </div>
                 ) : !user ? (
@@ -448,10 +590,10 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
                           </div>
                           <div className="min-w-0">
                             <p className="text-[10px] font-black uppercase tracking-[0.24em] text-sky-100/60">
-                              Entrar con email
+                              {language === 'en' ? 'Sign in with email' : 'Entrar con email'}
                             </p>
                             <p className="mt-1 text-xl font-black leading-none text-white font-display sm:text-2xl">
-                              Recibe un enlace mágico
+                              {language === 'en' ? 'Receive a magic link' : 'Recibe un enlace mágico'}
                             </p>
                           </div>
                         </div>
@@ -472,18 +614,20 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
                             disabled={accountActionDisabled || !email.trim()}
                           >
                             <Mail className="mr-2 h-4 w-4" />
-                            Enviar enlace
+                            {language === 'en' ? 'Send link' : 'Enviar enlace'}
                           </Button>
                           <button
                             type="button"
                             onClick={() => setAuthMode('setup')}
                             className="min-h-12 rounded-2xl border border-white/10 bg-white/[0.04] px-3 text-[11px] font-black uppercase tracking-widest text-white/60 transition-colors hover:text-white"
                           >
-                            Volver
+                            {language === 'en' ? 'Back' : 'Volver'}
                           </button>
                         </div>
                         <p className="text-xs font-medium leading-relaxed text-white/45">
-                          Te enviaremos un enlace seguro. No necesitas contraseña.
+                          {language === 'en'
+                            ? 'We will send a secure link. No password needed.'
+                            : 'Te enviaremos un enlace seguro. No necesitas contraseña.'}
                         </p>
                       </div>
                     ) : authMode === 'sent' ? (
@@ -494,22 +638,24 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
                           </div>
                           <div className="min-w-0">
                             <p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-100/65">
-                              Enlace enviado
+                              {language === 'en' ? 'Link sent' : 'Enlace enviado'}
                             </p>
                             <p className="mt-1 text-xl font-black leading-none text-white font-display sm:text-2xl">
-                              Revisa tu correo
+                              {language === 'en' ? 'Check your email' : 'Revisa tu correo'}
                             </p>
                           </div>
                         </div>
                         <p className="text-sm font-medium leading-relaxed text-white/55">
-                          Abre el enlace que enviamos a {email.trim() || 'tu email'} para completar el inicio de sesión.
+                          {language === 'en'
+                            ? `Open the link we sent to ${email.trim() || 'your email'} to finish signing in.`
+                            : `Abre el enlace que enviamos a ${email.trim() || 'tu email'} para completar el inicio de sesión.`}
                         </p>
                         <button
                           type="button"
                           onClick={() => setAuthMode('email')}
                           className="min-h-12 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-3 text-[11px] font-black uppercase tracking-widest text-white/65 transition-colors hover:text-white"
                         >
-                          Usar otro email
+                          {language === 'en' ? 'Use another email' : 'Usar otro email'}
                         </button>
                       </div>
                     ) : (
@@ -520,17 +666,12 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
                           </div>
                           <div className="min-w-0">
                             <p className="text-[10px] font-black uppercase tracking-[0.24em] text-sky-100/60">
-                              Login destacado
+                              {language === 'en' ? 'Featured login' : 'Login destacado'}
                             </p>
                             <p className="mt-1 text-2xl font-black leading-none text-white font-display sm:text-3xl">
-                              Entra y lleva tu rutina contigo
+                              {language === 'en' ? 'Sign in and take your routine with you' : 'Entra y lleva tu rutina contigo'}
                             </p>
                           </div>
-                        </div>
-                        <div className="grid gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-white/55 sm:grid-cols-3">
-                          <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-2">Sync cloud</span>
-                          <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-2">Magic link</span>
-                          <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-2">Sin password</span>
                         </div>
                         <div className="grid gap-2 sm:grid-cols-2">
                           <Button
@@ -540,7 +681,7 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
                             disabled={accountActionDisabled}
                           >
                             <Mail className="mr-2 h-4 w-4" />
-                            Entrar con email
+                            {language === 'en' ? 'Sign in with email' : 'Entrar con email'}
                           </Button>
                           <button
                             type="button"
@@ -557,11 +698,13 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
                             disabled={accountActionDisabled}
                           >
                             <UserRound className="mr-2 inline h-4 w-4" />
-                            Probar anónimo
+                            {language === 'en' ? 'Try anonymous' : 'Probar anónimo'}
                           </button>
                         </div>
                         <p className="text-xs font-medium leading-relaxed text-white/45">
-                          Tus datos actuales se quedan en este dispositivo hasta que conectes una cuenta.
+                          {language === 'en'
+                            ? 'Your local data stays on this device until you connect an account.'
+                            : 'Tus datos actuales se quedan en este dispositivo hasta que conectes una cuenta.'}
                         </p>
                       </div>
                     )}
@@ -574,10 +717,10 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
                       </div>
                       <div className="min-w-0">
                         <p className="text-[10px] font-black uppercase tracking-[0.24em] text-sky-100/60">
-                          Cuenta anónima activa
+                          {t.account.syncAnonymous}
                         </p>
                         <p className="mt-1 text-xl font-black leading-none text-white font-display sm:text-2xl">
-                          Añade email para no perder acceso
+                          {language === 'en' ? 'Add email to keep access' : 'Añade email para no perder acceso'}
                         </p>
                       </div>
                     </div>
@@ -601,14 +744,14 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
                             disabled={accountActionDisabled || !email.trim()}
                           >
                             <ArrowRight className="mr-2 h-4 w-4" />
-                            Añadir email
+                            {language === 'en' ? 'Add email' : 'Añadir email'}
                           </Button>
                           <button
                             type="button"
                             onClick={() => setAuthMode('setup')}
                             className="min-h-12 rounded-2xl border border-white/10 bg-white/[0.04] px-3 text-[11px] font-black uppercase tracking-widest text-white/60 transition-colors hover:text-white"
                           >
-                            Volver
+                            {language === 'en' ? 'Back' : 'Volver'}
                           </button>
                         </div>
                       </div>
@@ -618,7 +761,9 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
                           <div className="flex items-start gap-2">
                             <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-200" />
                             <p className="text-sm font-medium leading-relaxed text-emerald-50/80">
-                              Enviamos el enlace a {email.trim() || 'tu email'}. Ábrelo para convertir esta cuenta anónima en una cuenta recuperable.
+                              {language === 'en'
+                                ? `We sent the link to ${email.trim() || 'your email'}. Open it to convert this anonymous account into a recoverable one.`
+                                : `Enviamos el enlace a ${email.trim() || 'tu email'}. Ábrelo para convertir esta cuenta anónima en una cuenta recuperable.`}
                             </p>
                           </div>
                         </div>
@@ -627,7 +772,7 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
                           onClick={() => setAuthMode('email')}
                           className="min-h-12 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-3 text-[11px] font-black uppercase tracking-widest text-white/65 transition-colors hover:text-white"
                         >
-                          Usar otro email
+                          {language === 'en' ? 'Use another email' : 'Usar otro email'}
                         </button>
                       </div>
                     ) : (
@@ -639,7 +784,7 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
                           disabled={accountActionDisabled}
                         >
                           <Mail className="mr-2 h-4 w-4" />
-                          Añadir email
+                          {language === 'en' ? 'Add email' : 'Añadir email'}
                         </Button>
                         <button
                           type="button"
@@ -648,7 +793,7 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
                           className="min-h-12 rounded-2xl border border-white/10 bg-white/[0.04] px-3 text-[11px] font-black uppercase tracking-widest text-white/65 transition-colors hover:text-white disabled:opacity-50"
                         >
                           <RefreshCw className="mr-2 inline h-4 w-4" />
-                          Sincronizar
+                          {language === 'en' ? 'Sync now' : 'Sincronizar'}
                         </button>
                       </div>
                     )}
@@ -661,10 +806,10 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
                       </div>
                       <div className="min-w-0">
                         <p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-100/65">
-                          Sesión iniciada
+                          {t.account.signedIn}
                         </p>
                         <p className="mt-1 break-words text-xl font-black leading-none text-white font-display sm:text-2xl">
-                          {user.email ?? 'Cuenta conectada'}
+                          {user.email ?? t.account.connected}
                         </p>
                       </div>
                     </div>
@@ -680,7 +825,7 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
                         ) : (
                           <RefreshCw className="mr-2 h-4 w-4" />
                         )}
-                        Sincronizar ahora
+                        {language === 'en' ? 'Sync now' : 'Sincronizar ahora'}
                       </Button>
                       <button
                         type="button"
@@ -691,7 +836,7 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
                         className="min-h-12 rounded-2xl border border-white/10 bg-white/[0.04] px-3 text-[11px] font-black uppercase tracking-widest text-white/65 transition-colors hover:text-red-300"
                       >
                         <LogOut className="mr-2 inline h-4 w-4" />
-                        Cerrar sesión
+                        {language === 'en' ? 'Sign out' : 'Cerrar sesión'}
                       </button>
                     </div>
                   </div>
@@ -699,7 +844,9 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
 
                 {!user && supabaseEnabled && (
                   <p className="mt-3 text-[10px] font-medium leading-relaxed text-white/35">
-                    La sincronización se activa al entrar con una cuenta. Mientras tanto, todo sigue guardado localmente.
+                    {language === 'en'
+                      ? 'Sync activates after you sign in. Until then everything stays local.'
+                      : 'La sincronización se activa al entrar con una cuenta. Mientras tanto, todo sigue guardado localmente.'}
                   </p>
                 )}
               </div>
@@ -716,21 +863,20 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
 
               <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-3">
                 <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/30">
-                  Estado
+                  {language === 'en' ? 'State' : 'Estado'}
                 </p>
                 <p className="mt-1 text-sm font-medium text-white/45">
                   {syncStateDetail}
                 </p>
                 {lastSyncAt && (
                   <p className="mt-2 text-[10px] font-black uppercase tracking-[0.22em] text-white/28">
-                    Última sincronización: {formatDateTime(lastSyncAt)}
+                    {language === 'en' ? 'Last sync' : 'Última sincronización'}: {formatDateTime(lastSyncAt, language)}
                   </p>
                 )}
               </div>
             </div>
           </motion.section>
 
-          {/* Training preferences */}
           <motion.section
             ref={(node) => { sectionRefs.current.training = node; }}
             initial={{ opacity: 0, y: 12 }}
@@ -738,58 +884,27 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
             transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
             className="glass-panel space-y-4 rounded-3xl border-white/10 p-4"
           >
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/30">
-                Preferencias de entrenamiento
-              </p>
-              <p className="mt-1 text-sm font-medium text-white/45">
-                Ajustan descansos, calendario, registro de esfuerzo y el contexto del coach.
-              </p>
-            </div>
+            <SectionTitle
+              eyebrow={t.account.training}
+              title={language === 'en'
+                ? 'Adjust goals, calendar, effort tracking, and rest defaults.'
+                : 'Ajusta objetivo, calendario, seguimiento de esfuerzo y descansos.'}
+            />
 
             <div className="space-y-4">
               <div className="space-y-2">
                 <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/35">
-                  Objetivo
+                  {t.account.trainingGoal}
                 </p>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <div className="flex flex-wrap gap-2">
                   {TRAINING_GOALS.map((option) => (
-                    <button
+                    <PreferenceButton
                       key={option.value}
-                      type="button"
-                      onClick={() => updateProfile({ preferences: { trainingGoal: option.value } })}
-                      className={cn(
-                        'min-h-11 rounded-2xl border px-3 py-2 text-[11px] font-black uppercase tracking-widest transition-all',
-                        profile.preferences.trainingGoal === option.value
-                          ? 'active-glass-btn text-white'
-                          : 'sunken-glass text-white/45 hover:text-white/70',
-                      )}
+                      active={profile.preferences.trainingGoal === option.value}
+                      onClick={() => updatePreferences({ trainingGoal: option.value })}
                     >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/35">
-                  Experiencia
-                </p>
-                <div className="grid grid-cols-3 gap-2">
-                  {EXPERIENCE_LEVELS.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => updateProfile({ preferences: { experienceLevel: option.value } })}
-                      className={cn(
-                        'min-h-11 rounded-2xl border px-3 py-2 text-[11px] font-black uppercase tracking-widest transition-all',
-                        profile.preferences.experienceLevel === option.value
-                          ? 'active-glass-btn text-white'
-                          : 'sunken-glass text-white/45 hover:text-white/70',
-                      )}
-                    >
-                      {option.label}
-                    </button>
+                      {language === 'en' ? option.labelEn : option.labelEs}
+                    </PreferenceButton>
                   ))}
                 </div>
               </div>
@@ -797,46 +912,34 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/35">
-                    Semana
+                    {t.account.weekStarts}
                   </p>
                   <div className="grid grid-cols-2 gap-2">
                     {WEEK_STARTS.map((option) => (
-                      <button
+                      <PreferenceButton
                         key={option.value}
-                        type="button"
-                        onClick={() => updateProfile({ preferences: { weekStartsOn: option.value } })}
-                        className={cn(
-                          'min-h-11 rounded-2xl border px-3 py-2 text-[11px] font-black uppercase tracking-widest transition-all',
-                          profile.preferences.weekStartsOn === option.value
-                            ? 'active-glass-btn text-white'
-                            : 'sunken-glass text-white/45 hover:text-white/70',
-                        )}
+                        active={profile.preferences.weekStartsOn === option.value}
+                        onClick={() => updatePreferences({ weekStartsOn: option.value })}
                       >
-                        {option.label}
-                      </button>
+                        {language === 'en' ? option.labelEn : option.labelEs}
+                      </PreferenceButton>
                     ))}
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/35">
-                    Seguimiento
+                    {t.account.effortTracking}
                   </p>
                   <div className="grid grid-cols-2 gap-2">
                     {EFFORT_TRACKING.map((option) => (
-                      <button
+                      <PreferenceButton
                         key={option.value}
-                        type="button"
-                        onClick={() => updateProfile({ preferences: { effortTracking: option.value } })}
-                        className={cn(
-                          'min-h-11 rounded-2xl border px-3 py-2 text-[11px] font-black uppercase tracking-widest transition-all',
-                          profile.preferences.effortTracking === option.value
-                            ? 'active-glass-btn text-white'
-                            : 'sunken-glass text-white/45 hover:text-white/70',
-                        )}
+                        active={profile.preferences.effortTracking === option.value}
+                        onClick={() => updatePreferences({ effortTracking: option.value })}
                       >
-                        {option.label}
-                      </button>
+                        {language === 'en' ? option.labelEn : option.labelEs}
+                      </PreferenceButton>
                     ))}
                   </div>
                 </div>
@@ -844,35 +947,29 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
 
               <div className="space-y-2">
                 <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/35">
-                  Entrenador
+                  {t.account.coachTone}
                 </p>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="flex flex-wrap gap-2">
                   {COACH_TONES.map((option) => (
-                    <button
+                    <PreferenceButton
                       key={option.value}
-                      type="button"
-                      onClick={() => updateProfile({ preferences: { coachTone: option.value } })}
-                      className={cn(
-                        'min-h-11 rounded-2xl border px-3 py-2 text-[11px] font-black uppercase tracking-widest transition-all',
-                        profile.preferences.coachTone === option.value
-                          ? 'active-glass-btn text-white'
-                          : 'sunken-glass text-white/45 hover:text-white/70',
-                      )}
+                      active={profile.preferences.coachTone === option.value}
+                      onClick={() => updatePreferences({ coachTone: option.value })}
                     >
-                      {option.label}
-                    </button>
+                      {language === 'en' ? option.labelEn : option.labelEs}
+                    </PreferenceButton>
                   ))}
                 </div>
               </div>
 
               <div className="space-y-2">
                 <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/35">
-                  Días de descanso
+                  {t.account.restDays}
                 </p>
                 <div className="grid grid-cols-7 gap-2">
                   {weekDayOptions.map((value) => {
                     const isSelected = restDaySet.has(value);
-                    const label = DAY_OPTIONS.find((day) => day.value === value)?.label ?? '?';
+                    const label = DAY_OPTIONS.find((day) => day.value === value)?.[language === 'en' ? 'labelEn' : 'labelEs'] ?? '?';
                     return (
                       <button
                         key={value}
@@ -903,7 +1000,7 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/35">
-                    Descanso predeterminado
+                    {t.account.defaultRest}
                   </p>
                   <span className="text-xs font-black text-white/55">
                     {profile.defaultRestSeconds}s
@@ -914,7 +1011,7 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
                     type="button"
                     onClick={() => updateProfile({ defaultRestSeconds: Math.max(30, profile.defaultRestSeconds - 15) })}
                     className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/8 bg-white/[0.04] text-white/55 transition-colors hover:bg-white/[0.08] hover:text-white"
-                    aria-label="Reducir el descanso 15 segundos"
+                    aria-label={language === 'en' ? 'Reduce rest 15 seconds' : 'Reducir el descanso 15 segundos'}
                   >
                     <Minus className="h-3.5 w-3.5" />
                   </button>
@@ -936,7 +1033,7 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
                     type="button"
                     onClick={() => updateProfile({ defaultRestSeconds: Math.min(600, profile.defaultRestSeconds + 15) })}
                     className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/8 bg-white/[0.04] text-white/55 transition-colors hover:bg-white/[0.08] hover:text-white"
-                    aria-label="Aumentar el descanso 15 segundos"
+                    aria-label={language === 'en' ? 'Increase rest 15 seconds' : 'Aumentar el descanso 15 segundos'}
                   >
                     <Plus className="h-3.5 w-3.5" />
                   </button>
@@ -962,7 +1059,6 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
             </div>
           </motion.section>
 
-          {/* Appearance */}
           <motion.section
             ref={(node) => { sectionRefs.current.appearance = node; }}
             initial={{ opacity: 0, y: 12 }}
@@ -970,35 +1066,33 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
             transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
             className="glass-panel space-y-4 rounded-3xl border-white/10 p-4"
           >
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/30">
-                Apariencia
-              </p>
-              <p className="mt-1 text-sm font-medium text-white/45">
-                Ajusta acento, densidad y movimiento sin tocar la estética líquida.
-              </p>
-            </div>
+            <SectionTitle
+              eyebrow={t.account.appearance}
+              title={language === 'en'
+                ? 'Accent color, reduced motion, and language.'
+                : 'Color de acento, movimiento reducido e idioma.'}
+            />
 
             <div className="space-y-2">
               <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/35">
-                Color de acento
+                {t.account.accent}
               </p>
-              <div className="grid grid-cols-5 gap-2">
+              <div className="flex flex-wrap gap-2">
                 {ACCENTS.map((option) => {
                   const selected = profile.preferences.accentColor === option.value;
                   return (
                     <button
                       key={option.value}
                       type="button"
-                      onClick={() => updateProfile({ preferences: { accentColor: option.value } })}
+                      onClick={() => updatePreferences({ accentColor: option.value })}
                       className={cn(
-                        'min-h-11 rounded-2xl border px-2 py-2 text-[11px] font-black uppercase tracking-widest transition-all',
+                        'flex min-h-11 items-center gap-2 rounded-2xl border px-3 py-2 text-[11px] font-black uppercase tracking-widest transition-all',
                         selected
                           ? 'active-glass-btn text-white'
                           : 'sunken-glass text-white/45 hover:text-white/70',
                       )}
                     >
-                      <span className={cn('mx-auto mb-1.5 block h-2.5 w-2.5 rounded-full', option.className)} />
+                      <span className={cn('block h-2.5 w-2.5 rounded-full', option.className)} />
                       {option.label}
                     </button>
                   );
@@ -1009,134 +1103,268 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/35">
-                  Densidad
+                  {t.account.language}
                 </p>
                 <div className="grid grid-cols-2 gap-2">
-                  {DENSITIES.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => updateProfile({ preferences: { uiDensity: option.value } })}
-                      className={cn(
-                        'min-h-11 rounded-2xl border px-3 py-2 text-[11px] font-black uppercase tracking-widest transition-all',
-                        profile.preferences.uiDensity === option.value
-                          ? 'active-glass-btn text-white'
-                          : 'sunken-glass text-white/45 hover:text-white/70',
-                      )}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
+                  <PreferenceButton
+                    active={language === 'es'}
+                    onClick={() => updatePreferences({ language: 'es' })}
+                  >
+                    {t.account.languageNameEs}
+                  </PreferenceButton>
+                  <PreferenceButton
+                    active={language === 'en'}
+                    onClick={() => updatePreferences({ language: 'en' })}
+                  >
+                    {t.account.languageNameEn}
+                  </PreferenceButton>
                 </div>
               </div>
 
               <div className="space-y-2">
                 <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/35">
-                  Movimiento
+                  {t.account.reducedMotion}
                 </p>
-                <div className="grid grid-cols-3 gap-2">
-                  {MOTION_LEVELS.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => updateProfile({ preferences: { motionLevel: option.value } })}
-                      className={cn(
-                        'min-h-11 rounded-2xl border px-2 py-2 text-[11px] font-black uppercase tracking-widest transition-all',
-                        profile.preferences.motionLevel === option.value
-                          ? 'active-glass-btn text-white'
-                          : 'sunken-glass text-white/45 hover:text-white/70',
-                      )}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
+                <button
+                  type="button"
+                  onClick={toggleReducedMotion}
+                  aria-pressed={profile.preferences.reducedMotion}
+                  className={cn(
+                    'flex min-h-11 w-full items-center justify-between rounded-2xl border px-3 py-2 text-left text-[11px] font-black uppercase tracking-widest transition-all',
+                    profile.preferences.reducedMotion
+                      ? 'active-glass-btn text-white'
+                      : 'sunken-glass text-white/45 hover:text-white/70',
+                  )}
+                >
+                  <span>{profile.preferences.reducedMotion ? (language === 'en' ? 'On' : 'Activo') : (language === 'en' ? 'Off' : 'Inactivo')}</span>
+                  <span className="text-[9px] font-black uppercase tracking-[0.18em] text-white/35">
+                    {profile.preferences.reducedMotion ? (language === 'en' ? 'Less motion' : 'Menos movimiento') : (language === 'en' ? 'System motion' : 'Movimiento del sistema')}
+                  </span>
+                </button>
               </div>
             </div>
           </motion.section>
 
-          {/* Data & Backup */}
           <motion.section
-            ref={(node) => { sectionRefs.current.data = node; }}
+            ref={(node) => { sectionRefs.current.notifications = node; }}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
             className="glass-panel space-y-4 rounded-3xl border-white/10 p-4"
           >
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/30">
-                Datos y copia
-              </p>
-              <p className="mt-1 text-sm font-medium text-white/45">
-                Exporta o importa tus datos locales cuando quieras mover el historial o conservar una copia.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-3">
-              <div className="flex items-start gap-2">
-                <HardDrive className="mt-0.5 h-4 w-4 shrink-0 text-sky-300" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/30">
-                    Persistencia
-                  </p>
-                  <p className="mt-1 text-sm font-medium text-white/45">
-                    {isPersisted === null
-                      ? 'Comprobando...'
-                      : isPersisted
-                        ? 'El navegador puede conservar el almacenamiento local.'
-                        : 'El navegador no confirmó almacenamiento persistente.'}
-                  </p>
-                </div>
-                <ShieldCheck className={cn('mt-0.5 h-4 w-4 shrink-0', isPersisted ? 'text-emerald-300' : 'text-amber-300')} />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                variant="glass-primary"
-                className="h-11 rounded-2xl text-[11px] font-black uppercase tracking-widest"
-                onClick={handleExport}
-                disabled={isExporting || isImporting}
-              >
-                {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                Exportar
-              </Button>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="h-11 rounded-2xl border border-white/10 bg-white/[0.04] px-3 text-[11px] font-black uppercase tracking-widest text-white/55 transition-colors hover:text-white"
-                disabled={isExporting || isImporting}
-              >
-                {isImporting ? <Loader2 className="mr-2 inline h-4 w-4 animate-spin" /> : <Upload className="mr-2 inline h-4 w-4" />}
-                Importar
-              </button>
-            </div>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="application/json"
-              onChange={handleImport}
-              className="hidden"
+            <SectionTitle
+              eyebrow={t.account.notificationsTitle}
+              title={t.account.notificationsBody}
             />
 
-            <p className="text-[10px] font-medium leading-relaxed text-white/30">
-              La copia incluye rutinas, historial, peso corporal y perfil.
-            </p>
+            <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-3 space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-blue-300">
+                  <Bell className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/30">
+                    {pushStateLabel}
+                  </p>
+                  <p className="mt-1 text-sm font-medium leading-relaxed text-white/45">
+                    {push.permission === 'denied'
+                      ? t.account.notificationsDenied
+                      : push.permission === 'unsupported'
+                        ? t.account.notificationsUnsupported
+                        : language === 'en'
+                          ? 'Timer alerts use the service worker locally. Streak reminders use your saved push subscription.'
+                          : 'Las alertas de descanso usan el service worker localmente. Los recordatorios diarios usan tu suscripción push guardada.'}
+                  </p>
+                </div>
+              </div>
 
-            <AnimatePresence>
-              {backupStatus && (
-                <motion.p
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
-                  className="text-[10px] font-black uppercase tracking-[0.2em] text-white/45"
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Button
+                  variant="glass-primary"
+                  className="min-h-12 rounded-2xl text-[11px] font-black uppercase tracking-widest"
+                  onClick={push.state === 'active' ? push.disable : push.enable}
+                  disabled={
+                    push.loading ||
+                    push.permission === 'unsupported' ||
+                    push.permission === 'denied' ||
+                    (!session?.access_token && push.state !== 'active')
+                  }
                 >
-                  {backupStatus}
-                </motion.p>
+                  {push.loading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : push.state === 'active' ? (
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                  ) : (
+                    <Bell className="mr-2 h-4 w-4" />
+                  )}
+                  {push.state === 'active' ? t.account.disablePush : t.account.enablePush}
+                </Button>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-white/45">
+                  {language === 'en' ? 'Permission' : 'Permiso'}: {pushPermissionLabel}
+                </div>
+              </div>
+
+              {(!session?.access_token && supabaseEnabled) && (
+                <p className="text-xs font-medium leading-relaxed text-white/35">
+                  {language === 'en'
+                    ? 'Sign in to persist push subscriptions.'
+                    : 'Inicia sesión para guardar las suscripciones push.'}
+                </p>
               )}
-            </AnimatePresence>
+
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => updatePreferences({
+                    timerNotificationsEnabled: !profile.preferences.timerNotificationsEnabled,
+                  })}
+                  aria-pressed={profile.preferences.timerNotificationsEnabled}
+                  className={cn(
+                    'flex min-h-12 w-full items-center justify-between rounded-2xl border px-3 py-2 text-left transition-all',
+                    profile.preferences.timerNotificationsEnabled
+                      ? 'active-glass-btn text-white'
+                      : 'sunken-glass text-white/45 hover:text-white/70',
+                  )}
+                >
+                  <span className="text-[11px] font-black uppercase tracking-widest">
+                    {t.account.timerNotifications}
+                  </span>
+                  <span className="text-[9px] font-black uppercase tracking-[0.18em] text-white/35">
+                    {profile.preferences.timerNotificationsEnabled ? t.account.timerOn : t.account.timerOff}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => updatePreferences({
+                    streakReminderEnabled: !profile.preferences.streakReminderEnabled,
+                  })}
+                  aria-pressed={profile.preferences.streakReminderEnabled}
+                  className={cn(
+                    'flex min-h-12 w-full items-center justify-between rounded-2xl border px-3 py-2 text-left transition-all',
+                    profile.preferences.streakReminderEnabled
+                      ? 'active-glass-btn text-white'
+                      : 'sunken-glass text-white/45 hover:text-white/70',
+                  )}
+                >
+                  <span className="text-[11px] font-black uppercase tracking-widest">
+                    {t.account.streakReminder}
+                  </span>
+                  <span className="text-[9px] font-black uppercase tracking-[0.18em] text-white/35">
+                    {profile.preferences.streakReminderEnabled ? t.account.remindersOn : t.account.remindersOff}
+                  </span>
+                </button>
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                <input
+                  type="text"
+                  value={profile.preferences.timezone}
+                  onChange={(e) => updatePreferences({ timezone: e.target.value })}
+                  className="sunken-glass min-h-11 rounded-2xl border-none bg-transparent px-3 py-2 text-sm font-semibold text-white outline-none placeholder:text-white/20"
+                  placeholder="America/Bogota"
+                />
+                <button
+                  type="button"
+                  onClick={setTimezoneToDevice}
+                  className="min-h-11 rounded-2xl border border-white/10 bg-white/[0.04] px-3 text-[11px] font-black uppercase tracking-widest text-white/65 transition-colors hover:text-white"
+                >
+                  {language === 'en' ? 'Use device' : 'Usar dispositivo'}
+                </button>
+              </div>
+              <p className="text-[10px] font-medium leading-relaxed text-white/30">
+                {language === 'en'
+                  ? `Current timezone: ${formatTimezoneLabel(profile.preferences.timezone)} · device: ${deviceTimezone}`
+                  : `Zona horaria actual: ${formatTimezoneLabel(profile.preferences.timezone)} · dispositivo: ${deviceTimezone}`}
+              </p>
+            </div>
           </motion.section>
+
+          {canUseLocalBackup && (
+            <motion.section
+              ref={(node) => { sectionRefs.current.data = node; }}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
+              className="glass-panel space-y-4 rounded-3xl border-white/10 p-4"
+            >
+              <SectionTitle
+                eyebrow={t.account.data}
+                title={t.account.backupAvailable}
+              />
+
+              <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-3">
+                <div className="flex items-start gap-2">
+                  <HardDrive className="mt-0.5 h-4 w-4 shrink-0 text-sky-300" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/30">
+                      {t.account.persist}
+                    </p>
+                    <p className="mt-1 text-sm font-medium text-white/45">
+                      {isPersisted === null
+                        ? (language === 'en' ? 'Checking...' : 'Comprobando...')
+                        : isPersisted
+                          ? (language === 'en'
+                            ? 'The browser can keep local storage.'
+                            : 'El navegador puede conservar el almacenamiento local.')
+                          : (language === 'en'
+                            ? 'The browser did not confirm persistent storage.'
+                            : 'El navegador no confirmó almacenamiento persistente.')}
+                    </p>
+                  </div>
+                  <ShieldCheck className={cn('mt-0.5 h-4 w-4 shrink-0', isPersisted ? 'text-emerald-300' : 'text-amber-300')} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="glass-primary"
+                  className="h-11 rounded-2xl text-[11px] font-black uppercase tracking-widest"
+                  onClick={handleExport}
+                  disabled={isExporting || isImporting}
+                >
+                  {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                  {t.account.export}
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="h-11 rounded-2xl border border-white/10 bg-white/[0.04] px-3 text-[11px] font-black uppercase tracking-widest text-white/55 transition-colors hover:text-white"
+                  disabled={isExporting || isImporting}
+                >
+                  {isImporting ? <Loader2 className="mr-2 inline h-4 w-4 animate-spin" /> : <Upload className="mr-2 inline h-4 w-4" />}
+                  {t.account.import}
+                </button>
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/json"
+                onChange={handleImport}
+                className="hidden"
+              />
+
+              <p className="text-[10px] font-medium leading-relaxed text-white/30">
+                {language === 'en'
+                  ? 'The backup includes routines, history, bodyweight, and profile.'
+                  : 'La copia incluye rutinas, historial, peso corporal y perfil.'}
+              </p>
+
+              <AnimatePresence>
+                {backupStatus && (
+                  <motion.p
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    className="text-[10px] font-black uppercase tracking-[0.2em] text-white/45"
+                  >
+                    {backupStatus}
+                  </motion.p>
+                )}
+              </AnimatePresence>
+            </motion.section>
+          )}
         </div>
       </div>
     </Sheet>
