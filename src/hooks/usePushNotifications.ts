@@ -1,13 +1,22 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { subscribeToPush, registerSubscription, unsubscribeFromPush, isPushActive } from '@/lib/push/client';
+import {
+  subscribeToPush,
+  registerSubscription,
+  unsubscribeFromPush,
+  isPushActive,
+  scheduleLocalNotification,
+  cancelLocalNotification,
+} from '@/lib/push/client';
 
 type PushState = 'idle' | 'active' | 'denied' | 'unsupported';
 
 interface UsePushNotificationsResult {
   /** Current subscription state. */
   state: PushState;
+  /** Current notification permission. */
+  permission: NotificationPermission | 'unsupported';
   /** True while a subscribe/unsubscribe operation is in progress. */
   loading: boolean;
   /** Enable push notifications (requests permission if needed). */
@@ -18,11 +27,14 @@ interface UsePushNotificationsResult {
    * Schedule a local notification via the Service Worker (no server call).
    * Use this for rest-timer alerts — the SW fires the notification after delayMs.
    */
-  scheduleLocal: (opts: { delayMs: number; title: string; body: string; tag?: string }) => void;
+  scheduleLocal: (opts: { id: string; delayMs: number; title: string; body: string; tag?: string }) => void;
+  /** Cancel a scheduled local notification by ID. */
+  cancelLocal: (id: string) => void;
 }
 
-export function usePushNotifications(): UsePushNotificationsResult {
+export function usePushNotifications(accessToken?: string): UsePushNotificationsResult {
   const [state, setState] = useState<PushState>('idle');
+  const [permission, setPermission] = useState<NotificationPermission | 'unsupported'>('unsupported');
   const [loading, setLoading] = useState(false);
 
   // Detect support + existing subscription on mount
@@ -30,8 +42,10 @@ export function usePushNotifications(): UsePushNotificationsResult {
     if (typeof window === 'undefined') return;
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
       setState('unsupported');
+      setPermission('unsupported');
       return;
     }
+    setPermission(Notification.permission);
     if (Notification.permission === 'denied') {
       setState('denied');
       return;
@@ -46,38 +60,38 @@ export function usePushNotifications(): UsePushNotificationsResult {
     setLoading(true);
     try {
       const sub = await subscribeToPush();
+      setPermission(typeof Notification !== 'undefined' ? Notification.permission : 'unsupported');
       if (!sub) {
         setState(Notification.permission === 'denied' ? 'denied' : 'idle');
         return;
       }
-      await registerSubscription(sub);
+      await registerSubscription(sub, accessToken);
       setState('active');
     } catch (err) {
       console.error('[usePushNotifications] enable failed', err);
     } finally {
       setLoading(false);
     }
-  }, [state, loading]);
+  }, [state, loading, accessToken]);
 
   const disable = useCallback(async () => {
     if (loading) return;
     setLoading(true);
     try {
-      await unsubscribeFromPush();
+      await unsubscribeFromPush(accessToken);
+      setPermission(typeof Notification !== 'undefined' ? Notification.permission : 'unsupported');
       setState('idle');
     } catch (err) {
       console.error('[usePushNotifications] disable failed', err);
     } finally {
       setLoading(false);
     }
-  }, [loading]);
+  }, [loading, accessToken]);
 
   const scheduleLocal = useCallback(
-    ({ delayMs, title, body, tag }: { delayMs: number; title: string; body: string; tag?: string }) => {
-      if (typeof window === 'undefined') return;
-      if (!navigator.serviceWorker.controller) return;
-      navigator.serviceWorker.controller.postMessage({
-        type: 'SCHEDULE_NOTIFICATION',
+    ({ id, delayMs, title, body, tag }: { id: string; delayMs: number; title: string; body: string; tag?: string }) => {
+      void scheduleLocalNotification({
+        id,
         delayMs,
         title,
         body,
@@ -87,5 +101,9 @@ export function usePushNotifications(): UsePushNotificationsResult {
     []
   );
 
-  return { state, loading, enable, disable, scheduleLocal };
+  const cancelLocal = useCallback((id: string) => {
+    void cancelLocalNotification(id);
+  }, []);
+
+  return { state, permission, loading, enable, disable, scheduleLocal, cancelLocal };
 }

@@ -72,6 +72,7 @@ export type CoachTone = 'direct' | 'supportive' | 'technical';
 export type AccentColor = 'blue' | 'emerald' | 'orange' | 'violet' | 'mono';
 export type UiDensity = 'comfortable' | 'compact';
 export type MotionLevel = 'system' | 'reduced' | 'full';
+export type AppLanguage = 'es' | 'en';
 
 export interface UserProfilePreferences {
   trainingGoal: TrainingGoal;
@@ -82,6 +83,11 @@ export interface UserProfilePreferences {
   accentColor: AccentColor;
   uiDensity: UiDensity;
   motionLevel: MotionLevel;
+  reducedMotion: boolean;
+  language: AppLanguage;
+  streakReminderEnabled: boolean;
+  timerNotificationsEnabled: boolean;
+  timezone: string;
 }
 
 export interface UserProfile {
@@ -119,6 +125,7 @@ export interface SetDetail {
   rpe?: number;
   rir?: number;
   setType?: SetType;
+  notes?: string;
 }
 
 export interface ExerciseVolume {
@@ -261,6 +268,7 @@ export interface WorkoutState {
     rpe?: number,
     rir?: number,
     setType?: SetType,
+    notes?: string,
   ) => void;
 
   setCurrentView: (view: WorkoutView) => void;

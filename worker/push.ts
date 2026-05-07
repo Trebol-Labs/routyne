@@ -15,21 +15,44 @@ interface PushPayload {
 
 interface ScheduleMessage {
   type: 'SCHEDULE_NOTIFICATION';
+  id: string;
   delayMs: number;
   title: string;
   body: string;
   tag?: string;
 }
 
+interface CancelMessage {
+  type: 'CANCEL_SCHEDULED_NOTIFICATION';
+  id: string;
+}
+
+const scheduledNotifications = new Map<string, ReturnType<typeof setTimeout>>();
+
 // ── Scheduled notifications (rest-timer alerts, no server round-trip) ─────────
 // Client calls: navigator.serviceWorker.controller.postMessage({ type: 'SCHEDULE_NOTIFICATION', delayMs, title, body })
 
 self.addEventListener('message', (event: ExtendableMessageEvent) => {
-  const data = event.data as ScheduleMessage | undefined;
-  if (!data || data.type !== 'SCHEDULE_NOTIFICATION') return;
+  const data = event.data as ScheduleMessage | CancelMessage | undefined;
+  if (!data) return;
 
-  const { delayMs, title, body, tag } = data;
-  setTimeout(() => {
+  if (data.type === 'CANCEL_SCHEDULED_NOTIFICATION') {
+    const timer = scheduledNotifications.get(data.id);
+    if (timer) {
+      clearTimeout(timer);
+      scheduledNotifications.delete(data.id);
+    }
+    return;
+  }
+
+  const { id, delayMs, title, body, tag } = data;
+  const existing = scheduledNotifications.get(id);
+  if (existing) {
+    clearTimeout(existing);
+  }
+
+  const timer = setTimeout(() => {
+    scheduledNotifications.delete(id);
     self.registration.showNotification(title, {
       body,
       tag: tag ?? 'routyne-timer',
@@ -37,6 +60,7 @@ self.addEventListener('message', (event: ExtendableMessageEvent) => {
       badge: '/icons/icon-192x192.png',
     });
   }, delayMs);
+  scheduledNotifications.set(id, timer);
 });
 
 self.addEventListener('push', (event) => {

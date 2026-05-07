@@ -46,16 +46,19 @@ export async function subscribeToPush(): Promise<PushSubscription | null> {
 }
 
 /** Send the push subscription to our server for storage. */
-export async function registerSubscription(sub: PushSubscription): Promise<void> {
+export async function registerSubscription(sub: PushSubscription, accessToken?: string): Promise<void> {
   await fetch('/api/push/subscribe', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    },
     body: JSON.stringify(sub.toJSON()),
   });
 }
 
 /** Remove the push subscription from our server and unsubscribe locally. */
-export async function unsubscribeFromPush(): Promise<void> {
+export async function unsubscribeFromPush(accessToken?: string): Promise<void> {
   if (typeof window === 'undefined') return;
   if (!('serviceWorker' in navigator)) return;
 
@@ -66,7 +69,10 @@ export async function unsubscribeFromPush(): Promise<void> {
 
     await fetch('/api/push/subscribe', {
       method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      },
       body: JSON.stringify({ endpoint: sub.endpoint }),
     });
 
@@ -88,4 +94,36 @@ export async function isPushActive(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+interface LocalNotificationPayload {
+  id: string;
+  delayMs: number;
+  title: string;
+  body: string;
+  tag?: string;
+}
+
+async function postToServiceWorker(message: Record<string, unknown>): Promise<void> {
+  if (typeof window === 'undefined') return;
+  if (!('serviceWorker' in navigator)) return;
+
+  const registration = await navigator.serviceWorker.ready;
+  if (registration.active) {
+    registration.active.postMessage(message);
+  }
+}
+
+export async function scheduleLocalNotification(opts: LocalNotificationPayload): Promise<void> {
+  await postToServiceWorker({
+    type: 'SCHEDULE_NOTIFICATION',
+    ...opts,
+  });
+}
+
+export async function cancelLocalNotification(id: string): Promise<void> {
+  await postToServiceWorker({
+    type: 'CANCEL_SCHEDULED_NOTIFICATION',
+    id,
+  });
 }

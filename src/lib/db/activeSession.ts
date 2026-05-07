@@ -25,6 +25,10 @@ export async function saveActiveSession(
           repsDone: v.repsDone,
           weight: v.weight,
           timestamp: v.timestamp instanceof Date ? v.timestamp.toISOString() : v.timestamp,
+          rpe: v.rpe,
+          rir: v.rir,
+          setType: v.setType,
+          notes: v.notes,
         },
       ])
     ),

@@ -53,12 +53,17 @@ interface LegacyStorage {
 }
 
 function normalizeLegacyProfile(profile: Partial<UserProfile>): UserProfile {
+  const legacyMotionLevel = profile.preferences?.motionLevel;
   return {
     ...DEFAULT_PROFILE,
     ...profile,
     preferences: {
       ...DEFAULT_PROFILE.preferences,
       ...(profile.preferences ?? {}),
+      reducedMotion:
+        typeof profile.preferences?.reducedMotion === 'boolean'
+          ? profile.preferences.reducedMotion
+          : legacyMotionLevel === 'reduced',
     },
     restDays: profile.restDays ?? DEFAULT_PROFILE.restDays,
     updatedAt: profile.updatedAt ?? new Date().toISOString(),

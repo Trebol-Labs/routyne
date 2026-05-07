@@ -70,6 +70,7 @@ function buildVolumeData(
           rpe: s.rpe,
           rir: s.rir,
           setType: s.setType,
+          notes: s.notes,
         })),
       };
     })
@@ -129,6 +130,7 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
               rpe: val.rpe,
               rir: val.rir,
               setType: val.setType,
+              notes: val.notes,
             };
           }
           set({
@@ -252,8 +254,15 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
   },
 
   toggleSetCompletion: (
-    sessionIdx, exerciseId, setIdx,
-    repsDone?, weight?, rpe?, rir?, setType?
+    sessionIdx,
+    exerciseId,
+    setIdx,
+    repsDone?,
+    weight?,
+    rpe?,
+    rir?,
+    setType?,
+    notes?
   ) => {
     set((state) => {
       const key = `${sessionIdx}-${exerciseId}-${setIdx}`;
@@ -268,6 +277,7 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
           rpe: rpe ?? current?.rpe,
           rir: rir ?? current?.rir,
           setType: setType ?? current?.setType,
+          notes: notes ?? current?.notes,
         },
       };
 

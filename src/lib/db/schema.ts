@@ -45,6 +45,7 @@ export interface SetDetailRecord {
   rpe?: number;         // ← NEW: 1–10
   rir?: number;         // ← NEW: 0–5
   setType?: SetType;    // ← NEW
+  notes?: string;
 }
 
 export interface ExerciseVolumeRecord {
@@ -83,6 +84,7 @@ export interface ActiveSessionRecord {
     rpe?: number;       // ← NEW
     rir?: number;       // ← NEW
     setType?: SetType;  // ← NEW
+    notes?: string;
   }>;
 }
 

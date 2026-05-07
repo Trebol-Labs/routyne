@@ -26,7 +26,19 @@ type RemoteRoutine = Database['public']['Tables']['routines']['Row'];
 // ── History ────────────────────────────────────────────────────────────────────
 
 function remoteToLocalEntry(r: RemoteHistory): HistoryEntry {
-  const volumeData = (r.volume_data as ExerciseVolume[] | null) ?? [];
+  const volumeData = ((r.volume_data as ExerciseVolume[] | null) ?? []).map((ev) => ({
+    ...ev,
+    setDetails: (ev.setDetails ?? []).map((sd) => ({
+      setIdx: sd.setIdx,
+      repsDone: sd.repsDone,
+      weight: sd.weight,
+      timestamp: sd.timestamp ? new Date(sd.timestamp as unknown as string) : null,
+      rpe: sd.rpe,
+      rir: sd.rir,
+      setType: sd.setType,
+      notes: sd.notes,
+    })),
+  }));
   return {
     id: r.id,
     sessionIdx: r.session_idx ?? 0,
@@ -36,6 +48,7 @@ function remoteToLocalEntry(r: RemoteHistory): HistoryEntry {
     volumeData,
     totalVolume: r.total_volume ?? 0,
     durationSeconds: r.duration_secs ?? undefined,
+    notes: r.notes ?? undefined,
   };
 }
 
@@ -255,7 +268,7 @@ export function historyEntryToRemote(
     total_volume: entry.totalVolume,
     duration_secs: entry.durationSeconds ?? null,
     volume_data: entry.volumeData,
-    notes: null,
+    notes: entry.notes ?? null,
     deleted_at: null,
   };
 }

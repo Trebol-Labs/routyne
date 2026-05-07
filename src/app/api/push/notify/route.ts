@@ -1,34 +1,57 @@
 /**
- * POST /api/push/notify — immediately send a Web Push notification.
+ * POST /api/push/notify — send a Web Push notification to all stored subscriptions.
  *
- * Body: { title: string; body: string; tag?: string }
- *
- * For delayed notifications (e.g. rest timers), use the client-side approach:
- * send a postMessage to the Service Worker with { type: 'SCHEDULE_NOTIFICATION',
- * delayMs, title, body } — the SW uses setTimeout locally without a server round-trip.
- * This avoids serverless function timeout limits for delays > 30s.
+ * Production reads subscriptions from Supabase. Local/dev falls back to the
+ * in-memory subscription map used by Hobby-tier testing.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import webpush from 'web-push';
 import { subscriptions } from '@/lib/push/subscriptions';
+import {
+  loadAllPushSubscriptionRows,
+  markPushSubscriptionSent,
+} from '@/lib/push/server';
 
-// ── VAPID setup ───────────────────────────────────────────────────────────────
-
-const VAPID_PUBLIC  = process.env.VAPID_PUBLIC_KEY  ?? '';
+const VAPID_PUBLIC = process.env.VAPID_PUBLIC_KEY ?? '';
 const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY ?? '';
-const VAPID_SUBJECT = process.env.VAPID_SUBJECT     ?? 'mailto:admin@example.com';
+const VAPID_SUBJECT = process.env.VAPID_SUBJECT ?? 'mailto:admin@example.com';
 
-// ── Handler ───────────────────────────────────────────────────────────────────
+interface PushPayload {
+  title: string;
+  body: string;
+  tag?: string;
+  url?: string;
+}
+
+function vapidConfigured(): boolean {
+  return !!(VAPID_PUBLIC && VAPID_PRIVATE);
+}
+
+async function getTargets(): Promise<Array<{ userId?: string; endpoint: string; keys: { p256dh: string; auth: string } }>> {
+  if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    const rows = await loadAllPushSubscriptionRows();
+    return rows.map((row) => ({
+      userId: row.user_id,
+      endpoint: row.endpoint,
+      keys: row.keys,
+    }));
+  }
+
+  return Array.from(subscriptions.values()).map((row) => ({
+    endpoint: row.endpoint,
+    keys: row.keys,
+  }));
+}
 
 export async function POST(req: NextRequest) {
-  if (!VAPID_PRIVATE_KEY_CONFIGURED()) {
+  if (!vapidConfigured()) {
     return NextResponse.json({ error: 'Push not configured' }, { status: 503 });
   }
 
-  let body: { title: string; body: string; tag?: string };
+  let body: PushPayload;
   try {
-    body = await req.json() as typeof body;
+    body = await req.json() as PushPayload;
   } catch {
     return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
   }
@@ -41,38 +64,43 @@ export async function POST(req: NextRequest) {
 
   const payload = JSON.stringify({
     title: body.title,
-    body:  body.body,
-    tag:   body.tag ?? 'routyne',
+    body: body.body,
+    tag: body.tag ?? 'routyne',
+    url: body.url ?? '/',
   });
 
+  const targets = await getTargets();
   let sent = 0;
   let failed = 0;
-  const stale: string[] = [];
+  let removed = 0;
 
-  for (const sub of subscriptions.values()) {
+  for (const target of targets) {
     try {
       await webpush.sendNotification(
-        { endpoint: sub.endpoint, keys: sub.keys },
+        { endpoint: target.endpoint, keys: target.keys },
         payload
       );
       sent++;
+      if (target.userId) {
+        await markPushSubscriptionSent(target.userId, target.endpoint);
+      }
     } catch (err) {
       const status = (err as { statusCode?: number }).statusCode;
-      if (status === 404 || status === 410) {
-        // Subscription expired — clean up
-        stale.push(sub.endpoint);
+      if ((status === 404 || status === 410) && target.userId) {
+        removed++;
+        try {
+          const { deletePushSubscriptionRow } = await import('@/lib/push/server');
+          await deletePushSubscriptionRow(target.userId, target.endpoint);
+        } catch (deleteErr) {
+          console.error('[/api/push/notify] stale subscription cleanup failed', deleteErr);
+        }
       } else {
-        console.error('[/api/push/notify] send error', status, sub.endpoint);
+        console.error('[/api/push/notify] send error', status, target.endpoint);
         failed++;
       }
     }
   }
 
-  for (const endpoint of stale) subscriptions.delete(endpoint);
-
-  return NextResponse.json({ sent, failed, removed: stale.length });
+  return NextResponse.json({ sent, failed, removed });
 }
 
-function VAPID_PRIVATE_KEY_CONFIGURED(): boolean {
-  return !!(VAPID_PUBLIC && VAPID_PRIVATE);
-}

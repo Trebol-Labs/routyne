@@ -66,6 +66,22 @@ export interface Database {
         Insert: Partial<Database['public']['Tables']['profiles']['Row']> & { user_id: string };
         Update: Partial<Database['public']['Tables']['profiles']['Row']>;
       };
+      push_subscriptions: {
+        Row: {
+          user_id: string;
+          endpoint: string;
+          keys: { p256dh: string; auth: string };
+          created_at: string;
+          updated_at: string;
+          last_sent_at: string | null;
+        };
+        Insert: Partial<Database['public']['Tables']['push_subscriptions']['Row']> & {
+          user_id: string;
+          endpoint: string;
+          keys: { p256dh: string; auth: string };
+        };
+        Update: Partial<Database['public']['Tables']['push_subscriptions']['Row']>;
+      };
       sync_cursors: {
         Row: { user_id: string; last_pulled: string; last_pushed: string };
         Insert: { user_id: string; last_pulled?: string; last_pushed?: string };

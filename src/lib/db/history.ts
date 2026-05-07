@@ -30,8 +30,14 @@ function entryToRecord(
         repsDone: sd.repsDone,
         weight: sd.weight,
         timestamp: sd.timestamp instanceof Date ? sd.timestamp.toISOString() : (sd.timestamp ?? new Date().toISOString()),
+        rpe: sd.rpe,
+        rir: sd.rir,
+        setType: sd.setType,
+        notes: sd.notes,
       })),
     })),
+    durationSeconds: entry.durationSeconds,
+    notes: entry.notes,
   };
 }
 
@@ -53,9 +59,15 @@ function recordToEntry(r: HistoryRecord): HistoryEntry {
         repsDone: sd.repsDone,
         weight: sd.weight,
         timestamp: sd.timestamp ? new Date(sd.timestamp) : null,
+        rpe: sd.rpe,
+        rir: sd.rir,
+        setType: sd.setType,
+        notes: sd.notes,
       })),
     })),
     totalVolume: r.totalVolume,
+    durationSeconds: r.durationSeconds,
+    notes: r.notes,
   };
 }
 

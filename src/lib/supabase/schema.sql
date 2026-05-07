@@ -93,6 +93,27 @@ create policy "Users own their profile"
   on public.profiles for all
   using (auth.uid() = user_id);
 
+-- ── Push subscriptions ──────────────────────────────────────────────────────
+
+create table if not exists public.push_subscriptions (
+  user_id       uuid        references auth.users not null,
+  endpoint      text        not null,
+  keys          jsonb       not null,
+  created_at    timestamptz default now(),
+  updated_at    timestamptz default now(),
+  last_sent_at  timestamptz,
+  primary key (user_id, endpoint)
+);
+
+alter table public.push_subscriptions enable row level security;
+
+drop policy if exists "Users own their push subscriptions" on public.push_subscriptions;
+create policy "Users own their push subscriptions"
+  on public.push_subscriptions for all
+  using (auth.uid() = user_id);
+
+create index if not exists push_subscriptions_user_endpoint on public.push_subscriptions (user_id, endpoint);
+
 -- ── Sync cursors ──────────────────────────────────────────────────────────────
 
 create table if not exists public.sync_cursors (
