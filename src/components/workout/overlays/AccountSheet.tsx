@@ -24,6 +24,7 @@ import {
 import { Sheet } from '@/components/ui/Sheet';
 import { Button } from '@/components/ui/button';
 import { EmojiPicker } from '@/components/ui/EmojiPicker';
+import { GoogleIcon } from '@/components/ui/GoogleIcon';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
 import { useSync } from '@/hooks/useSync';
 import { useAuth } from '@/hooks/useAuth';
@@ -207,7 +208,7 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
     history,
     hydrate,
   } = useWorkoutStore();
-  const { user, session, isAnonymous, isLoading: authLoading, signInAnonymously, signInWithEmail, signOut } = useAuth();
+  const { user, session, isAnonymous, isLoading: authLoading, signInAnonymously, signInWithEmail, signInWithGoogle, signOut } = useAuth();
   const { status: syncStatus, pendingCount, lastSyncAt, lastError, syncNow } = useSync(user?.id);
   const { language, setLanguage, t } = useI18n();
   const push = usePushNotifications(session?.access_token);
@@ -673,6 +674,21 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
                             </p>
                           </div>
                         </div>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            setAccountMessage(null);
+                            const { error } = await signInWithGoogle();
+                            if (error) setAccountMessage(error);
+                          }}
+                          disabled={accountActionDisabled}
+                          className="flex min-h-12 w-full items-center justify-center gap-2.5 rounded-2xl bg-white text-[11px] font-black uppercase tracking-widest text-gray-800 shadow-sm transition-all hover:bg-white/90 active:scale-[0.98] disabled:opacity-50"
+                        >
+                          {accountActionDisabled
+                            ? <Loader2 className="h-4 w-4 animate-spin text-gray-500" />
+                            : <><GoogleIcon className="h-4 w-4" />{language === 'en' ? 'Continue with Google' : 'Continuar con Google'}</>
+                          }
+                        </button>
                         <div className="grid gap-2 sm:grid-cols-2">
                           <Button
                             variant="glass-primary"
