@@ -94,6 +94,17 @@ create table if not exists public.profiles (
   updated_at      timestamptz default now()
 );
 
+-- Keep existing projects created from older schema versions compatible.
+alter table public.profiles add column if not exists display_name text;
+alter table public.profiles add column if not exists avatar_emoji text default '💪';
+alter table public.profiles add column if not exists weight_unit text default 'kg';
+alter table public.profiles add column if not exists height_cm int;
+alter table public.profiles add column if not exists default_rest_s int default 90;
+alter table public.profiles add column if not exists rest_days int[] default '{0}';
+alter table public.profiles add column if not exists preferences jsonb default '{}'::jsonb;
+alter table public.profiles add column if not exists updated_at timestamptz default now();
+create unique index if not exists profiles_user_id_unique on public.profiles (user_id);
+
 alter table public.profiles enable row level security;
 
 drop policy if exists "Users own their profile" on public.profiles;

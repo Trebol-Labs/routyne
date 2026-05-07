@@ -263,6 +263,63 @@ describe('pushToCloud', () => {
     );
   });
 
+  it('retries profile upsert without onConflict when user_id is not unique remotely', async () => {
+    await saveProfile(makeProfile({ displayName: 'Latest Local Profile' }));
+    await enqueue({
+      table: 'profile',
+      operation: 'upsert',
+      payload: makeProfile({ displayName: 'Stale Queued Profile' }),
+    });
+    mockUpsert
+      .mockResolvedValueOnce({
+        error: { message: 'there is no unique or exclusion constraint matching the ON CONFLICT specification' },
+      })
+      .mockResolvedValueOnce({ error: null });
+
+    const { pushToCloud } = await import('./syncEngine');
+    await pushToCloud(USER_ID);
+
+    expect(mockUpsert).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ user_id: USER_ID }),
+      { onConflict: 'user_id' }
+    );
+    expect(mockUpsert).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ user_id: USER_ID })
+    );
+    expect(await getPendingCount()).toBe(0);
+  });
+
+  it('retries profile upsert with a legacy payload when newer columns are missing remotely', async () => {
+    await saveProfile(makeProfile({ displayName: 'Legacy Remote Profile' }));
+    await enqueue({
+      table: 'profile',
+      operation: 'upsert',
+      payload: makeProfile(),
+    });
+    mockUpsert
+      .mockResolvedValueOnce({
+        error: { message: "Could not find the 'preferences' column of 'profiles' in the schema cache" },
+      })
+      .mockResolvedValueOnce({ error: null });
+
+    const { pushToCloud } = await import('./syncEngine');
+    await pushToCloud(USER_ID);
+
+    expect(mockUpsert).toHaveBeenNthCalledWith(
+      2,
+      {
+        user_id: USER_ID,
+        display_name: 'Legacy Remote Profile',
+        avatar_emoji: '🏋️',
+        weight_unit: 'kg',
+      },
+      { onConflict: 'user_id' }
+    );
+    expect(await getPendingCount()).toBe(0);
+  });
+
   it('pushes bodyweight upserts and delete tombstones', async () => {
     await saveBodyweight(makeBodyweight({ id: 'bw-upsert', date: '2026-01-10' }));
     await enqueue({

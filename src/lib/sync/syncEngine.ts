@@ -99,6 +99,50 @@ function isBodyweightMetadataSchemaError(error: SyncError | null | undefined): b
   return mentionsMetadataColumn && looksLikeMissingColumn;
 }
 
+function isConflictTargetError(error: SyncError | null | undefined): boolean {
+  if (!error) return false;
+
+  const text = [
+    error.message,
+    error.details,
+    error.hint,
+    error.code,
+  ].filter(Boolean).join(' ').toLowerCase();
+
+  return text.includes('42p10') || text.includes('no unique or exclusion constraint');
+}
+
+function isProfileSchemaError(error: SyncError | null | undefined): boolean {
+  if (!error) return false;
+
+  const text = [
+    error.message,
+    error.details,
+    error.hint,
+    error.code,
+  ].filter(Boolean).join(' ').toLowerCase();
+
+  const mentionsProfileColumn =
+    text.includes('display_name') ||
+    text.includes('avatar_emoji') ||
+    text.includes('weight_unit') ||
+    text.includes('height_cm') ||
+    text.includes('default_rest_s') ||
+    text.includes('rest_days') ||
+    text.includes('preferences') ||
+    text.includes('updated_at') ||
+    text.includes('user_id');
+
+  const looksLikeSchemaError =
+    text.includes('does not exist') ||
+    text.includes('schema cache') ||
+    text.includes('column') ||
+    text.includes('42703') ||
+    text.includes('pgrst204');
+
+  return mentionsProfileColumn && looksLikeSchemaError;
+}
+
 function bodyweightToRemoteCompat(entry: BodyweightRecord, userId: string) {
   return {
     id: entry.id,
@@ -106,6 +150,15 @@ function bodyweightToRemoteCompat(entry: BodyweightRecord, userId: string) {
     date: entry.date,
     weight: entry.weight,
     unit: entry.unit,
+  };
+}
+
+function profileToRemoteCompat(profile: UserProfile, userId: string) {
+  return {
+    user_id: userId,
+    display_name: profile.displayName || null,
+    avatar_emoji: profile.avatarEmoji,
+    weight_unit: profile.weightUnit,
   };
 }
 
@@ -440,12 +493,46 @@ export async function pushProfileToCloud(
   profile: UserProfile
 ): Promise<void> {
   const sb = getSupabaseClient();
-  const { error } = await sb.from('profiles').upsert(profileToRemote(profile, userId) as never, {
+  const payload = profileToRemote(profile, userId);
+  const { error } = await sb.from('profiles').upsert(payload as never, {
     onConflict: 'user_id',
   });
-  if (error) {
-    throw new Error(`[Sync] profile upsert failed: ${error.message}`);
+  if (!error) {
+    return;
   }
+
+  if (isConflictTargetError(error)) {
+    console.warn('[Sync] profiles.user_id is missing a unique constraint; retrying profile upsert without onConflict');
+    const fallback = await sb.from('profiles').upsert(payload as never);
+    if (!fallback.error) {
+      return;
+    }
+
+    throw new Error(`[Sync] profile upsert failed: ${fallback.error.message}`);
+  }
+
+  if (isProfileSchemaError(error)) {
+    console.warn('[Sync] profiles schema is missing newer columns; retrying legacy profile upsert');
+    const fallbackPayload = profileToRemoteCompat(profile, userId);
+    const fallback = await sb.from('profiles').upsert(fallbackPayload as never, {
+      onConflict: 'user_id',
+    });
+    if (!fallback.error) {
+      return;
+    }
+
+    if (isConflictTargetError(fallback.error)) {
+      const conflictFallback = await sb.from('profiles').upsert(fallbackPayload as never);
+      if (!conflictFallback.error) {
+        return;
+      }
+      throw new Error(`[Sync] profile upsert failed: ${conflictFallback.error.message}`);
+    }
+
+    throw new Error(`[Sync] profile upsert failed: ${fallback.error.message}`);
+  }
+
+  throw new Error(`[Sync] profile upsert failed: ${error.message}`);
 }
 
 export async function syncCloudData(userId: string): Promise<void> {
