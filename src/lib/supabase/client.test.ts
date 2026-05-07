@@ -1,11 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { mockCreateClient } = vi.hoisted(() => ({
+const { mockCreateClient, mockCreateBrowserClient } = vi.hoisted(() => ({
   mockCreateClient: vi.fn(() => ({ auth: {} })),
+  mockCreateBrowserClient: vi.fn(() => ({ auth: {} })),
 }));
 
 vi.mock('@supabase/supabase-js', () => ({
   createClient: mockCreateClient,
+}));
+
+vi.mock('@supabase/ssr', () => ({
+  createBrowserClient: mockCreateBrowserClient,
 }));
 
 import { getSupabaseClient, resetSupabaseClient } from './client';
@@ -18,17 +23,13 @@ describe('getSupabaseClient', () => {
     resetSupabaseClient();
   });
 
-  it('enables URL session detection for browser auth callbacks', () => {
+  it('uses the cookie-backed browser client in browser contexts so the server callback can finish PKCE', () => {
     getSupabaseClient();
 
-    expect(mockCreateClient).toHaveBeenCalledWith(
+    expect(mockCreateBrowserClient).toHaveBeenCalledWith(
       'https://example.supabase.co',
-      'anon-key',
-      expect.objectContaining({
-        auth: expect.objectContaining({
-          detectSessionInUrl: true,
-        }),
-      })
+      'anon-key'
     );
+    expect(mockCreateClient).not.toHaveBeenCalled();
   });
 });
