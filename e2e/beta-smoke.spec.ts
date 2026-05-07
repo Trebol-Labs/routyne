@@ -73,7 +73,7 @@ test('core workout flow records history, stats, and backup export', async ({ pag
   if (!downloadPath) throw new Error('Playwright did not expose the backup download path');
 
   const backup = JSON.parse(await readFile(downloadPath, 'utf8')) as BackupJson;
-  expect(backup.formatVersion).toBe(1);
+  expect(backup.formatVersion).toBe(2);
   expect(typeof backup.exportedAt).toBe('string');
   expect(Array.isArray(backup.data?.routines)).toBe(true);
   expect(Array.isArray(backup.data?.sessions)).toBe(true);
