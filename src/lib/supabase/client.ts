@@ -1,3 +1,4 @@
+import { createBrowserClient } from '@supabase/ssr';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -105,14 +106,22 @@ export function getSupabaseClient(): SupabaseClient<Database> {
     throw new Error('[Supabase] NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY must be set');
   }
 
-  _client = createClient<Database>(url, key, {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      // Required for magic links and anonymous-email upgrades to complete in the browser.
-      detectSessionInUrl: true,
-    },
-  });
+  // In the browser we use @supabase/ssr's createBrowserClient so the PKCE
+  // code_verifier is stored in cookies — that way the server-side
+  // /auth/callback route can complete exchangeCodeForSession after Google
+  // OAuth redirects back. Server-only contexts (tests, scripts) fall back
+  // to the plain client.
+  if (typeof window !== 'undefined') {
+    _client = createBrowserClient<Database>(url, key);
+  } else {
+    _client = createClient<Database>(url, key, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true,
+      },
+    });
+  }
 
   return _client;
 }
