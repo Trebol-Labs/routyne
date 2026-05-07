@@ -564,6 +564,18 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
                 </div>
               )}
 
+              <button
+                type="button"
+                onClick={() => {
+                  const w = window as unknown as { __routyneSync?: { dump?: () => string } };
+                  const text = w.__routyneSync?.dump?.() ?? 'no sync trace yet';
+                  setBackupStatus(text.length > 80 ? `Trace copiado (${text.length} chars). Pégamelo.` : text);
+                }}
+                className="self-start rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-white/55 hover:text-white"
+              >
+                {language === 'en' ? 'Copy sync log' : 'Copiar log de sync'}
+              </button>
+
               <div className="rounded-[1.75rem] border border-sky-300/20 bg-[linear-gradient(135deg,rgba(14,165,233,0.18),rgba(59,130,246,0.08)_48%,rgba(255,255,255,0.04))] p-3 shadow-[0_18px_60px_-35px_rgba(56,189,248,0.95)] sm:p-4">
                 {!supabaseEnabled && localOnlyMode ? (
                   <div className="space-y-3">

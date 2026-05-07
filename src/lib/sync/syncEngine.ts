@@ -30,6 +30,7 @@ import { loadProfile } from '@/lib/db/profile';
 import { loadMetaValue, saveMetaValue } from '@/lib/db/meta';
 import { loadAllRoutineRecords, loadRoutine, loadRoutineRecord } from '@/lib/db/routines';
 import { generateMarkdown } from '@/lib/markdown/generator';
+import { startTrace, logEvent, finishTrace, type SyncTrace } from './debug';
 import type { Database } from '@/lib/supabase/client';
 import type { SyncMutationRecord } from '@/lib/db/schema';
 import type { BodyweightRecord } from '@/lib/db/schema';
@@ -304,22 +305,43 @@ async function seedLocalSnapshotToCloud(userId: string): Promise<void> {
 
 // ── Push ───────────────────────────────────────────────────────────────────────
 
-export async function pushToCloud(userId: string): Promise<void> {
+export async function pushToCloud(
+  userId: string,
+  options: { trace?: SyncTrace } = {}
+): Promise<void> {
   await pruneFailedMutations(5);
 
   const pending = await getPendingMutations();
+  if (options.trace) {
+    logEvent(options.trace, 'push:start', { pending: pending.length });
+  }
   if (pending.length === 0) return;
 
   const sb = getSupabaseClient();
+  let pushed = 0;
+  let failed = 0;
 
   for (const mutation of pending) {
     try {
       await applyMutation(sb, mutation, userId);
       await dequeue(mutation.id);
+      pushed++;
     } catch (err) {
+      if (options.trace) {
+        logEvent(options.trace, 'push:mutation-failed', {
+          id: mutation.id,
+          table: mutation.table,
+          op: mutation.operation,
+        }, err);
+      }
       console.error('[Sync] push failed for mutation', mutation.id, err);
       await incrementRetry(mutation.id);
+      failed++;
     }
+  }
+
+  if (options.trace) {
+    logEvent(options.trace, 'push:done', { pushed, failed });
   }
 }
 
@@ -420,11 +442,15 @@ const EPOCH_CURSOR = '1970-01-01T00:00:00.000Z';
 
 export async function pullFromCloud(
   userId: string,
-  options: { fullPull?: boolean } = {}
+  options: { fullPull?: boolean; trace?: SyncTrace } = {}
 ): Promise<number> {
   const sb = getSupabaseClient();
   const cursor = options.fullPull ? EPOCH_CURSOR : await getCursor(userId);
   const pullStart = new Date().toISOString();
+  const trace = options.trace;
+  if (trace) {
+    logEvent(trace, 'pull:start', { cursor, fullPull: !!options.fullPull });
+  }
 
   const [historyResult, profileResult, bodyweightResult, routinesResult] = await Promise.all([
     sb
@@ -465,48 +491,85 @@ export async function pullFromCloud(
     throw new Error(`[Sync] routine pull failed: ${routinesError.message}`);
   }
 
-  let merged = 0;
-
   const remoteHistory = historyResult.data ?? [];
+  const remoteProfiles = profileResult.data ?? [];
+  const remoteBodyweight = bodyweightResult.data ?? [];
+  const remoteRoutines = routinesResult.data ?? [];
+
+  if (trace) {
+    logEvent(trace, 'pull:fetched', {
+      history: remoteHistory.length,
+      profiles: remoteProfiles.length,
+      bodyweight: remoteBodyweight.length,
+      routines: remoteRoutines.length,
+    });
+  }
+
+  let merged = 0;
+  let historyMerged = 0;
+  let profileMerged = 0;
+  let bodyweightMerged = 0;
+  let routinesMerged = 0;
+
   if (remoteHistory.length > 0) {
     const localHistory = await loadAllHistory();
     const localById = new Map(localHistory.map((e) => [e.id, e]));
 
     for (const remote of remoteHistory) {
       const changed = await mergeRemoteHistory(remote, localById);
-      if (changed) merged++;
+      if (changed) {
+        merged++;
+        historyMerged++;
+      }
     }
   }
 
-  const remoteProfiles = profileResult.data ?? [];
   for (const remote of remoteProfiles) {
     const changed = await mergeRemoteProfile(remote);
-    if (changed) merged++;
+    if (changed) {
+      merged++;
+      profileMerged++;
+    }
   }
 
-  const remoteBodyweight = bodyweightResult.data ?? [];
   if (remoteBodyweight.length > 0) {
     const localBodyweight = await loadAllBodyweight();
     const localByDate = new Map(localBodyweight.map((entry) => [entry.date, entry]));
 
     for (const remote of remoteBodyweight) {
       const changed = await mergeRemoteBodyweight(remote, localByDate);
-      if (changed) merged++;
+      if (changed) {
+        merged++;
+        bodyweightMerged++;
+      }
     }
   }
 
-  const remoteRoutines = routinesResult.data ?? [];
   if (remoteRoutines.length > 0) {
     const localRoutineRecords = await loadAllRoutineRecords();
     const localById = new Map(localRoutineRecords.map((record) => [record.id, record]));
 
     for (const remote of remoteRoutines) {
       const changed = await mergeRemoteRoutine(remote, localById);
-      if (changed) merged++;
+      if (changed) {
+        merged++;
+        routinesMerged++;
+      }
     }
   }
 
   await updateCursor(userId, pullStart);
+
+  if (trace) {
+    logEvent(trace, 'pull:merged', {
+      historyMerged,
+      profileMerged,
+      bodyweightMerged,
+      routinesMerged,
+      cursorAdvancedTo: pullStart,
+    });
+  }
+
   return merged;
 }
 
@@ -565,30 +628,65 @@ export async function syncCloudData(userId: string): Promise<void> {
     return existing;
   }
 
+  const trace = startTrace(userId);
+
   const syncPromise = (async () => {
+    try {
+      const sb = getSupabaseClient();
+      // Best-effort; some test mocks don't expose .auth.
+      const getUser = sb.auth?.getUser?.bind(sb.auth);
+      if (getUser) {
+        const { data: authData } = await getUser();
+        logEvent(trace, 'auth:check', {
+          requestedUserId: userId,
+          authUserId: authData.user?.id ?? null,
+          authEmail: authData.user?.email ?? null,
+          hasSession: !!authData.user,
+        });
+        if (!authData.user || authData.user.id !== userId) {
+          logEvent(trace, 'auth:mismatch', {}, new Error('auth user does not match requested userId'));
+        }
+      }
+    } catch (err) {
+      logEvent(trace, 'auth:check-failed', {}, err);
+    }
+
     const initialSyncKey = `${INITIAL_SYNC_KEY_PREFIX}${userId}`;
     const initialSyncAt = await loadMetaValue(initialSyncKey);
+    logEvent(trace, 'bootstrap:check', { hasInitialSyncKey: !!initialSyncAt, initialSyncAt });
 
     if (!initialSyncAt) {
       // First sync on this device. The remote sync_cursors row may already
       // be advanced from another device, so we ignore it and pull every
       // row owned by this user — otherwise a fresh install with the same
       // account would render an empty IDB.
-      await pullFromCloud(userId, { fullPull: true });
-      await pushToCloud(userId);
+      logEvent(trace, 'bootstrap:start', { path: 'first-device-pull-then-seed' });
+      await pullFromCloud(userId, { fullPull: true, trace });
+      await pushToCloud(userId, { trace });
       await seedLocalSnapshotToCloud(userId);
+      logEvent(trace, 'bootstrap:seeded', {});
 
       const now = new Date().toISOString();
       await updateCursor(userId, now);
       await saveMetaValue(initialSyncKey, now);
+      logEvent(trace, 'bootstrap:done', { cursor: now });
       return;
     }
 
-    await pushToCloud(userId);
-    await pullFromCloud(userId);
-  })().finally(() => {
-    inFlightSyncs.delete(userId);
-  });
+    logEvent(trace, 'incremental:start', {});
+    await pushToCloud(userId, { trace });
+    await pullFromCloud(userId, { trace });
+    logEvent(trace, 'incremental:done', {});
+  })()
+    .then(() => finishTrace(trace, true))
+    .catch((err) => {
+      logEvent(trace, 'sync:fatal', {}, err);
+      finishTrace(trace, false);
+      throw err;
+    })
+    .finally(() => {
+      inFlightSyncs.delete(userId);
+    });
 
   inFlightSyncs.set(userId, syncPromise);
   return syncPromise;
