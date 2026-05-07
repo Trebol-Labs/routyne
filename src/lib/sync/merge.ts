@@ -8,6 +8,10 @@ import { saveHistoryEntry } from '@/lib/db/history';
 import { saveBodyweight, deleteBodyweightEntriesByDate } from '@/lib/db/bodyweight';
 import { loadProfile, saveProfile, normalizeProfileRecord } from '@/lib/db/profile';
 import { deleteRoutine, saveRoutineFromRemote } from '@/lib/db/routines';
+import {
+  loadNutritionProfile,
+  persistNutritionProfileSilently,
+} from '@/lib/db/nutritionProfile';
 import { parseRoutine } from '@/lib/markdown/parser';
 import type { BodyweightRecord } from '@/lib/db/schema';
 import type { RoutineRecord } from '@/lib/db/schema';
@@ -17,11 +21,20 @@ import type {
   ExerciseVolume,
   UserProfile,
 } from '@/types/workout';
+import type {
+  NutritionProfile,
+  ActivityLevel,
+  TrainingType,
+  TrainingTime,
+  Budget,
+  DietaryRestriction,
+} from '@/types/nutrition';
 
 type RemoteHistory = Database['public']['Tables']['history']['Row'];
 type RemoteProfile = Database['public']['Tables']['profiles']['Row'];
 type RemoteBodyweight = Database['public']['Tables']['bodyweight']['Row'];
 type RemoteRoutine = Database['public']['Tables']['routines']['Row'];
+type RemoteNutritionProfile = Database['public']['Tables']['nutrition_profiles']['Row'];
 
 // ── History ────────────────────────────────────────────────────────────────────
 
@@ -252,6 +265,117 @@ export async function mergeRemoteRoutine(
 }
 
 // ── History payload builder ────────────────────────────────────────────────────
+
+// ── Nutrition Profile ────────────────────────────────────────────────────────
+
+const ACTIVITY_LEVELS: readonly ActivityLevel[] = [
+  'sedentary',
+  'light',
+  'moderate',
+  'very_active',
+  'extra_active',
+] as const;
+
+const TRAINING_TYPES: readonly TrainingType[] = [
+  'strength',
+  'hypertrophy',
+  'cardio',
+  'mixed',
+] as const;
+
+const TRAINING_TIMES: readonly TrainingTime[] = ['morning', 'afternoon', 'evening'] as const;
+
+const BUDGETS: readonly Budget[] = ['low', 'medium', 'high'] as const;
+
+const DIETARY_RESTRICTIONS: readonly DietaryRestriction[] = [
+  'vegan',
+  'vegetarian',
+  'pescatarian',
+  'gluten_free',
+  'lactose_free',
+  'nut_free',
+  'halal',
+  'kosher',
+  'low_fodmap',
+] as const;
+
+function isMember<T extends string>(value: unknown, values: readonly T[]): value is T {
+  return typeof value === 'string' && (values as readonly string[]).includes(value);
+}
+
+export function nutritionProfileToRemote(
+  local: NutritionProfile,
+  userId: string
+): Database['public']['Tables']['nutrition_profiles']['Insert'] {
+  return {
+    user_id: userId,
+    weight_kg: local.weightKg,
+    height_cm: local.heightCm,
+    age_years: local.ageYears,
+    sex: local.sex,
+    activity_level: local.activityLevel,
+    goal: local.goal,
+    experience: local.experience,
+    body_fat_pct: local.bodyFatPct,
+    training_days: local.trainingDaysPerWeek,
+    training_type: local.trainingType,
+    training_time: local.trainingTime,
+    dietary_restrictions: local.dietaryRestrictions,
+    custom_restrictions: local.customRestrictions,
+    budget: local.budget,
+    bmr_kcal: local.bmrKcal,
+    tdee_kcal: local.tdeeKcal,
+    target_kcal: local.targetKcal,
+    protein_g: local.proteinG,
+    fats_g: local.fatsG,
+    carbs_g: local.carbsG,
+    created_at: local.createdAt,
+    updated_at: local.updatedAt,
+  };
+}
+
+function remoteToLocalNutritionProfile(remote: RemoteNutritionProfile): NutritionProfile {
+  return {
+    weightKg: remote.weight_kg,
+    heightCm: remote.height_cm,
+    ageYears: remote.age_years,
+    sex: remote.sex,
+    activityLevel: isMember(remote.activity_level, ACTIVITY_LEVELS) ? remote.activity_level : 'moderate',
+    goal: remote.goal,
+    experience:
+      remote.experience === 'beginner' || remote.experience === 'intermediate' || remote.experience === 'advanced'
+        ? remote.experience
+        : 'intermediate',
+    bodyFatPct: remote.body_fat_pct,
+    trainingDaysPerWeek: remote.training_days,
+    trainingType: isMember(remote.training_type, TRAINING_TYPES) ? remote.training_type : null,
+    trainingTime: isMember(remote.training_time, TRAINING_TIMES) ? remote.training_time : null,
+    dietaryRestrictions: (remote.dietary_restrictions ?? []).filter((r): r is DietaryRestriction =>
+      isMember(r, DIETARY_RESTRICTIONS),
+    ),
+    customRestrictions: remote.custom_restrictions ?? [],
+    budget: isMember(remote.budget, BUDGETS) ? remote.budget : null,
+    bmrKcal: remote.bmr_kcal,
+    tdeeKcal: remote.tdee_kcal,
+    targetKcal: remote.target_kcal,
+    proteinG: remote.protein_g,
+    fatsG: remote.fats_g,
+    carbsG: remote.carbs_g,
+    createdAt: remote.created_at,
+    updatedAt: remote.updated_at,
+  };
+}
+
+export async function mergeRemoteNutritionProfile(
+  remote: RemoteNutritionProfile
+): Promise<boolean> {
+  const local = await loadNutritionProfile();
+  const remoteUpdated = new Date(remote.updated_at).getTime();
+  const localUpdated = local ? new Date(local.updatedAt).getTime() : 0;
+  if (local && remoteUpdated <= localUpdated) return false;
+  await persistNutritionProfileSilently(remoteToLocalNutritionProfile(remote));
+  return true;
+}
 
 export function historyEntryToRemote(
   entry: HistoryEntry,

@@ -17,6 +17,13 @@ import type { LucideIcon } from 'lucide-react';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
 import { cn } from '@/lib/utils';
 import type { MealType, NutritionEntry, NutritionTotals } from '@/types/workout';
+import type { NutritionProfile } from '@/types/nutrition';
+import { loadNutritionProfile } from '@/lib/db/nutritionProfile';
+import { NUTRITION_ENABLED } from '@/lib/feature-flags';
+import { NutritionPlanCard } from '@/components/nutrition/NutritionPlanCard';
+import { NutritionEmptyState } from '@/components/nutrition/NutritionEmptyState';
+import { AdjustmentBanner } from '@/components/nutrition/AdjustmentBanner';
+import { useAdaptiveCheck } from '@/hooks/useAdaptiveCheck';
 
 const MEAL_LABELS: Record<MealType, string> = {
   breakfast: 'Desayuno',
@@ -156,10 +163,31 @@ export function NutritionView() {
     fatGrams: String(nutritionGoal.fatGrams),
   });
   const [isGoalOpen, setIsGoalOpen] = useState(false);
+  const [coachProfile, setCoachProfile] = useState<NutritionProfile | null>(null);
+  const [coachLoaded, setCoachLoaded] = useState(() => !NUTRITION_ENABLED);
+  const adaptive = useAdaptiveCheck();
 
   useEffect(() => {
     loadNutritionDay(selectedDate).catch(console.error);
   }, [loadNutritionDay, selectedDate]);
+
+  useEffect(() => {
+    if (!NUTRITION_ENABLED) return;
+    let cancelled = false;
+    loadNutritionProfile()
+      .then((p) => {
+        if (!cancelled) {
+          setCoachProfile(p);
+          setCoachLoaded(true);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setCoachLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedDate]);
 
   const totals = useMemo(
     () => nutritionEntries.reduce<NutritionTotals>((acc, entry) => ({
@@ -232,6 +260,25 @@ export function NutritionView() {
       className="space-y-4 px-4 pb-48 overflow-y-auto"
       id="main-content"
     >
+      {NUTRITION_ENABLED && coachLoaded && (
+        coachProfile
+          ? <NutritionPlanCard profile={coachProfile} consumedKcal={totals.calories} />
+          : <NutritionEmptyState />
+      )}
+
+      {NUTRITION_ENABLED && adaptive.pending && coachProfile && (
+        <AdjustmentBanner
+          pending={adaptive.pending}
+          onApply={async () => {
+            await adaptive.apply();
+            // Refresh local view of profile so the plan card updates.
+            const updated = await loadNutritionProfile();
+            setCoachProfile(updated);
+          }}
+          onReject={adaptive.reject}
+        />
+      )}
+
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="w-2 h-10 bg-emerald-400 rounded-full shadow-[0_0_20px_rgba(52,211,153,0.6)]" />

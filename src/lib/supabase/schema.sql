@@ -163,3 +163,45 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
+-- ── Nutrition profiles ────────────────────────────────────────────────────────
+
+create table if not exists public.nutrition_profiles (
+  user_id              uuid        primary key references auth.users,
+  weight_kg            float       not null,
+  height_cm            int         not null,
+  age_years            int         not null,
+  sex                  text        not null check (sex in ('male','female')),
+  activity_level       text        not null,
+  goal                 text        not null check (goal in ('bulk','cut','recomp')),
+  experience           text        not null,
+
+  body_fat_pct         float,
+  training_days        int,
+  training_type        text,
+  training_time        text,
+  dietary_restrictions text[]      default '{}',
+  custom_restrictions  text[]      default '{}',
+  budget               text,
+
+  bmr_kcal             int         not null,
+  tdee_kcal            int         not null,
+  target_kcal          int         not null,
+  protein_g            int         not null,
+  fats_g               int         not null,
+  carbs_g              int         not null,
+
+  created_at           timestamptz default now(),
+  updated_at           timestamptz default now(),
+  deleted_at           timestamptz
+);
+
+alter table public.nutrition_profiles enable row level security;
+
+drop policy if exists "Users own their nutrition profile" on public.nutrition_profiles;
+create policy "Users own their nutrition profile"
+  on public.nutrition_profiles for all
+  using (auth.uid() = user_id);
+
+create index if not exists nutrition_profiles_user_updated
+  on public.nutrition_profiles (user_id, updated_at);

@@ -11,7 +11,13 @@ import { resetDBSingleton } from '@/lib/db/index';
 
 const mockUpsert = vi.fn().mockResolvedValue({ error: null });
 
-type QueryTable = 'history' | 'profiles' | 'bodyweight' | 'routines' | 'sync_cursors';
+type QueryTable =
+  | 'history'
+  | 'profiles'
+  | 'bodyweight'
+  | 'routines'
+  | 'sync_cursors'
+  | 'nutrition_profiles';
 type QueryResult = { data: unknown; error: { message: string } | null };
 type QueryResultState = QueryResult | QueryResult[];
 
@@ -21,6 +27,7 @@ const queryResults: Record<QueryTable, QueryResultState> = {
   bodyweight: { data: [], error: null },
   routines: { data: [], error: null },
   sync_cursors: { data: null, error: null },
+  nutrition_profiles: { data: [], error: null },
 };
 
 function setQueryResult(table: QueryTable, result: QueryResultState): void {
@@ -757,5 +764,99 @@ describe('historyEntryToRemote', () => {
     expect(remote.total_volume).toBe(500);
     expect(remote.duration_secs).toBe(3600);
     expect(typeof remote.completed_at).toBe('string');
+  });
+});
+
+// ── Nutrition profile sync ───────────────────────────────────────────────────
+
+import { nutritionProfileToRemote, mergeRemoteNutritionProfile } from './merge';
+import { saveNutritionProfile, loadNutritionProfile } from '@/lib/db/nutritionProfile';
+import type { NutritionProfile } from '@/types/nutrition';
+
+function makeNutritionProfile(overrides: Partial<NutritionProfile> = {}): NutritionProfile {
+  return {
+    weightKg: 80,
+    heightCm: 180,
+    ageYears: 30,
+    sex: 'male',
+    activityLevel: 'moderate',
+    goal: 'bulk',
+    experience: 'intermediate',
+    bodyFatPct: null,
+    trainingDaysPerWeek: 4,
+    trainingType: 'hypertrophy',
+    trainingTime: 'evening',
+    dietaryRestrictions: [],
+    customRestrictions: [],
+    budget: 'medium',
+    bmrKcal: 1780,
+    tdeeKcal: 2759,
+    targetKcal: 3035,
+    proteinG: 160,
+    fatsG: 90,
+    carbsG: 395,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    ...overrides,
+  };
+}
+
+describe('nutritionProfileToRemote', () => {
+  it('maps camelCase IDB fields to snake_case Supabase row', () => {
+    const remote = nutritionProfileToRemote(makeNutritionProfile(), USER_ID);
+    expect(remote.user_id).toBe(USER_ID);
+    expect(remote.weight_kg).toBe(80);
+    expect(remote.height_cm).toBe(180);
+    expect(remote.activity_level).toBe('moderate');
+    expect(remote.training_days).toBe(4);
+    expect(remote.training_type).toBe('hypertrophy');
+    expect(remote.target_kcal).toBe(3035);
+  });
+});
+
+describe('mergeRemoteNutritionProfile', () => {
+  it('persists a newer remote profile (last-write-wins)', async () => {
+    const local = makeNutritionProfile({ updatedAt: '2026-01-01T00:00:00.000Z', targetKcal: 3000 });
+    await saveNutritionProfile(local);
+
+    const remoteRow = {
+      ...nutritionProfileToRemote(makeNutritionProfile({ targetKcal: 3500 }), USER_ID),
+      updated_at: '2026-02-01T00:00:00.000Z',
+      created_at: local.createdAt,
+      deleted_at: null,
+    };
+
+    const changed = await mergeRemoteNutritionProfile(remoteRow as never);
+    expect(changed).toBe(true);
+
+    const after = await loadNutritionProfile();
+    expect(after?.targetKcal).toBe(3500);
+    expect(after?.updatedAt).toBe('2026-02-01T00:00:00.000Z');
+  });
+
+  it('ignores remote rows older than local', async () => {
+    const local = makeNutritionProfile({ updatedAt: '2026-03-01T00:00:00.000Z', targetKcal: 3200 });
+    await saveNutritionProfile(local);
+
+    const remoteRow = {
+      ...nutritionProfileToRemote(makeNutritionProfile({ targetKcal: 9999 }), USER_ID),
+      updated_at: '2026-01-01T00:00:00.000Z',
+      created_at: local.createdAt,
+      deleted_at: null,
+    };
+
+    const changed = await mergeRemoteNutritionProfile(remoteRow as never);
+    expect(changed).toBe(false);
+
+    const after = await loadNutritionProfile();
+    expect(after?.targetKcal).toBe(3200);
+  });
+});
+
+describe('saveNutritionProfile', () => {
+  it('persists locally and enqueues a sync mutation', async () => {
+    await saveNutritionProfile(makeNutritionProfile());
+    const pending = await getPendingMutations();
+    expect(pending.some((m) => m.table === 'nutritionProfile' && m.operation === 'upsert')).toBe(true);
   });
 });
