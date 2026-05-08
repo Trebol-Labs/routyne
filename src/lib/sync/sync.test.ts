@@ -120,6 +120,7 @@ function makeProfile(overrides: Partial<UserProfile> = {}): UserProfile {
       reducedMotion: false,
       language: 'es',
       streakReminderEnabled: false,
+      streakReminderTime: '20:00',
       timerNotificationsEnabled: false,
       timezone: 'UTC',
     },

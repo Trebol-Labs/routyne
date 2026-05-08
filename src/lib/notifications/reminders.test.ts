@@ -1,0 +1,94 @@
+import { describe, expect, it } from 'vitest';
+import {
+  buildStreakReminderCopy,
+  buildUpcomingStreakReminderSchedule,
+  getCurrentStreak,
+  normalizeReminderTime,
+  shouldSendStreakReminder,
+} from './reminders';
+
+describe('reminder time helpers', () => {
+  it('normalizes invalid reminder times to the default', () => {
+    expect(normalizeReminderTime('')).toBe('20:00');
+    expect(normalizeReminderTime('99:99')).toBe('20:00');
+    expect(normalizeReminderTime('7:3')).toBe('20:00');
+    expect(normalizeReminderTime('07:30')).toBe('07:30');
+  });
+});
+
+describe('streak reminder scheduling', () => {
+  it('skips rest days and completed days when scheduling reminders', () => {
+    const now = new Date('2026-04-01T12:00:00Z');
+    const schedule = buildUpcomingStreakReminderSchedule({
+      history: [{ completedAt: new Date('2026-04-01T08:00:00Z') }],
+      restDays: [0],
+      timezone: 'UTC',
+      reminderTime: '20:00',
+      now,
+      horizonDays: 2,
+    });
+
+    expect(schedule).toHaveLength(1);
+    expect(schedule[0].dateKey).toBe('2026-04-02');
+    expect(schedule[0].scheduledFor.toISOString()).toBe('2026-04-02T20:00:00.000Z');
+  });
+
+  it('computes the current streak using local timezone dates', () => {
+    const streak = getCurrentStreak({
+      history: [
+        { completedAt: new Date('2026-04-01T08:00:00Z') },
+        { completedAt: new Date('2026-03-31T08:00:00Z') },
+        { completedAt: new Date('2026-03-30T08:00:00Z') },
+      ],
+      restDays: [],
+      timezone: 'UTC',
+      now: new Date('2026-04-01T12:00:00Z'),
+    });
+
+    expect(streak).toBe(3);
+  });
+
+  it('builds personalized copy in both languages', () => {
+    expect(
+      buildStreakReminderCopy({
+        displayName: 'Sierra',
+        currentStreak: 5,
+        language: 'en',
+      })
+    ).toEqual({
+      title: 'Sierra, time to train',
+      body: "You're on a 5-day streak. Train today to keep it alive.",
+    });
+
+    expect(
+      buildStreakReminderCopy({
+        displayName: 'Sierra',
+        currentStreak: 0,
+        language: 'es',
+      })
+    ).toEqual({
+      title: 'Sierra, hora de entrenar',
+      body: 'Empieza una nueva racha hoy.',
+    });
+  });
+
+  it('only sends a streak reminder when today is not a rest or workout day', () => {
+    expect(
+      shouldSendStreakReminder({
+        history: [{ completedAt: new Date('2026-04-01T08:00:00Z') }],
+        restDays: [],
+        timezone: 'UTC',
+        now: new Date('2026-04-01T12:00:00Z'),
+      })
+    ).toBe(false);
+
+    expect(
+      shouldSendStreakReminder({
+        history: [],
+        restDays: [3],
+        timezone: 'UTC',
+        now: new Date('2026-04-01T12:00:00Z'),
+      })
+    ).toBe(false);
+  });
+});
