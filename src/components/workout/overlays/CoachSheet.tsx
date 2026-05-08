@@ -7,6 +7,11 @@ import { Sheet } from '@/components/ui/Sheet';
 import { Button } from '@/components/ui/button';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
 import { buildUserContext } from '@/lib/coach/context-builder';
+import { loadNutritionProfile } from '@/lib/db/nutritionProfile';
+import { loadPendingAdjustment, type PendingAdjustment } from '@/lib/db/nutritionAdjustment';
+import { loadAllBodyweight } from '@/lib/db/bodyweight';
+import type { NutritionProfile } from '@/types/nutrition';
+import type { BodyweightRecord } from '@/lib/db/schema';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/components/i18n/LanguageProvider';
 
@@ -27,8 +32,26 @@ export function CoachSheet({ onClose }: CoachSheetProps) {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [limitReached, setLimitReached] = useState(false);
+  const [nutritionProfile, setNutritionProfile] = useState<NutritionProfile | null>(null);
+  const [pendingAdjustment, setPendingAdjustment] = useState<PendingAdjustment | null>(null);
+  const [bodyweight, setBodyweight] = useState<BodyweightRecord[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      loadNutritionProfile().catch(() => null),
+      loadPendingAdjustment().catch(() => null),
+      loadAllBodyweight().catch(() => [] as BodyweightRecord[]),
+    ]).then(([np, pa, bw]) => {
+      if (cancelled) return;
+      setNutritionProfile(np);
+      setPendingAdjustment(pa);
+      setBodyweight(bw);
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   const welcomeMessage = useMemo(() => {
     if (history.length === 0) {
@@ -71,7 +94,14 @@ export function CoachSheet({ onClose }: CoachSheetProps) {
     setIsLoading(true);
 
     try {
-      const ctx = buildUserContext(history, profile, nutritionGoal);
+      const ctx = buildUserContext({
+        history,
+        profile,
+        nutritionGoal,
+        nutritionProfile,
+        pendingAdjustment,
+        bodyweight,
+      });
       const res = await fetch('/api/coach', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
