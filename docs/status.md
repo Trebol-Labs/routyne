@@ -18,7 +18,7 @@ This file is the current source of truth for shipped state, roadmap health, and 
 - The AI Coach is optional. Its prompt is nutrition-aware around saved daily macro targets, but the full rich nutrition profile and pending adaptive adjustment are not yet structured into `UserCoachContext`.
 - Push subscriptions can persist to Supabase when the service role key is configured; browser and PWA installs still fall back to Web Push, while native installs register FCM/APNs tokens through authenticated device rows.
 - Daily streak reminders still run through the protected Vercel Cron route `/api/cron/streak-reminders` for the web fallback, while native installs now reschedule local reminders on device.
-- Exercise media/search depend on ExerciseDB through RapidAPI.
+- Exercise media/search depend on ExerciseDB through RapidAPI, and the visual routine builder now uses demo-first exercise search with a selected-day editor and a collapsed Markdown import fallback.
 
 ## Recent Changes From Last Commits
 

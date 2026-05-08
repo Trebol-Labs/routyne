@@ -18,6 +18,17 @@ Main views:
 
 Standalone pages include `/landing`, `/privacy`, `/terms`, `/support`, `/onboarding`, and `/auth/callback`.
 
+## Routine Builder
+
+The visual routine builder in [`src/components/workout/views/RoutineBuilderView.tsx`](/Users/sierra/Code/routyne/src/components/workout/views/RoutineBuilderView.tsx) is optimized around a selected-day workflow:
+
+- Routine title and the currently selected day stay visible at the top of the builder.
+- A horizontal day rail lets users switch or add days without flattening every session into one long column.
+- Exercise rows stay compact by default and expand only when the user edits sets, reps, or rest.
+- Exercise search is demo-first: on desktop it renders inline beside the builder, and on mobile it opens as a bottom sheet via [`src/components/workout/overlays/SearchSheet.tsx`](/Users/sierra/Code/routyne/src/components/workout/overlays/SearchSheet.tsx).
+- The search results are enriched by [`src/app/api/exercises/browse/route.ts`](/Users/sierra/Code/routyne/src/app/api/exercises/browse/route.ts) with target muscles, secondary muscles, instructions, difficulty, and demo media when the ExerciseDB data is available.
+- Markdown import remains in [`src/components/workout/RoutineUploader.tsx`](/Users/sierra/Code/routyne/src/components/workout/RoutineUploader.tsx) behind an advanced disclosure so the primary create path stays visually focused.
+
 ## Native Shell
 
 Routyne also ships checked-in Capacitor projects in [`/android`](/Users/sierra/Code/routyne/android) and [`/ios`](/Users/sierra/Code/routyne/ios). The native shell loads the hosted Vercel app instead of a static export, which keeps cookies, route handlers, API routes, and Supabase auth callbacks working inside the app container.
@@ -136,6 +147,7 @@ Generated markdown comes from [`src/lib/markdown/generator.ts`](/Users/sierra/Co
 
 - [`src/lib/media/resolver.ts`](/Users/sierra/Code/routyne/src/lib/media/resolver.ts) maps exercise names to `/api/media/{slug}`.
 - [`src/app/api/media/[slug]/route.ts`](/Users/sierra/Code/routyne/src/app/api/media/[slug]/route.ts) resolves/fetches media from provider data.
+- [`src/app/api/exercises/browse/route.ts`](/Users/sierra/Code/routyne/src/app/api/exercises/browse/route.ts) powers builder/search browsing with ExerciseDB-backed fixtures, metadata enrichment, and body-part/equipment filters.
 - [`src/lib/media/providers/exercisedb.ts`](/Users/sierra/Code/routyne/src/lib/media/providers/exercisedb.ts) uses RapidAPI ExerciseDB.
 - Exercise card fallback order is video, GIF, image, dumbbell icon.
 
