@@ -43,6 +43,7 @@ If you are testing the Capacitor shell on a real Android phone, keep `pnpm dev` 
 | `CAPACITOR_SERVER_URL` | Optional | URL loaded by the Capacitor shell. Defaults to `NEXT_PUBLIC_SITE_URL`; use a LAN-reachable dev URL for on-device testing. |
 | `NEXT_PUBLIC_SUPABASE_URL` | Optional | Enables Supabase auth and cloud sync. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Optional | Browser Supabase client key. |
+| `HEVY_API_KEY` | Optional | Required by the Hevy migration route to pull the archive once and store it in Supabase. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Optional | Server-side push subscription storage and streak reminder cron. |
 | `NEXT_PUBLIC_COACH_ENABLED` | Optional | Shows the AI Coach button when `true`. |
 | `VERCEL_OIDC_TOKEN` | Optional | Required by `/api/coach` for Vercel AI Gateway. |

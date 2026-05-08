@@ -20,16 +20,19 @@ import {
   mergeRemoteBodyweight,
   mergeRemoteRoutine,
   mergeRemoteNutritionProfile,
+  mergeRemoteHevyArchive,
   historyEntryToRemote,
   profileToRemote,
   bodyweightToRemote,
   routineToRemote,
   nutritionProfileToRemote,
+  hevyArchiveToRemote,
 } from './merge';
 import { loadAllHistory } from '@/lib/db/history';
 import { loadAllBodyweight, loadBodyweightByDate } from '@/lib/db/bodyweight';
 import { loadProfile } from '@/lib/db/profile';
 import { loadNutritionProfile } from '@/lib/db/nutritionProfile';
+import { loadHevyArchiveSnapshot } from '@/lib/db/hevyArchive';
 import { loadMetaValue, saveMetaValue } from '@/lib/db/meta';
 import { loadAllRoutineRecords, loadRoutine, loadRoutineRecord } from '@/lib/db/routines';
 import { generateMarkdown } from '@/lib/markdown/generator';
@@ -254,10 +257,11 @@ async function pullBodyweightRows(
 
 async function seedLocalSnapshotToCloud(userId: string): Promise<void> {
   const sb = getSupabaseClient();
-  const [profile, history, bodyweight] = await Promise.all([
+  const [profile, history, bodyweight, hevyArchive] = await Promise.all([
     loadProfile(),
     loadAllHistory(),
     loadAllBodyweight(),
+    loadHevyArchiveSnapshot(),
   ]);
   const routineRecords = await loadAllRoutineRecords();
 
@@ -315,6 +319,16 @@ async function seedLocalSnapshotToCloud(userId: string): Promise<void> {
       throw new Error(`[Sync] nutrition profile bootstrap failed: ${error.message}`);
     }
   }
+
+  if (hevyArchive) {
+    const { error } = await sb.from('hevy_archives').upsert(
+      hevyArchiveToRemote(hevyArchive, userId) as never,
+      { onConflict: 'user_id' }
+    );
+    if (error && !isMissingHevyTableError(error)) {
+      throw new Error(`[Sync] Hevy archive bootstrap failed: ${error.message}`);
+    }
+  }
 }
 
 function isMissingNutritionTableError(error: SyncError | null | undefined): boolean {
@@ -325,6 +339,21 @@ function isMissingNutritionTableError(error: SyncError | null | undefined): bool
     .toLowerCase();
   return (
     text.includes('nutrition_profiles') &&
+    (text.includes('does not exist') ||
+      text.includes('schema cache') ||
+      text.includes('42p01') ||
+      text.includes('pgrst205'))
+  );
+}
+
+function isMissingHevyTableError(error: SyncError | null | undefined): boolean {
+  if (!error) return false;
+  const text = [error.message, error.details, error.hint, error.code]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  return (
+    text.includes('hevy_archives') &&
     (text.includes('does not exist') ||
       text.includes('schema cache') ||
       text.includes('42p01') ||
@@ -498,7 +527,7 @@ export async function pullFromCloud(
     logEvent(trace, 'pull:start', { cursor, fullPull: !!options.fullPull });
   }
 
-  const [historyResult, profileResult, bodyweightResult, routinesResult, nutritionProfileResult] = await Promise.all([
+  const [historyResult, profileResult, bodyweightResult, routinesResult, nutritionProfileResult, hevyArchiveResult] = await Promise.all([
     sb
       .from('history')
       .select('*')
@@ -522,6 +551,11 @@ export async function pullFromCloud(
       .select('*')
       .eq('user_id', userId)
       .gt('updated_at', cursor),
+    sb
+      .from('hevy_archives')
+      .select('*')
+      .eq('user_id', userId)
+      .gt('updated_at', cursor),
   ]);
 
   const historyError = historyResult.error;
@@ -529,6 +563,7 @@ export async function pullFromCloud(
   const bodyweightError = bodyweightResult.error;
   const routinesError = routinesResult.error;
   const nutritionProfileError = nutritionProfileResult.error;
+  const hevyArchiveError = hevyArchiveResult.error;
 
   if (historyError) {
     throw new Error(`[Sync] history pull failed: ${historyError.message}`);
@@ -545,12 +580,16 @@ export async function pullFromCloud(
   if (nutritionProfileError && !isMissingNutritionTableError(nutritionProfileError)) {
     throw new Error(`[Sync] nutrition profile pull failed: ${nutritionProfileError.message}`);
   }
+  if (hevyArchiveError && !isMissingHevyTableError(hevyArchiveError)) {
+    throw new Error(`[Sync] Hevy archive pull failed: ${hevyArchiveError.message}`);
+  }
 
   const remoteHistory = historyResult.data ?? [];
   const remoteProfiles = profileResult.data ?? [];
   const remoteBodyweight = bodyweightResult.data ?? [];
   const remoteRoutines = routinesResult.data ?? [];
   const remoteNutritionProfiles = nutritionProfileResult.data ?? [];
+  const remoteHevyArchives = hevyArchiveResult.data ?? [];
 
   if (trace) {
     logEvent(trace, 'pull:fetched', {
@@ -559,6 +598,7 @@ export async function pullFromCloud(
       bodyweight: remoteBodyweight.length,
       routines: remoteRoutines.length,
       nutritionProfiles: remoteNutritionProfiles.length,
+      hevyArchives: remoteHevyArchives.length,
     });
   }
 
@@ -568,6 +608,7 @@ export async function pullFromCloud(
   let bodyweightMerged = 0;
   let routinesMerged = 0;
   let nutritionProfileMerged = 0;
+  let hevyArchiveMerged = 0;
 
   if (remoteHistory.length > 0) {
     const localHistory = await loadAllHistory();
@@ -624,6 +665,14 @@ export async function pullFromCloud(
     }
   }
 
+  for (const remote of remoteHevyArchives) {
+    const changed = await mergeRemoteHevyArchive(remote);
+    if (changed) {
+      merged++;
+      hevyArchiveMerged++;
+    }
+  }
+
   await updateCursor(userId, pullStart);
 
   if (trace) {
@@ -633,6 +682,7 @@ export async function pullFromCloud(
       bodyweightMerged,
       routinesMerged,
       nutritionProfileMerged,
+      hevyArchiveMerged,
       cursorAdvancedTo: pullStart,
     });
   }

@@ -139,3 +139,48 @@ describe('buildSystemPrompt pending adjustment + stall signals', () => {
     expect(prompt).toContain('bench press');
   });
 });
+
+describe('buildSystemPrompt Hevy archive context', () => {
+  it('formats the imported Hevy archive when present', () => {
+    const prompt = buildSystemPrompt({
+      ...baseContext,
+      hevyArchive: {
+        importedAt: '2026-05-08T00:00:00.000Z',
+        totalWorkouts: 2,
+        firstWorkoutAt: '2025-01-01T10:00:00Z',
+        lastWorkoutAt: '2025-02-01T10:00:00Z',
+        spanDays: 31,
+        avgWorkoutsPerWeek: 0.5,
+        totalSets: 10,
+        totalVolumeKg: 1234.5,
+        avgDurationMinutes: 75,
+        setTypeMix: { warmup: 2, working: 8, dropset: 0, failure: 0 },
+        rpeUsageRatio: 0.8,
+        topExercises: [
+          {
+            name: 'Bench Press',
+            workouts: 2,
+            totalSets: 5,
+            totalReps: 40,
+            totalVolumeKg: 320,
+            bestWeightKg: 90,
+            bestReps: 5,
+            bestEst1RMKg: 105,
+            bestEst1RMDate: '2025-02-01',
+            firstSeen: '2025-01-01',
+            lastSeen: '2025-02-01',
+            avgRpe: 8,
+          },
+        ],
+        progression: [],
+        stagnation: [],
+        comments: { workoutNotes: [], exerciseNotes: [] },
+        recentWorkouts: [],
+      },
+    });
+
+    expect(prompt).toContain('ARCHIVO HISTÓRICO DE HEVY');
+    expect(prompt).toContain('Bench Press');
+    expect(prompt).toContain('Histórico cargado: 2 entrenamientos');
+  });
+});

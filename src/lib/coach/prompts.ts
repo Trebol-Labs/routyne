@@ -119,7 +119,6 @@ function formatHevyArchive(ctx: UserCoachContext): string {
   if (!a) return '  (sin archivo de Hevy importado)';
   if (a.totalWorkouts === 0) return '  (archivo de Hevy importado pero vacío)';
 
-  const unit = ctx.profile.weightUnit; // archive is in kg; user prefs is for display only
   const lines: string[] = [];
   lines.push(
     `  • Histórico cargado: ${a.totalWorkouts} entrenamientos · del ${a.firstWorkoutAt?.slice(0, 10)} al ${a.lastWorkoutAt?.slice(0, 10)} (${a.spanDays} días)`
@@ -167,19 +166,19 @@ function formatHevyArchive(ctx: UserCoachContext): string {
   if (a.recentWorkouts.length > 0) {
     lines.push('');
     lines.push('  ÚLTIMOS 5 ENTRENAMIENTOS DE HEVY (sets en kg):');
-    for (const w of a.recentWorkouts) {
-      lines.push(`    ${w.date} — ${w.title} (${w.durationMinutes}min)${w.description ? ` · "${w.description}"` : ''}`);
-      for (const ex of w.exercises) {
-        const setsStr = ex.sets
-          .map((s) => {
-            const w = s.weightKg !== null ? `${s.weightKg}kg` : 'BW';
-            const r = s.reps ?? 0;
-            const rpe = s.rpe !== null ? `@${s.rpe}` : '';
-            return `${w}×${r}${rpe}`;
+    for (const workout of a.recentWorkouts) {
+      lines.push(`    ${workout.date} — ${workout.title} (${workout.durationMinutes}min)${workout.description ? ` · "${workout.description}"` : ''}`);
+      for (const exercise of workout.exercises) {
+        const setsStr = exercise.sets
+          .map((set) => {
+            const weight = set.weightKg !== null ? `${set.weightKg}kg` : 'BW';
+            const reps = set.reps ?? 0;
+            const rpe = set.rpe !== null ? `@${set.rpe}` : '';
+            return `${weight}×${reps}${rpe}`;
           })
           .join(', ');
-        const note = ex.notes ? ` · "${ex.notes}"` : '';
-        lines.push(`      ${ex.name}: ${setsStr}${note}`);
+        const note = exercise.notes ? ` · "${exercise.notes}"` : '';
+        lines.push(`      ${exercise.name}: ${setsStr}${note}`);
       }
     }
   }
@@ -187,20 +186,18 @@ function formatHevyArchive(ctx: UserCoachContext): string {
   if (a.comments.workoutNotes.length > 0) {
     lines.push('');
     lines.push('  COMENTARIOS RECIENTES DE WORKOUTS (cómo se siente entrenando):');
-    for (const c of a.comments.workoutNotes.slice(0, 10)) {
-      lines.push(`    • ${c.date}: "${c.text}"`);
+    for (const comment of a.comments.workoutNotes.slice(0, 10)) {
+      lines.push(`    • ${comment.date}: "${comment.text}"`);
     }
   }
 
   if (a.comments.exerciseNotes.length > 0) {
     lines.push('');
     lines.push('  NOTAS POR EJERCICIO (técnica, dolores, sensaciones):');
-    for (const n of a.comments.exerciseNotes.slice(0, 15)) {
-      lines.push(`    • ${n.exercise} (${n.date}): "${n.text}"`);
+    for (const note of a.comments.exerciseNotes.slice(0, 15)) {
+      lines.push(`    • ${note.exercise} (${note.date}): "${note.text}"`);
     }
   }
-
-  void unit;
   return lines.join('\n');
 }
 

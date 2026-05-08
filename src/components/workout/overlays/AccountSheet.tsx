@@ -41,7 +41,8 @@ import {
   type ExportFile,
 } from '@/lib/db/export';
 import { resetOnboarding } from '@/lib/db/nutritionProfile';
-import { migrateFromHevy, loadHevyImportedAt, type HevyMigrationProgress } from '@/lib/hevy/importer';
+import { loadHevyImportedAt } from '@/lib/db/hevyArchive';
+import { migrateFromHevy, type HevyMigrationProgress } from '@/lib/hevy/importer';
 import type {
   AccentColor,
   AppLanguage,
@@ -266,7 +267,7 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
     setHevyStatus(null);
     setHevyProgress(null);
     try {
-      const result = await migrateFromHevy((p) => setHevyProgress(p));
+      const result = await migrateFromHevy((progress) => setHevyProgress(progress));
       setHevyImportedAt(result.digest.importedAt);
       const span = result.digest.spanDays;
       const topName = result.digest.topExercises[0]?.name;
@@ -1544,39 +1545,98 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
           )}
 
           {canResetOnboarding && (
-            <motion.section
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
-              className="glass-panel space-y-3 rounded-3xl border-amber-500/20 p-4"
-            >
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-300/70">
-                  {language === 'en' ? 'Maintainer tools' : 'Herramientas de maintainer'}
-                </p>
-                <p className="mt-1 text-sm font-medium text-white/55">
-                  {language === 'en'
-                    ? 'Wipe local nutrition profile + onboarding flags and re-run the onboarding wizard.'
-                    : 'Borra el perfil de nutrición local + las flags de onboarding y vuelve a correr el wizard.'}
-                </p>
-              </div>
-              <Button
-                variant="glass-primary"
-                className="h-11 w-full rounded-2xl text-[11px] font-black uppercase tracking-widest"
-                onClick={handleResetOnboarding}
-                disabled={isResettingOnboarding}
+            <>
+              <motion.section
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
+                className="glass-panel space-y-3 rounded-3xl border-amber-500/20 p-4"
               >
-                {isResettingOnboarding
-                  ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  : <RotateCcw className="mr-2 h-4 w-4" />}
-                {language === 'en' ? 'Reset onboarding' : 'Reiniciar onboarding'}
-              </Button>
-              <p className="text-[10px] font-medium leading-relaxed text-white/30">
-                {language === 'en'
-                  ? `Visible only for ${user?.email}.`
-                  : `Solo visible para ${user?.email}.`}
-              </p>
-            </motion.section>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-300/70">
+                    {language === 'en' ? 'Maintainer tools' : 'Herramientas de maintainer'}
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-white/55">
+                    {language === 'en'
+                      ? 'Wipe local nutrition profile + onboarding flags and re-run the onboarding wizard.'
+                      : 'Borra el perfil de nutrición local + las flags de onboarding y vuelve a correr el wizard.'}
+                  </p>
+                </div>
+                <Button
+                  variant="glass-primary"
+                  className="h-11 w-full rounded-2xl text-[11px] font-black uppercase tracking-widest"
+                  onClick={handleResetOnboarding}
+                  disabled={isResettingOnboarding}
+                >
+                  {isResettingOnboarding
+                    ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    : <RotateCcw className="mr-2 h-4 w-4" />}
+                  {language === 'en' ? 'Reset onboarding' : 'Reiniciar onboarding'}
+                </Button>
+                <p className="text-[10px] font-medium leading-relaxed text-white/30">
+                  {language === 'en'
+                    ? `Visible only for ${user?.email}.`
+                    : `Solo visible para ${user?.email}.`}
+                </p>
+              </motion.section>
+
+              <motion.section
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
+                className="glass-panel space-y-3 rounded-3xl border-sky-500/20 p-4"
+              >
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-sky-300/70">
+                    {language === 'en' ? 'Hevy migration (coach context)' : 'Migración de Hevy (contexto del coach)'}
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-white/55">
+                    {language === 'en'
+                      ? 'Pull your full Hevy training archive (PRs, progression, plateaus, comments) and feed it to the AI Coach as personal background. NOT added to the workout history.'
+                      : 'Trae todo tu archivo de entrenamiento de Hevy (PRs, progresión, estancamientos, comentarios) y dáselo al AI Coach como background personal. NO se agrega al historial de la app.'}
+                  </p>
+                  {hevyImportedAt && (
+                    <p className="mt-2 text-[10px] font-medium uppercase tracking-[0.2em] text-emerald-300/70">
+                      {language === 'en'
+                        ? `Last synced: ${new Date(hevyImportedAt).toLocaleString()}`
+                        : `Última sincronización: ${new Date(hevyImportedAt).toLocaleString()}`}
+                    </p>
+                  )}
+                </div>
+                <Button
+                  variant="glass-primary"
+                  className="h-11 w-full rounded-2xl text-[11px] font-black uppercase tracking-widest"
+                  onClick={handleHevyImport}
+                  disabled={isImportingHevy}
+                >
+                  {isImportingHevy
+                    ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    : <Download className="mr-2 h-4 w-4" />}
+                  {isImportingHevy
+                    ? (language === 'en' ? 'Migrating...' : 'Migrando...')
+                    : hevyImportedAt
+                      ? (language === 'en' ? 'Re-sync from Hevy' : 'Re-sincronizar desde Hevy')
+                      : (language === 'en' ? 'Migrate from Hevy' : 'Migrar desde Hevy')}
+                </Button>
+                {hevyProgress && isImportingHevy && (
+                  <p className="text-[10px] font-medium leading-relaxed text-white/45">
+                    {language === 'en'
+                      ? `Page ${hevyProgress.page}/${hevyProgress.pageCount} · ${hevyProgress.workouts} workouts so far`
+                      : `Página ${hevyProgress.page}/${hevyProgress.pageCount} · ${hevyProgress.workouts} entrenamientos hasta ahora`}
+                  </p>
+                )}
+                {hevyStatus && !isImportingHevy && (
+                  <p className="text-[10px] font-medium leading-relaxed text-white/45">
+                    {hevyStatus}
+                  </p>
+                )}
+                <p className="text-[10px] font-medium leading-relaxed text-white/30">
+                  {language === 'en'
+                    ? `Visible only for ${user?.email}. Requires HEVY_API_KEY on the server.`
+                    : `Solo visible para ${user?.email}. Requiere HEVY_API_KEY en el servidor.`}
+                </p>
+              </motion.section>
+            </>
           )}
 
           {canResetOnboarding && (

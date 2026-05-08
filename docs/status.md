@@ -15,7 +15,8 @@ This file is the current source of truth for shipped state, roadmap health, and 
 - The app supports manual `es`/`en` language selection, localized standalone pages, and a persisted language cookie.
 - Nutrition onboarding, profile calculations, plan card, adaptive kcal adjustment banner, and block planner are in `main`.
 - Daily nutrition logging still uses the legacy local `nutritionEntries` and `nutritionGoals` stores.
-- The AI Coach is optional. Its prompt is nutrition-aware around saved daily macro targets, but the full rich nutrition profile and pending adaptive adjustment are not yet structured into `UserCoachContext`.
+- The AI Coach is optional. Its prompt is nutrition-aware around saved daily macro targets; the full rich nutrition profile and pending adaptive adjustment are not yet structured into `UserCoachContext`, while the imported Hevy archive digest is now available through Supabase-backed local sync.
+- The AI Coach can also ingest an imported Hevy archive digest. The archive is pulled once with `HEVY_API_KEY`, stored in Supabase `hevy_archives`, synced locally, and then passed to the coach without needing the Hevy key at runtime.
 - Push subscriptions can persist to Supabase when the service role key is configured; browser and PWA installs still fall back to Web Push, while native installs register FCM/APNs tokens through authenticated device rows.
 - Daily streak reminders still run through the protected Vercel Cron route `/api/cron/streak-reminders` for the web fallback, while native installs now reschedule local reminders on device.
 - Exercise media/search depend on ExerciseDB through RapidAPI, and the visual routine builder now uses demo-first exercise search with a selected-day editor and a collapsed Markdown import fallback.
@@ -24,6 +25,7 @@ This file is the current source of truth for shipped state, roadmap health, and 
 
 - `6f44544` / PR #10: added the nutrition block planner in `src/lib/nutrition/planner.ts`, planner tests, the live planner UI in `NutritionView`, and prompt tests for saved nutrition targets.
 - `aebaf91` / PR #9: added nutrition onboarding, rich nutrition profile persistence, Supabase `nutrition_profiles` sync, nutrition plan card, adaptive adjustment logic/banner, and onboarding gate.
+- Current worktree: added Hevy archive migration, digest generation, Supabase archive storage, and coach context wiring.
 - `3a5b00a` / PR #8: added structured sync traces in `src/lib/sync/debug.ts`, exposed through `window.__routyneSync`.
 - `4d96352` / PR #7: forced a full pull during first-device sync so a new local IDB can hydrate from existing remote data.
 - `fff70bc` and `42d7929`: switched browser Supabase auth to `createBrowserClient` and added coverage for the cookie-backed client.
@@ -44,6 +46,7 @@ This file is the current source of truth for shipped state, roadmap health, and 
 ## Current Config Notes
 
 - `RAPIDAPI_KEY` is required for production media/search.
+- `HEVY_API_KEY` is required only for the one-time Hevy migration route that seeds Supabase `hevy_archives`.
 - `NEXT_PUBLIC_SITE_URL` controls server-side URL generation and auth redirect fallback; browser sign-in links resolve against the current origin.
 - `NEXT_PUBLIC_NUTRITION_ENABLED` defaults on; set it to `false` to disable rich nutrition onboarding/profile flows.
 - `NEXT_PUBLIC_COACH_ENABLED=false` hides the AI Coach button even if `/api/coach` is configured.
