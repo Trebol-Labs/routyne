@@ -1,8 +1,9 @@
 // Persistence for the rich NutritionProfile (Tier 1 + Tier 2 onboarding data).
 // Stored as JSON inside the existing `meta` store to avoid an IDB schema bump.
 
-import { loadMetaValue, saveMetaValue } from './meta';
+import { loadMetaValue, saveMetaValue, deleteMetaValue } from './meta';
 import { enqueue } from '@/lib/sync/queue';
+import { clearPendingAdjustment } from './nutritionAdjustment';
 import type { NutritionProfile } from '@/types/nutrition';
 
 export const NUTRITION_PROFILE_META_KEY = 'nutrition.profile';
@@ -59,4 +60,22 @@ export async function isOnboardingCompleted(): Promise<boolean> {
 
 export async function isOnboardingDeferred(): Promise<boolean> {
   return (await loadMetaValue(ONBOARDING_DEFERRED_KEY)) !== null;
+}
+
+/**
+ * Local-only reset of onboarding state. Clears the rich profile, the
+ * onboarding flags (completed/deferred/disabled), and any pending adaptive
+ * adjustment so the next render of /onboarding starts from a blank slate.
+ *
+ * Does NOT enqueue a remote delete — if the user re-onboards, the new profile
+ * will overwrite the remote row through the normal save path.
+ */
+export async function resetOnboarding(): Promise<void> {
+  await Promise.all([
+    deleteMetaValue(NUTRITION_PROFILE_META_KEY),
+    deleteMetaValue(ONBOARDING_COMPLETED_KEY),
+    deleteMetaValue(ONBOARDING_DEFERRED_KEY),
+    deleteMetaValue(NUTRITION_DISABLED_KEY),
+  ]);
+  await clearPendingAdjustment();
 }
