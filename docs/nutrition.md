@@ -130,7 +130,7 @@ The sync engine tolerates a missing `nutrition_profiles` table by skipping nutri
 
 ## AI Coach Boundary
 
-The current AI Coach context includes the legacy saved nutrition goal from `useWorkoutStore`. It does not yet include:
+The current AI Coach context includes the legacy saved nutrition goal from `useWorkoutStore` and an imported Hevy archive digest when present. It does not yet include:
 
 - Rich onboarding nutrition profile.
 - Meal plan from `computeAll`.

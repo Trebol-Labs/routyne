@@ -12,6 +12,10 @@ import {
   loadNutritionProfile,
   persistNutritionProfileSilently,
 } from '@/lib/db/nutritionProfile';
+import {
+  loadHevyArchiveSnapshot,
+  persistHevyArchiveLocal,
+} from '@/lib/db/hevyArchive';
 import { parseRoutine } from '@/lib/markdown/parser';
 import type { BodyweightRecord } from '@/lib/db/schema';
 import type { RoutineRecord } from '@/lib/db/schema';
@@ -29,12 +33,15 @@ import type {
   Budget,
   DietaryRestriction,
 } from '@/types/nutrition';
+import type { HevyArchiveSnapshot } from '@/lib/db/hevyArchive';
+import type { HevyWorkout } from '@/lib/hevy/types';
 
 type RemoteHistory = Database['public']['Tables']['history']['Row'];
 type RemoteProfile = Database['public']['Tables']['profiles']['Row'];
 type RemoteBodyweight = Database['public']['Tables']['bodyweight']['Row'];
 type RemoteRoutine = Database['public']['Tables']['routines']['Row'];
 type RemoteNutritionProfile = Database['public']['Tables']['nutrition_profiles']['Row'];
+type RemoteHevyArchive = Database['public']['Tables']['hevy_archives']['Row'];
 
 // ── History ────────────────────────────────────────────────────────────────────
 
@@ -374,6 +381,39 @@ export async function mergeRemoteNutritionProfile(
   const localUpdated = local ? new Date(local.updatedAt).getTime() : 0;
   if (local && remoteUpdated <= localUpdated) return false;
   await persistNutritionProfileSilently(remoteToLocalNutritionProfile(remote));
+  return true;
+}
+
+function remoteToLocalHevyArchive(remote: RemoteHevyArchive): HevyArchiveSnapshot {
+  return {
+    rawWorkouts: Array.isArray(remote.raw_archive) ? (remote.raw_archive as HevyWorkout[]) : [],
+    digest: remote.digest,
+    importedAt: remote.imported_at,
+  };
+}
+
+export function hevyArchiveToRemote(
+  local: HevyArchiveSnapshot,
+  userId: string
+): Database['public']['Tables']['hevy_archives']['Insert'] {
+  return {
+    user_id: userId,
+    raw_archive: local.rawWorkouts,
+    digest: local.digest,
+    imported_at: local.importedAt,
+    updated_at: local.importedAt,
+  };
+}
+
+export async function mergeRemoteHevyArchive(remote: RemoteHevyArchive): Promise<boolean> {
+  const local = await loadHevyArchiveSnapshot();
+  const remoteUpdated = new Date(remote.updated_at).getTime();
+  const localUpdated = local ? new Date(local.importedAt).getTime() : 0;
+  if (local && remoteUpdated <= localUpdated) {
+    return false;
+  }
+
+  await persistHevyArchiveLocal(remoteToLocalHevyArchive(remote));
   return true;
 }
 

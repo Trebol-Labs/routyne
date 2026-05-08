@@ -1,5 +1,7 @@
 import { createBrowserClient } from '@supabase/ssr';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import type { HevyAthleteDigest } from '@/lib/hevy/digest';
+import type { HevyWorkout } from '@/lib/hevy/types';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -155,6 +157,22 @@ export interface Database {
           carbs_g: number;
         };
         Update: Partial<Database['public']['Tables']['nutrition_profiles']['Row']>;
+      };
+      hevy_archives: {
+        Row: {
+          user_id: string;
+          raw_archive: HevyWorkout[];
+          digest: HevyAthleteDigest;
+          imported_at: string;
+          updated_at: string;
+        };
+        Insert: Partial<Database['public']['Tables']['hevy_archives']['Row']> & {
+          user_id: string;
+          raw_archive: HevyWorkout[];
+          digest: HevyAthleteDigest;
+          imported_at: string;
+        };
+        Update: Partial<Database['public']['Tables']['hevy_archives']['Row']>;
       };
     };
   };

@@ -17,7 +17,8 @@ type QueryTable =
   | 'bodyweight'
   | 'routines'
   | 'sync_cursors'
-  | 'nutrition_profiles';
+  | 'nutrition_profiles'
+  | 'hevy_archives';
 type QueryResult = { data: unknown; error: { message: string } | null };
 type QueryResultState = QueryResult | QueryResult[];
 
@@ -28,6 +29,7 @@ const queryResults: Record<QueryTable, QueryResultState> = {
   routines: { data: [], error: null },
   sync_cursors: { data: null, error: null },
   nutrition_profiles: { data: [], error: null },
+  hevy_archives: { data: [], error: null },
 };
 
 function setQueryResult(table: QueryTable, result: QueryResultState): void {
@@ -79,9 +81,11 @@ import { mergeRemoteHistory, mergeRemoteProfile, mergeRemoteBodyweight, mergeRem
 import { loadProfile, saveProfile } from '@/lib/db/profile';
 import { loadAllBodyweight, saveBodyweight } from '@/lib/db/bodyweight';
 import { loadMetaValue } from '@/lib/db/meta';
+import { loadHevyArchiveSnapshot } from '@/lib/db/hevyArchive';
 import { saveHistoryEntry } from '@/lib/db/history';
 import { loadAllRoutineRecords, saveRoutine } from '@/lib/db/routines';
 import { generateMarkdown } from '@/lib/markdown/generator';
+import { computeHevyDigest } from '@/lib/hevy/digest';
 import type { Bodyweight, HistoryEntry, RoutineData, UserProfile } from '@/types/workout';
 
 const USER_ID = 'user-abc-123';
@@ -179,6 +183,7 @@ beforeEach(() => {
   setQueryResult('bodyweight', { data: [], error: null });
   setQueryResult('routines', { data: [], error: null });
   setQueryResult('sync_cursors', { data: null, error: null });
+  setQueryResult('hevy_archives', { data: [], error: null });
 });
 
 afterEach(() => {
@@ -408,6 +413,7 @@ describe('pullFromCloud', () => {
     setQueryResult('profiles', { data: [], error: null });
     setQueryResult('bodyweight', { data: [], error: null });
     setQueryResult('routines', { data: [], error: null });
+    setQueryResult('hevy_archives', { data: [], error: null });
 
     const { pullFromCloud } = await import('./syncEngine');
     const merged = await pullFromCloud(USER_ID);
@@ -434,6 +440,7 @@ describe('pullFromCloud', () => {
     setQueryResult('profiles', { data: [], error: null });
     setQueryResult('bodyweight', { data: [], error: null });
     setQueryResult('routines', { data: [], error: null });
+    setQueryResult('hevy_archives', { data: [], error: null });
 
     const { pullFromCloud } = await import('./syncEngine');
     const merged = await pullFromCloud(USER_ID);
@@ -457,6 +464,7 @@ describe('pullFromCloud', () => {
     setQueryResult('profiles', { data: [], error: null });
     setQueryResult('bodyweight', { data: [], error: null });
     setQueryResult('routines', { data: [remoteRoutine], error: null });
+    setQueryResult('hevy_archives', { data: [], error: null });
 
     const { pullFromCloud } = await import('./syncEngine');
     const merged = await pullFromCloud(USER_ID);
@@ -489,6 +497,7 @@ describe('pullFromCloud', () => {
       { data: [remoteBodyweight], error: null },
     ]);
     setQueryResult('routines', { data: [], error: null });
+    setQueryResult('hevy_archives', { data: [], error: null });
 
     const { pullFromCloud } = await import('./syncEngine');
     const merged = await pullFromCloud(USER_ID);
@@ -510,6 +519,7 @@ describe('pullFromCloud', () => {
     setQueryResult('profiles', { data: [], error: { message: 'profiles exploded' } });
     setQueryResult('bodyweight', { data: [], error: null });
     setQueryResult('routines', { data: [], error: null });
+    setQueryResult('hevy_archives', { data: [], error: null });
 
     const { pullFromCloud } = await import('./syncEngine');
     await expect(pullFromCloud(USER_ID)).rejects.toThrow('profiles exploded');
@@ -530,6 +540,7 @@ describe('syncCloudData', () => {
     setQueryResult('profiles', { data: [], error: null });
     setQueryResult('bodyweight', { data: [], error: null });
     setQueryResult('routines', { data: [], error: null });
+    setQueryResult('hevy_archives', { data: [], error: null });
 
     const { syncCloudData } = await import('./syncEngine');
     await syncCloudData(USER_ID);
@@ -749,6 +760,27 @@ describe('mergeRemoteRoutine', () => {
     const saved = await loadAllRoutineRecords();
     expect(saved).toHaveLength(1);
     expect(saved[0].updatedAt).toBe('2026-01-03T00:00:00.000Z');
+  });
+});
+
+describe('mergeRemoteHevyArchive', () => {
+  it('persists the remote archive locally', async () => {
+    const { mergeRemoteHevyArchive } = await import('./merge');
+    const digest = computeHevyDigest([], new Date('2026-05-08T00:00:00.000Z'));
+    const remoteRow = {
+      user_id: USER_ID,
+      raw_archive: [],
+      digest,
+      imported_at: digest.importedAt,
+      updated_at: digest.importedAt,
+    };
+
+    const changed = await mergeRemoteHevyArchive(remoteRow as never);
+    expect(changed).toBe(true);
+
+    const saved = await loadHevyArchiveSnapshot();
+    expect(saved?.importedAt).toBe(digest.importedAt);
+    expect(saved?.digest.totalWorkouts).toBe(0);
   });
 });
 

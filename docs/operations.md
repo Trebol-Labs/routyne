@@ -9,6 +9,7 @@
 - Install command: `pnpm install --frozen-lockfile`.
 - Node version: `.nvmrc` (`20`).
 - Required production environment: `RAPIDAPI_KEY`.
+- Hevy archive migration requires `HEVY_API_KEY` on the server.
 
 Vercel config lives in [`vercel.json`](/Users/sierra/Code/routyne/vercel.json).
 
@@ -43,10 +44,11 @@ Synced app data:
 - Bodyweight
 - Routines
 - Rich nutrition profile
+- Hevy archives
 - Push subscriptions
 - Sync cursors
 
-Run the current schema SQL in the Supabase SQL Editor after schema changes. The sync engine has compatibility fallbacks for older bodyweight/profile schemas and skips `nutrition_profiles` if the table is missing.
+Run the current schema SQL in the Supabase SQL Editor after schema changes. The sync engine has compatibility fallbacks for older bodyweight/profile schemas and skips `nutrition_profiles` or `hevy_archives` if the table is missing.
 
 ## Auth Redirects
 

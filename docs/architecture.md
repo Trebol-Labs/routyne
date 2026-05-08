@@ -81,8 +81,11 @@ Synced tables:
 - `bodyweight`
 - `routines`
 - `nutrition_profiles`
+- `hevy_archives`
 - `push_subscriptions` through server-side push helpers
 - `sync_cursors`
+
+Hevy import is handled by [`src/app/api/hevy/import/route.ts`](/Users/sierra/Code/routyne/src/app/api/hevy/import/route.ts) plus the client-side migration and digest modules in [`src/lib/hevy/`](/Users/sierra/Code/routyne/src/lib/hevy). The server uses `HEVY_API_KEY` only for the import step; the coach consumes the stored Supabase-backed digest locally after sync.
 
 The daily nutrition entries/goals from `src/lib/db/nutrition.ts` are local-only today.
 
@@ -110,6 +113,7 @@ See [`nutrition.md`](/Users/sierra/Code/routyne/docs/nutrition.md) for details.
 - [`src/components/workout/overlays/CoachSheet.tsx`](/Users/sierra/Code/routyne/src/components/workout/overlays/CoachSheet.tsx) provides the UI.
 
 The coach never queries Supabase directly. Current context includes workout history, profile, PRs, weekly muscle volume, streak, total workouts, and the saved legacy nutrition goal.
+It also includes an imported Hevy archive digest when present, loaded from local IDB that was synced from Supabase.
 
 ## Push Notifications
 

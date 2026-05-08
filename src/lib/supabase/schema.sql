@@ -230,3 +230,23 @@ create policy "Users own their nutrition profile"
 
 create index if not exists nutrition_profiles_user_updated
   on public.nutrition_profiles (user_id, updated_at);
+
+-- ── Hevy archives ────────────────────────────────────────────────────────────
+
+create table if not exists public.hevy_archives (
+  user_id      uuid        primary key references auth.users,
+  raw_archive  jsonb       not null,
+  digest       jsonb       not null,
+  imported_at  timestamptz not null,
+  updated_at   timestamptz default now()
+);
+
+alter table public.hevy_archives enable row level security;
+
+drop policy if exists "Users own their hevy archives" on public.hevy_archives;
+create policy "Users own their hevy archives"
+  on public.hevy_archives for all
+  using (auth.uid() = user_id);
+
+create index if not exists hevy_archives_user_updated
+  on public.hevy_archives (user_id, updated_at);

@@ -328,7 +328,16 @@ export function buildUserContext(
     ? { history: arg1, profile: arg2 as UserProfile, nutritionGoal: arg3 }
     : arg1;
 
-  const { history, profile, nutritionGoal, nutritionProfile, pendingAdjustment, bodyweight, fitnessProfile, hevyArchive } = args;
+  const {
+    history,
+    profile,
+    nutritionGoal,
+    nutritionProfile,
+    pendingAdjustment,
+    bodyweight,
+    fitnessProfile,
+    hevyArchive,
+  } = args;
 
   const recent = history.slice(0, 10);
   const language = profile.preferences.language;
