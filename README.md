@@ -1,11 +1,13 @@
 # Routyne
 
-Routyne is a mobile-first Next.js PWA workout tracker. It stores workouts locally in IndexedDB, syncs profile, history, bodyweight, and routines to Supabase when configured, and includes stats, share cards, push notifications, a bilingual `es`/`en` UI, history session detail views, and an optional AI coach.
+Routyne is a mobile-first Next.js PWA workout tracker. It stores workouts locally in IndexedDB, syncs profile, history, bodyweight, routine, nutrition profile, and push subscription data to Supabase when configured, and includes stats, share cards, push notifications, bilingual `es`/`en` UI, nutrition planning, and an optional AI Coach.
 
-## Docs
+## Documentation
 
-- Current app status and roadmap: [`status.md`](/Users/sierra/Code/routyne/status.md)
-- General project handbook: [`agents.md`](/Users/sierra/Code/routyne/agents.md)
+- Documentation index: [`docs/README.md`](/Users/sierra/Code/routyne/docs/README.md)
+- Current status and roadmap: [`docs/status.md`](/Users/sierra/Code/routyne/docs/status.md)
+- Shared Claude/Codex context: [`AGENTS.md`](/Users/sierra/Code/routyne/AGENTS.md)
+- Environment reference: [`.env.example`](/Users/sierra/Code/routyne/.env.example)
 
 ## Getting Started
 
@@ -17,25 +19,7 @@ pnpm dev
 
 Open `http://localhost:3000`.
 
-## Environment
-
-`RAPIDAPI_KEY` is required for ExerciseDB media lookup.
-
-Optional feature flags and integrations:
-
-- `NEXT_PUBLIC_SITE_URL` (defaults to `https://routyne-nu.vercel.app`)
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `NEXT_PUBLIC_COACH_ENABLED`
-- `NEXT_PUBLIC_LOCAL_BACKUP_TOOLS`
-- `VERCEL_OIDC_TOKEN`
-- `COACH_DAILY_LIMIT_FREE`
-- `NEXT_PUBLIC_VAPID_PUBLIC_KEY`
-- `VAPID_PUBLIC_KEY`
-- `VAPID_PRIVATE_KEY`
-- `VAPID_SUBJECT`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `CRON_SECRET`
+`RAPIDAPI_KEY` is required for production ExerciseDB media/search. See [`docs/development.md`](/Users/sierra/Code/routyne/docs/development.md) for the full environment table.
 
 ## Commands
 
@@ -53,8 +37,6 @@ pnpm import:exercises
 ## Notes
 
 - Use pnpm only; `pnpm-lock.yaml` is the lockfile source.
-- The landing page lives at `/landing`.
-- The landing, privacy, terms, and support pages render from the same persisted language cookie as the main app shell.
-- Supabase magic links return to `/auth/callback`; browser redirects use the current origin, with `NEXT_PUBLIC_SITE_URL` as the server-side fallback.
-- Push subscriptions are persisted in Supabase when configured, and daily streak reminders run through `/api/cron/streak-reminders`.
-- The production deploy is connected to Vercel, but the latest workspace changes still need to be redeployed.
+- Node version is `20` from `.nvmrc`.
+- Production URL: `https://routyne-nu.vercel.app`.
+- Vercel auto-deploys from `main`; CI runs lint, commit guard, typecheck, tests, build, and Playwright smoke.

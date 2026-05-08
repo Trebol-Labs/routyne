@@ -1,5 +1,5 @@
 // Adaptive kcal adjustment. Pure function — no side effects.
-// Reference: docs/nutrition/04-calculations-engine.md §4.2 (suggestKcalAdjustment).
+// Reference: docs/nutrition.md.
 
 import type { NutritionGoal } from '@/types/nutrition';
 

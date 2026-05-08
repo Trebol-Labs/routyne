@@ -57,8 +57,6 @@ gemini.md
 .worktrees/
 
 .opencode/
-AGENTS.md
-!agents.md
 TestRoutine.md
 
 # Playwright MCP logs & screenshots

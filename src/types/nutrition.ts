@@ -1,5 +1,5 @@
 // Types for the nutrition coach (profile, plan, logs, adjustments).
-// Matches docs/nutrition/03-data-model.md.
+// See docs/nutrition.md for the current data model.
 
 export type BiologicalSex = 'male' | 'female';
 

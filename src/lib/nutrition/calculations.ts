@@ -1,5 +1,5 @@
 // Pure nutrition science engine. No side effects, no DB, no React.
-// Reference: docs/nutrition/04-calculations-engine.md
+// Reference: docs/nutrition.md.
 
 import type {
   ActivityLevel,
