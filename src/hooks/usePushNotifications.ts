@@ -8,6 +8,10 @@ import {
   isPushActive,
   scheduleLocalNotification,
   cancelLocalNotification,
+  getNotificationPermission,
+  isWebPushSupported,
+  PushSetupError,
+  type PushSetupFailureReason,
 } from '@/lib/push/client';
 
 type PushState = 'idle' | 'active' | 'denied' | 'unsupported';
@@ -19,6 +23,8 @@ interface UsePushNotificationsResult {
   permission: NotificationPermission | 'unsupported';
   /** True while a subscribe/unsubscribe operation is in progress. */
   loading: boolean;
+  /** Last setup error, if the latest push action failed before becoming active. */
+  error: PushSetupFailureReason | null;
   /** Enable push notifications (requests permission if needed). */
   enable: () => Promise<void>;
   /** Disable push notifications. */
@@ -36,39 +42,64 @@ export function usePushNotifications(accessToken?: string): UsePushNotifications
   const [state, setState] = useState<PushState>('idle');
   const [permission, setPermission] = useState<NotificationPermission | 'unsupported'>('unsupported');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<PushSetupFailureReason | null>(null);
 
   // Detect support + existing subscription on mount
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    if (!isWebPushSupported()) {
       setState('unsupported');
       setPermission('unsupported');
       return;
     }
-    setPermission(Notification.permission);
-    if (Notification.permission === 'denied') {
+    const currentPermission = getNotificationPermission();
+    setPermission(currentPermission);
+    if (currentPermission === 'denied') {
       setState('denied');
       return;
     }
+    let cancelled = false;
     isPushActive().then((active) => {
+      if (cancelled) return;
       if (active) setState('active');
     });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const enable = useCallback(async () => {
     if (state === 'unsupported' || loading) return;
     setLoading(true);
+    setError(null);
     try {
       const sub = await subscribeToPush();
-      setPermission(typeof Notification !== 'undefined' ? Notification.permission : 'unsupported');
+      const currentPermission = getNotificationPermission();
+      setPermission(currentPermission);
       if (!sub) {
-        setState(Notification.permission === 'denied' ? 'denied' : 'idle');
+        setState(currentPermission === 'denied' ? 'denied' : 'idle');
         return;
       }
-      await registerSubscription(sub, accessToken);
+      try {
+        await registerSubscription(sub, accessToken);
+      } catch (err) {
+        await sub.unsubscribe().catch((unsubscribeErr: unknown) => {
+          console.error('[usePushNotifications] rollback unsubscribe failed', unsubscribeErr);
+        });
+        throw err;
+      }
       setState('active');
     } catch (err) {
       console.error('[usePushNotifications] enable failed', err);
+      const reason = err instanceof PushSetupError ? err.reason : 'subscription-failed';
+      setError(reason);
+      setPermission(getNotificationPermission());
+      setState(
+        reason === 'unsupported' || reason === 'missing-vapid-key' || reason === 'service-worker-unavailable'
+          ? 'unsupported'
+          : 'idle'
+      );
     } finally {
       setLoading(false);
     }
@@ -77,9 +108,10 @@ export function usePushNotifications(accessToken?: string): UsePushNotifications
   const disable = useCallback(async () => {
     if (loading) return;
     setLoading(true);
+    setError(null);
     try {
       await unsubscribeFromPush(accessToken);
-      setPermission(typeof Notification !== 'undefined' ? Notification.permission : 'unsupported');
+      setPermission(getNotificationPermission());
       setState('idle');
     } catch (err) {
       console.error('[usePushNotifications] disable failed', err);
@@ -105,5 +137,5 @@ export function usePushNotifications(accessToken?: string): UsePushNotifications
     void cancelLocalNotification(id);
   }, []);
 
-  return { state, permission, loading, enable, disable, scheduleLocal, cancelLocal };
+  return { state, permission, loading, error, enable, disable, scheduleLocal, cancelLocal };
 }

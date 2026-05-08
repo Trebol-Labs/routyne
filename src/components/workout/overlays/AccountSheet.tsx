@@ -278,6 +278,15 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
     return language === 'en' ? 'Default' : 'Predeterminado';
   })();
 
+  const pushFailureDetail = (() => {
+    if (push.error === 'missing-vapid-key') return t.account.notificationsMissingVapidKey;
+    if (push.error === 'service-worker-unavailable') return t.account.notificationsServiceWorkerUnavailable;
+    if (push.error === 'server-rejected') return t.account.notificationsServerRejected;
+    if (push.error === 'subscription-failed') return t.account.notificationsSubscriptionFailed;
+    if (push.error === 'unsupported') return t.account.notificationsUnsupported;
+    return null;
+  })();
+
   const syncStateLabel = (() => {
     if (!supabaseEnabled && localOnlyMode) return language === 'en' ? 'Local-only mode' : 'Modo local';
     if (!supabaseEnabled) return t.account.syncPaused;
@@ -1202,13 +1211,14 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
                     {pushStateLabel}
                   </p>
                   <p className="mt-1 text-sm font-medium leading-relaxed text-white/45">
-                    {push.permission === 'denied'
-                      ? t.account.notificationsDenied
-                      : push.permission === 'unsupported'
-                        ? t.account.notificationsUnsupported
-                        : language === 'en'
-                          ? 'Timer alerts use the service worker locally. Streak reminders use your saved push subscription.'
-                          : 'Las alertas de descanso usan el service worker localmente. Los recordatorios diarios usan tu suscripción push guardada.'}
+                    {pushFailureDetail ??
+                      (push.permission === 'denied'
+                        ? t.account.notificationsDenied
+                        : push.permission === 'unsupported'
+                          ? t.account.notificationsUnsupported
+                          : language === 'en'
+                            ? 'Timer alerts use the service worker locally. Streak reminders use your saved push subscription.'
+                            : 'Las alertas de descanso usan el service worker localmente. Los recordatorios diarios usan tu suscripción push guardada.')}
                   </p>
                 </div>
               </div>
@@ -1220,9 +1230,9 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
                   onClick={push.state === 'active' ? push.disable : push.enable}
                   disabled={
                     push.loading ||
+                    push.state === 'unsupported' ||
                     push.permission === 'unsupported' ||
-                    push.permission === 'denied' ||
-                    (!session?.access_token && push.state !== 'active')
+                    push.permission === 'denied'
                   }
                 >
                   {push.loading ? (
