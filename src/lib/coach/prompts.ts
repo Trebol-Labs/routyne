@@ -114,6 +114,96 @@ function formatFitnessProfile(ctx: UserCoachContext): string {
   return lines.join('\n');
 }
 
+function formatHevyArchive(ctx: UserCoachContext): string {
+  const a = ctx.hevyArchive;
+  if (!a) return '  (sin archivo de Hevy importado)';
+  if (a.totalWorkouts === 0) return '  (archivo de Hevy importado pero vacío)';
+
+  const unit = ctx.profile.weightUnit; // archive is in kg; user prefs is for display only
+  const lines: string[] = [];
+  lines.push(
+    `  • Histórico cargado: ${a.totalWorkouts} entrenamientos · del ${a.firstWorkoutAt?.slice(0, 10)} al ${a.lastWorkoutAt?.slice(0, 10)} (${a.spanDays} días)`
+  );
+  lines.push(
+    `  • Frecuencia promedio: ${a.avgWorkoutsPerWeek} entrenos/semana · ${a.avgDurationMinutes}min por sesión`
+  );
+  lines.push(
+    `  • Volumen total: ${Math.round(a.totalVolumeKg)}kg en ${a.totalSets} sets de trabajo (todos los datos en kg)`
+  );
+  lines.push(
+    `  • Mix de sets: ${a.setTypeMix.working} working · ${a.setTypeMix.warmup} warmup · ${a.setTypeMix.dropset} dropsets · ${a.setTypeMix.failure} failure · uso de RPE: ${Math.round(a.rpeUsageRatio * 100)}%`
+  );
+
+  if (a.topExercises.length > 0) {
+    lines.push('');
+    lines.push('  TOP EJERCICIOS POR FRECUENCIA (con PR histórico, kg):');
+    for (const ex of a.topExercises) {
+      const pr = ex.bestEst1RMKg
+        ? `PR ${ex.bestWeightKg}×${ex.bestReps} (1RM ~${ex.bestEst1RMKg}kg) el ${ex.bestEst1RMDate}`
+        : 'sin PR registrado';
+      const rpe = ex.avgRpe !== null ? ` · RPE avg ${ex.avgRpe}` : '';
+      lines.push(`    • ${ex.name}: ${ex.workouts} sesiones, ${ex.totalSets} sets · ${pr}${rpe}`);
+    }
+  }
+
+  if (a.progression.length > 0) {
+    lines.push('');
+    lines.push('  PROGRESIÓN MENSUAL (mejor 1RM est. por mes, kg):');
+    for (const p of a.progression) {
+      if (p.points.length === 0) continue;
+      const trend = p.points.map((pt) => `${pt.month}:${pt.est1RMKg}`).join(' → ');
+      lines.push(`    • ${p.name}: ${trend} · semanas desde PR: ${p.weeksSincePR}`);
+    }
+  }
+
+  if (a.stagnation.length > 0) {
+    lines.push('');
+    lines.push('  ESTANCAMIENTOS HISTÓRICOS (sin PR nuevo en ≥8 semanas):');
+    for (const s of a.stagnation) {
+      lines.push(`    • ${s.name}: ${s.weeksSincePR} semanas estancado en ~${s.bestEst1RMKg}kg de 1RM est.`);
+    }
+  }
+
+  if (a.recentWorkouts.length > 0) {
+    lines.push('');
+    lines.push('  ÚLTIMOS 5 ENTRENAMIENTOS DE HEVY (sets en kg):');
+    for (const w of a.recentWorkouts) {
+      lines.push(`    ${w.date} — ${w.title} (${w.durationMinutes}min)${w.description ? ` · "${w.description}"` : ''}`);
+      for (const ex of w.exercises) {
+        const setsStr = ex.sets
+          .map((s) => {
+            const w = s.weightKg !== null ? `${s.weightKg}kg` : 'BW';
+            const r = s.reps ?? 0;
+            const rpe = s.rpe !== null ? `@${s.rpe}` : '';
+            return `${w}×${r}${rpe}`;
+          })
+          .join(', ');
+        const note = ex.notes ? ` · "${ex.notes}"` : '';
+        lines.push(`      ${ex.name}: ${setsStr}${note}`);
+      }
+    }
+  }
+
+  if (a.comments.workoutNotes.length > 0) {
+    lines.push('');
+    lines.push('  COMENTARIOS RECIENTES DE WORKOUTS (cómo se siente entrenando):');
+    for (const c of a.comments.workoutNotes.slice(0, 10)) {
+      lines.push(`    • ${c.date}: "${c.text}"`);
+    }
+  }
+
+  if (a.comments.exerciseNotes.length > 0) {
+    lines.push('');
+    lines.push('  NOTAS POR EJERCICIO (técnica, dolores, sensaciones):');
+    for (const n of a.comments.exerciseNotes.slice(0, 15)) {
+      lines.push(`    • ${n.exercise} (${n.date}): "${n.text}"`);
+    }
+  }
+
+  void unit;
+  return lines.join('\n');
+}
+
 export function buildSystemPrompt(ctx: UserCoachContext): string {
   const responseLanguage = ctx.profile.language === 'en' ? 'English' : 'español';
   const responseInstruction = ctx.profile.language === 'en'
@@ -173,6 +263,9 @@ CONTEXTO ACTUAL DEL USUARIO (datos reales — no inventes nada fuera de aquí)
 
 PERFIL DE ENTRENAMIENTO (coach fitness setup):
 ${formatFitnessProfile(ctx)}
+
+ARCHIVO HISTÓRICO DE HEVY (background completo del atleta antes de migrar a Routyne — usa esto para entender su trayectoria, fuerza absoluta, progresión, estancamientos crónicos y patrones; los entrenos NO están en el historial de la app, solo aquí):
+${formatHevyArchive(ctx)}
 
 PERFIL DE NUTRICIÓN (onboarding rich):
 ${formatNutritionProfile(ctx)}

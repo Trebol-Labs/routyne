@@ -31,6 +31,7 @@ const baseContext: UserCoachContext = {
   weeklyTrainingDays: 0,
   streakDays: 0,
   totalWorkouts: 0,
+  hevyArchive: null,
 };
 
 describe('buildSystemPrompt nutrition context', () => {
