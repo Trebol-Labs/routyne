@@ -14,7 +14,7 @@ import { BodyWeightSheet } from '@/components/workout/overlays/BodyWeightSheet';
 import { loadBodyweightHistory } from '@/lib/db/bodyweight';
 import { getMuscleGroupVolume } from '@/lib/analytics/muscle-map';
 import { useAnalyticsWorker } from '@/hooks/useAnalyticsWorker';
-import { loadEarnedAchievements } from '@/lib/db/achievements';
+import { reconcileAchievementsFromHistory } from '@/lib/achievements/reconcile';
 import { ACHIEVEMENTS } from '@/lib/achievements/definitions';
 import { cn } from '@/lib/utils';
 import type { Bodyweight } from '@/types/workout';
@@ -105,8 +105,37 @@ export function StatsView() {
   const [bodyweightEntries, setBodyweightEntries] = useState<Bodyweight[]>([]);
   const [earnedAchievements, setEarnedAchievements] = useState<AchievementRecord[]>([]);
 
-  useEffect(() => { loadBodyweightHistory(30).then(setBodyweightEntries); }, []);
-  useEffect(() => { loadEarnedAchievements().then(setEarnedAchievements); }, []);
+  useEffect(() => {
+    let cancelled = false;
+
+    loadBodyweightHistory(30)
+      .then((entries) => {
+        if (!cancelled) {
+          setBodyweightEntries(entries);
+        }
+      })
+      .catch((err) => console.error('[StatsView] bodyweight refresh failed', err));
+
+    return () => {
+      cancelled = true;
+    };
+  }, [history]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    reconcileAchievementsFromHistory()
+      .then((records) => {
+        if (!cancelled) {
+          setEarnedAchievements(records);
+        }
+      })
+      .catch((err) => console.error('[StatsView] achievement reconciliation failed', err));
+
+    return () => {
+      cancelled = true;
+    };
+  }, [history]);
 
   const refreshBodyweight = () => loadBodyweightHistory(30).then(setBodyweightEntries);
 

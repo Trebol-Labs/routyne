@@ -48,6 +48,15 @@ function mergeProfilePatch(profile: UserProfile, patch: UserProfilePatch): UserP
   };
 }
 
+async function reconcileAchievementsSilently(source: string): Promise<void> {
+  try {
+    const { reconcileAchievementsFromHistory } = await import('@/lib/achievements/reconcile');
+    await reconcileAchievementsFromHistory();
+  } catch (err) {
+    console.error(`[useWorkoutStore] ${source} achievement reconciliation failed`, err);
+  }
+}
+
 // ── Volume helper ─────────────────────────────────────────────────────────────
 
 function buildVolumeData(
@@ -132,6 +141,8 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
         nutritionEntries,
         isHydrated: true,
       });
+
+      await reconcileAchievementsSilently('hydrate');
 
       // Restore in-progress session if one exists
       if (activeSession) {
@@ -587,6 +598,7 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
         listRoutines(),
         loadHistory(50),
       ]);
+      await reconcileAchievementsSilently('refreshFromPersistence');
 
       const state = get();
       const nextState: Partial<WorkoutState> = {
