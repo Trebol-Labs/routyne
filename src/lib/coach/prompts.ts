@@ -92,6 +92,28 @@ function formatStallSignals(ctx: UserCoachContext): string {
     .join('\n');
 }
 
+function formatFitnessProfile(ctx: UserCoachContext): string {
+  const fp = ctx.fitnessProfile;
+  if (!fp) return '  (sin perfil de entrenamiento — el usuario no completó el setup de coach fitness)';
+  const splitLabels: Record<string, string> = {
+    ppl: 'Push/Pull/Legs (6 días)',
+    upper_lower: 'Upper/Lower (4 días)',
+    full_body: 'Full Body (3 días)',
+    push_pull: 'Push/Pull (2 días)',
+    no_preference: 'Sin preferencia',
+  };
+  const split = fp.trainingSplit ? (splitLabels[fp.trainingSplit] ?? fp.trainingSplit) : 'no declarado';
+  const lines = [
+    `  • Distribución preferida: ${split}`,
+    `  • Background powerlifting: ${fp.isPowerlifter ? 'SÍ — atleta de fuerza / powerlifting' : 'No — hipertrofia / fitness general'}`,
+    `  • Background Hevy: ${fp.hasHevyBackground ? 'Sí, viene de Hevy' : 'No'}`,
+  ];
+  if (fp.mainLiftsSummary) {
+    lines.push(`  • Levantamientos principales: ${fp.mainLiftsSummary}`);
+  }
+  return lines.join('\n');
+}
+
 export function buildSystemPrompt(ctx: UserCoachContext): string {
   const responseLanguage = ctx.profile.language === 'en' ? 'English' : 'español';
   const responseInstruction = ctx.profile.language === 'en'
@@ -148,6 +170,9 @@ Rechazar fat burners y pre-workouts propietarios — no valen lo que cuestan.
 ═══════════════════════════════════════════════════════
 CONTEXTO ACTUAL DEL USUARIO (datos reales — no inventes nada fuera de aquí)
 ═══════════════════════════════════════════════════════
+
+PERFIL DE ENTRENAMIENTO (coach fitness setup):
+${formatFitnessProfile(ctx)}
 
 PERFIL DE NUTRICIÓN (onboarding rich):
 ${formatNutritionProfile(ctx)}

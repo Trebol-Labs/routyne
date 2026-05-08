@@ -10,7 +10,9 @@ import { buildUserContext } from '@/lib/coach/context-builder';
 import { loadNutritionProfile } from '@/lib/db/nutritionProfile';
 import { loadPendingAdjustment, type PendingAdjustment } from '@/lib/db/nutritionAdjustment';
 import { loadAllBodyweight } from '@/lib/db/bodyweight';
+import { loadFitnessProfile } from '@/lib/db/fitnessProfile';
 import type { NutritionProfile } from '@/types/nutrition';
+import type { FitnessProfile } from '@/types/fitness';
 import type { BodyweightRecord } from '@/lib/db/schema';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/components/i18n/LanguageProvider';
@@ -35,6 +37,7 @@ export function CoachSheet({ onClose }: CoachSheetProps) {
   const [nutritionProfile, setNutritionProfile] = useState<NutritionProfile | null>(null);
   const [pendingAdjustment, setPendingAdjustment] = useState<PendingAdjustment | null>(null);
   const [bodyweight, setBodyweight] = useState<BodyweightRecord[]>([]);
+  const [fitnessProfile, setFitnessProfile] = useState<FitnessProfile | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -44,11 +47,13 @@ export function CoachSheet({ onClose }: CoachSheetProps) {
       loadNutritionProfile().catch(() => null),
       loadPendingAdjustment().catch(() => null),
       loadAllBodyweight().catch(() => [] as BodyweightRecord[]),
-    ]).then(([np, pa, bw]) => {
+      loadFitnessProfile().catch(() => null),
+    ]).then(([np, pa, bw, fp]) => {
       if (cancelled) return;
       setNutritionProfile(np);
       setPendingAdjustment(pa);
       setBodyweight(bw);
+      setFitnessProfile(fp);
     });
     return () => { cancelled = true; };
   }, []);
@@ -101,6 +106,7 @@ export function CoachSheet({ onClose }: CoachSheetProps) {
         nutritionProfile,
         pendingAdjustment,
         bodyweight,
+        fitnessProfile,
       });
       const res = await fetch('/api/coach', {
         method: 'POST',

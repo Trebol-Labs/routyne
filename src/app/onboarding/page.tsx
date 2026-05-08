@@ -13,8 +13,10 @@ import {
   markOnboardingDeferred,
   markNutritionDisabled,
 } from '@/lib/db/nutritionProfile';
-import { computeAll } from '@/lib/nutrition/calculations';
+import { saveFitnessProfile, loadFitnessProfile } from '@/lib/db/fitnessProfile';
+import { computeAll, calcMacros } from '@/lib/nutrition/calculations';
 import type { NutritionProfile } from '@/types/nutrition';
+import type { FitnessProfile } from '@/types/fitness';
 
 import { OnboardingShell } from '@/components/nutrition/onboarding/OnboardingShell';
 import { WelcomeStep } from '@/components/nutrition/onboarding/WelcomeStep';
@@ -22,9 +24,10 @@ import { BasicsStep } from '@/components/nutrition/onboarding/BasicsStep';
 import { GoalStep } from '@/components/nutrition/onboarding/GoalStep';
 import { OptionalStep } from '@/components/nutrition/onboarding/OptionalStep';
 import { SummaryStep } from '@/components/nutrition/onboarding/SummaryStep';
+import { FitnessStep, type FitnessDraft, EMPTY_FITNESS_DRAFT } from '@/components/nutrition/onboarding/FitnessStep';
 import { EMPTY_DRAFT, type OnboardingDraft } from '@/components/nutrition/onboarding/types';
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 6;
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -34,19 +37,22 @@ export default function OnboardingPage() {
 
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<OnboardingDraft>(EMPTY_DRAFT);
+  const [fitnessDraft, setFitnessDraft] = useState<FitnessDraft>(EMPTY_FITNESS_DRAFT);
   const [isSaving, setIsSaving] = useState(false);
 
-  // If feature flag off or user not signed in, leave page.
+  // If feature flag off, leave page.
   useEffect(() => {
     if (!NUTRITION_ENABLED) router.replace('/');
   }, [router]);
 
-  // Pre-fill weight from profile data if available (no-op for now since we
-  // only store unit preference, not actual bodyweight in profile).
+  // Pre-fill from existing profiles if available.
   useEffect(() => {
     if (!isHydrated) return;
     void (async () => {
-      const existing = await loadNutritionProfile();
+      const [existing, existingFitness] = await Promise.all([
+        loadNutritionProfile(),
+        loadFitnessProfile(),
+      ]);
       if (existing) {
         setDraft({
           sex: existing.sex,
@@ -63,6 +69,14 @@ export default function OnboardingPage() {
           dietaryRestrictions: existing.dietaryRestrictions,
           customRestrictions: existing.customRestrictions,
           budget: existing.budget,
+        });
+      }
+      if (existingFitness) {
+        setFitnessDraft({
+          trainingSplit: existingFitness.trainingSplit,
+          isPowerlifter: existingFitness.isPowerlifter,
+          hasHevyBackground: existingFitness.hasHevyBackground,
+          mainLiftsSummary: existingFitness.mainLiftsSummary ?? '',
         });
       }
     })();
@@ -102,6 +116,9 @@ export default function OnboardingPage() {
   const updateDraft = (patch: Partial<OnboardingDraft>) =>
     setDraft((d) => ({ ...d, ...patch }));
 
+  const updateFitnessDraft = (patch: Partial<FitnessDraft>) =>
+    setFitnessDraft((d) => ({ ...d, ...patch }));
+
   const handleSkipNutrition = async () => {
     try {
       await markNutritionDisabled();
@@ -119,7 +136,8 @@ export default function OnboardingPage() {
     }
   };
 
-  const handleFinish = async () => {
+  // Called from SummaryStep "Continuar" — saves nutrition profile then advances to fitness step.
+  const handleSaveNutritionAndNext = async (adjustedKcal: number) => {
     if (!computed) return;
     if (
       draft.sex === null ||
@@ -135,6 +153,11 @@ export default function OnboardingPage() {
     setIsSaving(true);
     try {
       const now = new Date().toISOString();
+      const liveMacros = calcMacros({
+        weightKg: draft.weightKg,
+        targetKcal: adjustedKcal,
+        goal: draft.goal,
+      });
       const profileToSave: NutritionProfile = {
         weightKg: draft.weightKg,
         heightCm: draft.heightCm,
@@ -152,18 +175,47 @@ export default function OnboardingPage() {
         budget: draft.budget,
         bmrKcal: computed.bmrKcal,
         tdeeKcal: computed.tdeeKcal,
-        targetKcal: computed.targetKcal,
-        proteinG: computed.macros.proteinG,
-        fatsG: computed.macros.fatsG,
-        carbsG: computed.macros.carbsG,
+        targetKcal: adjustedKcal,
+        proteinG: liveMacros.proteinG,
+        fatsG: liveMacros.fatsG,
+        carbsG: liveMacros.carbsG,
         createdAt: now,
         updatedAt: now,
       };
       await saveNutritionProfile(profileToSave);
+      setStep(5);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Called from FitnessStep "Empezar" — saves fitness profile and completes onboarding.
+  const handleFinish = async () => {
+    setIsSaving(true);
+    try {
+      const now = new Date().toISOString();
+      const fitnessProfile: FitnessProfile = {
+        trainingSplit: fitnessDraft.trainingSplit,
+        isPowerlifter: fitnessDraft.isPowerlifter,
+        hasHevyBackground: fitnessDraft.hasHevyBackground,
+        mainLiftsSummary: fitnessDraft.mainLiftsSummary || null,
+        createdAt: now,
+        updatedAt: now,
+      };
+      await saveFitnessProfile(fitnessProfile);
       await markOnboardingCompleted();
       router.replace('/');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Called from FitnessStep "Saltar" — mark completed without saving fitness profile.
+  const handleSkipFitness = async () => {
+    try {
+      await markOnboardingCompleted();
+    } finally {
+      router.replace('/');
     }
   };
 
@@ -213,8 +265,21 @@ export default function OnboardingPage() {
       {step === 4 && computed && (
         <SummaryStep
           result={computed}
+          weightKg={draft.weightKg!}
+          goal={draft.goal!}
+          trainingTime={draft.trainingTime}
           onBack={() => setStep(3)}
+          onFinish={handleSaveNutritionAndNext}
+          isSaving={isSaving}
+        />
+      )}
+      {step === 5 && (
+        <FitnessStep
+          draft={fitnessDraft}
+          onChange={updateFitnessDraft}
+          onBack={() => setStep(4)}
           onFinish={handleFinish}
+          onSkip={handleSkipFitness}
           isSaving={isSaving}
         />
       )}
