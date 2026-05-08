@@ -7,6 +7,7 @@ import { estimate1RM } from '@/lib/progression/engine';
 import { getMuscleGroupVolume } from '@/lib/analytics/muscle-map';
 import type { HistoryEntry, UserProfile, ExerciseVolume, NutritionGoal } from '@/types/workout';
 import type { NutritionProfile } from '@/types/nutrition';
+import type { FitnessProfile, TrainingSplit } from '@/types/fitness';
 import type { PendingAdjustment } from '@/lib/db/nutritionAdjustment';
 import type { BodyweightRecord } from '@/lib/db/schema';
 
@@ -59,6 +60,13 @@ export interface CoachNutritionProfile {
   dietaryRestrictions: string[];
 }
 
+export interface CoachFitnessProfile {
+  trainingSplit: TrainingSplit | null;
+  isPowerlifter: boolean;
+  hasHevyBackground: boolean;
+  mainLiftsSummary: string | null;
+}
+
 export interface CoachPendingAdjustment {
   reason: 'too_fast' | 'too_slow' | 'on_track' | 'insufficient_data';
   weeklyWeightChangePct: number;
@@ -106,6 +114,7 @@ export interface UserCoachContext {
   pendingAdjustment: CoachPendingAdjustment | null;
   bodyweightTrend: CoachBodyweightTrend;
   stallSignals: CoachStallSignal[];
+  fitnessProfile: CoachFitnessProfile | null;
   weeklyTrainingDays: number;
   streakDays: number;
   totalWorkouts: number;
@@ -290,6 +299,7 @@ export interface BuildUserContextArgs {
   nutritionProfile?: NutritionProfile | null;
   pendingAdjustment?: PendingAdjustment | null;
   bodyweight?: BodyweightRecord[];
+  fitnessProfile?: FitnessProfile | null;
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
@@ -309,7 +319,7 @@ export function buildUserContext(
     ? { history: arg1, profile: arg2 as UserProfile, nutritionGoal: arg3 }
     : arg1;
 
-  const { history, profile, nutritionGoal, nutritionProfile, pendingAdjustment, bodyweight } = args;
+  const { history, profile, nutritionGoal, nutritionProfile, pendingAdjustment, bodyweight, fitnessProfile } = args;
 
   const recent = history.slice(0, 10);
   const language = profile.preferences.language;
@@ -368,6 +378,14 @@ export function buildUserContext(
         suggestedTargetKcal: pendingAdjustment.suggestedTargetKcal,
         deltaKcal: pendingAdjustment.deltaKcal,
         computedAt: pendingAdjustment.computedAt,
+      }
+      : null,
+    fitnessProfile: fitnessProfile
+      ? {
+        trainingSplit: fitnessProfile.trainingSplit,
+        isPowerlifter: fitnessProfile.isPowerlifter,
+        hasHevyBackground: fitnessProfile.hasHevyBackground,
+        mainLiftsSummary: fitnessProfile.mainLiftsSummary,
       }
       : null,
     bodyweightTrend: computeBodyweightTrend(bodyweight ?? []),

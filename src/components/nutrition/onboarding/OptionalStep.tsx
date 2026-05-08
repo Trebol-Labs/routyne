@@ -1,7 +1,10 @@
 'use client';
 
+import { useState } from 'react';
+import { HelpCircle } from 'lucide-react';
 import { useI18n } from '@/components/i18n/LanguageProvider';
 import { StepFooter } from './StepFooter';
+import { BodyFatGuide } from './BodyFatGuide';
 import type { OnboardingDraft } from './types';
 import type {
   Budget,
@@ -21,6 +24,7 @@ interface OptionalStepProps {
 export function OptionalStep({ draft, onChange, onBack, onNext, onSkip }: OptionalStepProps) {
   const { t } = useI18n();
   const o = t.onboarding.optional;
+  const [showGuide, setShowGuide] = useState(false);
 
   const trainingTypes: { id: TrainingType; label: string }[] = [
     { id: 'strength', label: o.trainingTypeStrength },
@@ -61,13 +65,32 @@ export function OptionalStep({ draft, onChange, onBack, onNext, onSkip }: Option
   };
 
   return (
+    <>
+    {showGuide && (
+      <BodyFatGuide
+        sex={draft.sex}
+        onSelect={(pct) => onChange({ bodyFatPct: pct })}
+        onClose={() => setShowGuide(false)}
+      />
+    )}
     <section className="flex flex-col gap-6 pt-2">
       <header>
         <h1 className="text-2xl font-black text-white">{o.title}</h1>
         <p className="text-sm text-white/50 mt-1">{o.subtitle}</p>
       </header>
 
-      <Field label={o.bodyFat}>
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <label className="block text-xs font-bold uppercase tracking-wider text-white/60">{o.bodyFat}</label>
+          <button
+            type="button"
+            onClick={() => setShowGuide(true)}
+            className="flex items-center gap-1 text-[11px] font-bold text-[rgb(var(--accent-primary-rgb))] hover:opacity-80 transition-opacity"
+          >
+            <HelpCircle className="w-3.5 h-3.5" />
+            {o.bodyFatHelp}
+          </button>
+        </div>
         <div className="relative">
           <input
             type="number"
@@ -87,7 +110,7 @@ export function OptionalStep({ draft, onChange, onBack, onNext, onSkip }: Option
           />
           <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-white/40">%</span>
         </div>
-      </Field>
+      </div>
 
       <Field label={`${o.trainingDays}: ${draft.trainingDaysPerWeek ?? 0}`}>
         <input
@@ -182,6 +205,7 @@ export function OptionalStep({ draft, onChange, onBack, onNext, onSkip }: Option
         skipLabel={t.onboarding.skip}
       />
     </section>
+    </>
   );
 }
 

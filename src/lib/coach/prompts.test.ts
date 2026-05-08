@@ -26,6 +26,7 @@ const baseContext: UserCoachContext = {
   nutritionProfile: null,
   pendingAdjustment: null,
   bodyweightTrend: { latestKg: null, latestDate: null, weeklyChangePct: null, pointsLast30Days: 0 },
+  fitnessProfile: null,
   stallSignals: [],
   weeklyTrainingDays: 0,
   streakDays: 0,

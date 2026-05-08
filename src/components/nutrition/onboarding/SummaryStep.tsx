@@ -1,21 +1,67 @@
 'use client';
 
+import { useMemo, useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { useI18n } from '@/components/i18n/LanguageProvider';
 import { StepFooter } from './StepFooter';
+import { calcMacros, buildMealPlan } from '@/lib/nutrition/calculations';
 import type { ComputeAllResult } from '@/lib/nutrition/calculations';
+import type { NutritionGoal, TrainingTime } from '@/types/nutrition';
 
 interface SummaryStepProps {
   result: ComputeAllResult;
+  weightKg: number;
+  goal: NutritionGoal;
+  trainingTime: TrainingTime | null;
   onBack: () => void;
-  onFinish: () => void;
+  onFinish: (adjustedKcal: number) => void;
   isSaving: boolean;
 }
 
-export function SummaryStep({ result, onBack, onFinish, isSaving }: SummaryStepProps) {
+export function SummaryStep({
+  result,
+  weightKg,
+  goal,
+  trainingTime,
+  onBack,
+  onFinish,
+  isSaving,
+}: SummaryStepProps) {
   const { t } = useI18n();
   const s = t.onboarding.summary;
   const warningMap = s.warnings as unknown as Record<string, string>;
+
+  const [adjustedKcal, setAdjustedKcal] = useState(result.targetKcal);
+
+  const sliderMin = Math.max(800, Math.round(result.bmrKcal * 0.85));
+  const sliderMax = result.tdeeKcal + 1200;
+
+  const liveMacros = useMemo(
+    () => calcMacros({ weightKg, targetKcal: adjustedKcal, goal }),
+    [weightKg, adjustedKcal, goal],
+  );
+
+  const liveMealPlan = useMemo(
+    () => buildMealPlan({ weightKg, macros: liveMacros, trainingTime }),
+    [weightKg, liveMacros, trainingTime],
+  );
+
+  const sliderWarning: string | null = (() => {
+    if (adjustedKcal < result.bmrKcal) return s.warningTooLow;
+    if (adjustedKcal < result.bmrKcal * 1.1) return s.warningAggressiveLow;
+    if (adjustedKcal > result.tdeeKcal + 800) return s.warningVeryHigh;
+    return null;
+  })();
+
+  const sliderDanger = adjustedKcal < result.bmrKcal;
+
+  const kcalDelta = adjustedKcal - result.targetKcal;
+  const deltaLabel =
+    kcalDelta === 0
+      ? null
+      : kcalDelta > 0
+        ? `+${kcalDelta} kcal`
+        : `${kcalDelta} kcal`;
 
   return (
     <section className="flex flex-col gap-6 pt-2">
@@ -27,10 +73,82 @@ export function SummaryStep({ result, onBack, onFinish, isSaving }: SummaryStepP
       {/* Calorie summary card */}
       <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 flex flex-col gap-4">
         <div className="flex items-end gap-3">
-          <span className="text-5xl font-black text-white tabular-nums">{result.targetKcal}</span>
-          <span className="text-xs font-bold uppercase tracking-wider text-white/40 mb-1.5">{s.kcalPerDay}</span>
+          <span
+            className={[
+              'text-5xl font-black tabular-nums transition-colors',
+              sliderDanger ? 'text-rose-400' : 'text-white',
+            ].join(' ')}
+          >
+            {adjustedKcal}
+          </span>
+          <div className="flex items-baseline gap-2 mb-1.5">
+            <span className="text-xs font-bold uppercase tracking-wider text-white/40">{s.kcalPerDay}</span>
+            {deltaLabel && (
+              <span
+                className={[
+                  'text-xs font-bold tabular-nums',
+                  kcalDelta > 0 ? 'text-emerald-400' : 'text-amber-400',
+                ].join(' ')}
+              >
+                {deltaLabel}
+              </span>
+            )}
+          </div>
         </div>
-        <p className="text-xs font-bold uppercase tracking-wider text-white/40">{s.target}</p>
+
+        {/* Calorie slider */}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">{s.adjustCalories}</span>
+            <span className="text-[10px] text-white/30">{s.adjustBase}: {result.targetKcal}</span>
+          </div>
+          <input
+            type="range"
+            min={sliderMin}
+            max={sliderMax}
+            step={25}
+            value={adjustedKcal}
+            onChange={(e) => setAdjustedKcal(Number(e.target.value))}
+            className={[
+              'w-full h-2 rounded-full appearance-none cursor-pointer',
+              sliderDanger
+                ? 'accent-rose-400'
+                : 'accent-[rgb(var(--accent-primary-rgb))]',
+            ].join(' ')}
+          />
+          <div className="flex justify-between text-[10px] text-white/30 font-mono tabular-nums">
+            <span>{sliderMin}</span>
+            <span>{sliderMax}</span>
+          </div>
+        </div>
+
+        {/* Slider warning */}
+        {sliderWarning && (
+          <div
+            className={[
+              'flex items-start gap-2 p-3 rounded-2xl border',
+              sliderDanger
+                ? 'border-rose-500/30 bg-rose-500/10'
+                : 'border-amber-500/20 bg-amber-500/5',
+            ].join(' ')}
+          >
+            <AlertTriangle
+              className={[
+                'w-4 h-4 shrink-0 mt-0.5',
+                sliderDanger ? 'text-rose-400' : 'text-amber-400',
+              ].join(' ')}
+            />
+            <p
+              className={[
+                'text-xs leading-snug',
+                sliderDanger ? 'text-rose-100/90' : 'text-amber-100/90',
+              ].join(' ')}
+            >
+              {sliderWarning}
+            </p>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-3 pt-2 border-t border-white/5">
           <Stat label={s.bmr} value={`${result.bmrKcal}`} />
           <Stat label={s.tdee} value={`${result.tdeeKcal}`} />
@@ -41,19 +159,19 @@ export function SummaryStep({ result, onBack, onFinish, isSaving }: SummaryStepP
       <div>
         <h2 className="text-xs font-bold uppercase tracking-wider text-white/60 mb-3">{s.macros}</h2>
         <div className="grid grid-cols-3 gap-2">
-          <MacroBlock label={s.protein} grams={result.macros.proteinG} kcal={result.macros.proteinKcal} accent="bg-rose-400/80" />
-          <MacroBlock label={s.carbs} grams={result.macros.carbsG} kcal={result.macros.carbsKcal} accent="bg-amber-400/80" />
-          <MacroBlock label={s.fats} grams={result.macros.fatsG} kcal={result.macros.fatsKcal} accent="bg-emerald-400/80" />
+          <MacroBlock label={s.protein} grams={liveMacros.proteinG} kcal={liveMacros.proteinKcal} accent="bg-rose-400/80" />
+          <MacroBlock label={s.carbs} grams={liveMacros.carbsG} kcal={liveMacros.carbsKcal} accent="bg-amber-400/80" />
+          <MacroBlock label={s.fats} grams={liveMacros.fatsG} kcal={liveMacros.fatsKcal} accent="bg-emerald-400/80" />
         </div>
       </div>
 
       {/* Meals */}
       <div>
         <h2 className="text-xs font-bold uppercase tracking-wider text-white/60 mb-3">
-          {s.meals} ({result.mealPlan.meals.length})
+          {s.meals} ({liveMealPlan.meals.length})
         </h2>
         <div className="rounded-2xl border border-white/10 overflow-hidden divide-y divide-white/5">
-          {result.mealPlan.meals.map((meal, i) => (
+          {liveMealPlan.meals.map((meal, i) => (
             <div key={`${meal.slot}-${i}`} className="flex items-center justify-between p-3">
               <span className="text-sm font-bold text-white">{meal.label}</span>
               <span className="text-[11px] text-white/50 font-mono tabular-nums">
@@ -64,7 +182,7 @@ export function SummaryStep({ result, onBack, onFinish, isSaving }: SummaryStepP
         </div>
       </div>
 
-      {/* Warnings */}
+      {/* Warnings from computeAll */}
       {result.warnings.length > 0 ? (
         <div className="flex flex-col gap-2">
           {result.warnings.map((key) => (
@@ -85,9 +203,9 @@ export function SummaryStep({ result, onBack, onFinish, isSaving }: SummaryStepP
 
       <StepFooter
         onBack={onBack}
-        onNext={onFinish}
+        onNext={() => onFinish(adjustedKcal)}
         backLabel={t.onboarding.back}
-        nextLabel={isSaving ? '…' : t.onboarding.finish}
+        nextLabel={isSaving ? '…' : t.onboarding.next}
         nextDisabled={isSaving}
       />
     </section>

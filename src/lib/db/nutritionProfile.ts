@@ -4,6 +4,7 @@
 import { loadMetaValue, saveMetaValue, deleteMetaValue } from './meta';
 import { enqueue } from '@/lib/sync/queue';
 import { clearPendingAdjustment } from './nutritionAdjustment';
+import { FITNESS_PROFILE_META_KEY } from './fitnessProfile';
 import type { NutritionProfile } from '@/types/nutrition';
 
 export const NUTRITION_PROFILE_META_KEY = 'nutrition.profile';
@@ -76,6 +77,7 @@ export async function resetOnboarding(): Promise<void> {
     deleteMetaValue(ONBOARDING_COMPLETED_KEY),
     deleteMetaValue(ONBOARDING_DEFERRED_KEY),
     deleteMetaValue(NUTRITION_DISABLED_KEY),
+    deleteMetaValue(FITNESS_PROFILE_META_KEY),
   ]);
   await clearPendingAdjustment();
 }
