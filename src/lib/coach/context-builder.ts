@@ -10,6 +10,7 @@ import type { NutritionProfile } from '@/types/nutrition';
 import type { FitnessProfile, TrainingSplit } from '@/types/fitness';
 import type { PendingAdjustment } from '@/lib/db/nutritionAdjustment';
 import type { BodyweightRecord } from '@/lib/db/schema';
+import type { HevyAthleteDigest } from '@/lib/hevy/digest';
 
 export interface CoachTopExercise {
   name: string;
@@ -118,6 +119,13 @@ export interface UserCoachContext {
   weeklyTrainingDays: number;
   streakDays: number;
   totalWorkouts: number;
+  /**
+   * Personal Hevy training archive used as deep coach context.
+   * Captures lifetime training history, PRs, progression curves, plateaus
+   * and comments before the user migrated to Routyne. Not part of the app's
+   * workout history table.
+   */
+  hevyArchive: HevyAthleteDigest | null;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -300,6 +308,7 @@ export interface BuildUserContextArgs {
   pendingAdjustment?: PendingAdjustment | null;
   bodyweight?: BodyweightRecord[];
   fitnessProfile?: FitnessProfile | null;
+  hevyArchive?: HevyAthleteDigest | null;
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
@@ -319,7 +328,7 @@ export function buildUserContext(
     ? { history: arg1, profile: arg2 as UserProfile, nutritionGoal: arg3 }
     : arg1;
 
-  const { history, profile, nutritionGoal, nutritionProfile, pendingAdjustment, bodyweight, fitnessProfile } = args;
+  const { history, profile, nutritionGoal, nutritionProfile, pendingAdjustment, bodyweight, fitnessProfile, hevyArchive } = args;
 
   const recent = history.slice(0, 10);
   const language = profile.preferences.language;
@@ -393,5 +402,6 @@ export function buildUserContext(
     weeklyTrainingDays: computeWeeklyTrainingDays(history),
     streakDays: computeStreak(history),
     totalWorkouts: history.length,
+    hevyArchive: hevyArchive ?? null,
   };
 }

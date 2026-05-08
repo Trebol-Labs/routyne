@@ -11,6 +11,8 @@ import { loadNutritionProfile } from '@/lib/db/nutritionProfile';
 import { loadPendingAdjustment, type PendingAdjustment } from '@/lib/db/nutritionAdjustment';
 import { loadAllBodyweight } from '@/lib/db/bodyweight';
 import { loadFitnessProfile } from '@/lib/db/fitnessProfile';
+import { loadHevyDigest } from '@/lib/hevy/importer';
+import type { HevyAthleteDigest } from '@/lib/hevy/digest';
 import type { NutritionProfile } from '@/types/nutrition';
 import type { FitnessProfile } from '@/types/fitness';
 import type { BodyweightRecord } from '@/lib/db/schema';
@@ -38,6 +40,7 @@ export function CoachSheet({ onClose }: CoachSheetProps) {
   const [pendingAdjustment, setPendingAdjustment] = useState<PendingAdjustment | null>(null);
   const [bodyweight, setBodyweight] = useState<BodyweightRecord[]>([]);
   const [fitnessProfile, setFitnessProfile] = useState<FitnessProfile | null>(null);
+  const [hevyArchive, setHevyArchive] = useState<HevyAthleteDigest | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -48,12 +51,14 @@ export function CoachSheet({ onClose }: CoachSheetProps) {
       loadPendingAdjustment().catch(() => null),
       loadAllBodyweight().catch(() => [] as BodyweightRecord[]),
       loadFitnessProfile().catch(() => null),
-    ]).then(([np, pa, bw, fp]) => {
+      loadHevyDigest().catch(() => null),
+    ]).then(([np, pa, bw, fp, hd]) => {
       if (cancelled) return;
       setNutritionProfile(np);
       setPendingAdjustment(pa);
       setBodyweight(bw);
       setFitnessProfile(fp);
+      setHevyArchive(hd);
     });
     return () => { cancelled = true; };
   }, []);
@@ -107,6 +112,7 @@ export function CoachSheet({ onClose }: CoachSheetProps) {
         pendingAdjustment,
         bodyweight,
         fitnessProfile,
+        hevyArchive,
       });
       const res = await fetch('/api/coach', {
         method: 'POST',
