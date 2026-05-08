@@ -133,6 +133,31 @@ create policy "Users own their push subscriptions"
 
 create index if not exists push_subscriptions_user_endpoint on public.push_subscriptions (user_id, endpoint);
 
+-- ── Notification devices ────────────────────────────────────────────────────
+
+create table if not exists public.notification_devices (
+  device_id     text        primary key,
+  user_id       uuid        references auth.users not null,
+  token         text        not null,
+  platform      text        not null check (platform in ('ios', 'android')),
+  provider      text        not null default 'fcm',
+  app_id        text        not null,
+  created_at    timestamptz default now(),
+  updated_at    timestamptz default now(),
+  last_seen_at  timestamptz default now(),
+  disabled_at   timestamptz
+);
+
+alter table public.notification_devices enable row level security;
+
+drop policy if exists "Users own their notification devices" on public.notification_devices;
+create policy "Users own their notification devices"
+  on public.notification_devices for all
+  using (auth.uid() = user_id);
+
+create index if not exists notification_devices_user_updated
+  on public.notification_devices (user_id, updated_at);
+
 -- ── Sync cursors ──────────────────────────────────────────────────────────────
 
 create table if not exists public.sync_cursors (

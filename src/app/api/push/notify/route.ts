@@ -22,10 +22,23 @@ interface PushPayload {
   body: string;
   tag?: string;
   url?: string;
+  data?: {
+    kind?: string;
+    url?: string;
+    [key: string]: unknown;
+  };
 }
 
 function vapidConfigured(): boolean {
   return !!(VAPID_PUBLIC && VAPID_PRIVATE);
+}
+
+function isAuthorized(request: NextRequest): boolean {
+  if (!process.env.CRON_SECRET) {
+    return process.env.NODE_ENV !== 'production';
+  }
+
+  return request.headers.get('authorization') === `Bearer ${process.env.CRON_SECRET}`;
 }
 
 async function getTargets(): Promise<Array<{ userId?: string; endpoint: string; keys: { p256dh: string; auth: string } }>> {
@@ -49,6 +62,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Push not configured' }, { status: 503 });
   }
 
+  if (!isAuthorized(req)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   let body: PushPayload;
   try {
     body = await req.json() as PushPayload;
@@ -67,6 +84,14 @@ export async function POST(req: NextRequest) {
     body: body.body,
     tag: body.tag ?? 'routyne',
     url: body.url ?? '/',
+    silent: false,
+    renotify: true,
+    vibrate: [120, 60, 120],
+    data: {
+      kind: body.data?.kind ?? 'push',
+      url: body.data?.url ?? body.url ?? '/',
+      ...(body.data ?? {}),
+    },
   });
 
   const targets = await getTargets();
@@ -103,4 +128,3 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ sent, failed, removed });
 }
-

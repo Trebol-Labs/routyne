@@ -22,6 +22,8 @@ import { BottomNav } from '@/components/workout/BottomNav';
 import { useHydration } from '@/hooks/useHydration';
 import { useStoragePersist } from '@/hooks/useStoragePersist';
 import { useSync } from '@/hooks/useSync';
+import { useNativeDeepLinks } from '@/hooks/useNativeDeepLinks';
+import { useStreakReminderSync } from '@/hooks/useStreakReminderSync';
 import { useAuth } from '@/hooks/useAuth';
 import { useOnboardingGate } from '@/hooks/useOnboardingGate';
 import { useI18n } from '@/components/i18n/LanguageProvider';
@@ -91,6 +93,7 @@ function HomeContent() {
     pendingAchievements,
     clearPendingAchievements,
     profile,
+    history,
   } = useWorkoutStore();
 
   const auth = useAuth();
@@ -111,11 +114,18 @@ function HomeContent() {
   const [confirmNewRoutine, setConfirmNewRoutine] = useState(false);
 
   useStoragePersist();
+  useNativeDeepLinks();
 
   useEffect(() => {
     if (!isReady) return;
     applyAppearancePreferences(profile.preferences);
   }, [isReady, profile.preferences]);
+
+  useStreakReminderSync({
+    isReady,
+    profile,
+    history,
+  });
 
   useEffect(() => {
     if (!isReady) return;

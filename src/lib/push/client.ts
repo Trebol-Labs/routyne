@@ -80,7 +80,7 @@ async function getReadyServiceWorkerRegistration(): Promise<ServiceWorkerRegistr
   }
 }
 
-async function requestNotificationPermission(): Promise<NotificationPermission> {
+export async function requestBrowserNotificationPermission(): Promise<NotificationPermission> {
   if (Notification.permission !== 'default') return Notification.permission;
 
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -125,7 +125,7 @@ export async function subscribeToPush(): Promise<PushSubscription | null> {
     throw new PushSetupError('service-worker-unavailable', 'No active service worker is available for Web Push.');
   }
 
-  const permission = await requestNotificationPermission();
+  const permission = await requestBrowserNotificationPermission();
   if (permission !== 'granted') return null;
 
   try {
@@ -217,6 +217,11 @@ interface LocalNotificationPayload {
   title: string;
   body: string;
   tag?: string;
+  data?: {
+    kind?: string;
+    url?: string;
+    [key: string]: unknown;
+  };
 }
 
 async function postToServiceWorker(message: Record<string, unknown>): Promise<void> {

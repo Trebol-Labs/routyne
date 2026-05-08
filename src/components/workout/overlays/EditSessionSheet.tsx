@@ -8,6 +8,7 @@ import { Plus, Trash2, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { v4 as uuidv4 } from 'uuid';
 import { resolveExerciseMedia } from '@/lib/media/resolver';
+import { useI18n } from '@/components/i18n/LanguageProvider';
 
 interface EditSessionSheetProps {
   onClose: () => void;
@@ -18,6 +19,7 @@ interface EditSessionSheetProps {
 export function EditSessionSheet({ onClose, exercises: initialExercises, onSave }: EditSessionSheetProps) {
   const [exercises, setExercises] = useState<ParsedExercise[]>(initialExercises);
   const [showSearch, setShowSearch] = useState(false);
+  const { t } = useI18n();
 
   const handleUpdateExercise = (id: string, updates: Partial<ParsedExercise>) => {
     setExercises(exercises.map(ex => (ex.id === id ? { ...ex, ...updates } : ex)));
@@ -43,7 +45,13 @@ export function EditSessionSheet({ onClose, exercises: initialExercises, onSave 
   };
 
   if (showSearch) {
-    return <SearchSheet onClose={() => setShowSearch(false)} onSelectExercise={handleAddExercise} />;
+    return (
+      <SearchSheet
+        onClose={() => setShowSearch(false)}
+        onSelectExercise={handleAddExercise}
+        actionLabel={t.builder.addExercise}
+      />
+    );
   }
 
   return (

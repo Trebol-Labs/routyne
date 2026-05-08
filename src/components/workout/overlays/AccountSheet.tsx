@@ -16,6 +16,7 @@ import {
   Minus,
   Plus,
   RefreshCw,
+  Smartphone,
   ShieldCheck,
   Upload,
   UserRound,
@@ -264,11 +265,16 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
     [profile.preferences.weekStartsOn]
   );
 
-  const pushStateLabel = (() => {
-    if (push.state === 'active') return t.account.pushStateOn;
-    if (push.state === 'denied') return t.account.pushStateDenied;
-    if (push.state === 'unsupported') return t.account.pushStateUnsupported;
-    return t.account.pushStateOff;
+  const pushModeLabel = (() => {
+    if (push.mode === 'native') return t.account.notificationModeNative;
+    if (push.mode === 'web') return t.account.notificationModeWeb;
+    return t.account.notificationModeUnsupported;
+  })();
+
+  const pushModeDetail = (() => {
+    if (push.mode === 'native') return t.account.nativeNotificationsReady;
+    if (push.mode === 'web') return t.account.webNotificationsFallback;
+    return t.account.notificationsUnsupported;
   })();
 
   const pushPermissionLabel = (() => {
@@ -278,11 +284,22 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
     return language === 'en' ? 'Default' : 'Predeterminado';
   })();
 
-  const pushFailureDetail = (() => {
+  const pushErrorMessage = (() => {
+    if (!push.error) return null;
     if (push.error === 'missing-vapid-key') return t.account.notificationsMissingVapidKey;
     if (push.error === 'service-worker-unavailable') return t.account.notificationsServiceWorkerUnavailable;
     if (push.error === 'server-rejected') return t.account.notificationsServerRejected;
     if (push.error === 'subscription-failed') return t.account.notificationsSubscriptionFailed;
+    if (push.error === 'native-registration-failed') {
+      return language === 'en'
+        ? 'The device could not finish native push registration.'
+        : 'El dispositivo no pudo completar el registro nativo de notificaciones.';
+    }
+    if (push.error === 'native-unregister-failed') {
+      return language === 'en'
+        ? 'The device could not be removed from the server.'
+        : 'No se pudo eliminar el dispositivo del servidor.';
+    }
     if (push.error === 'unsupported') return t.account.notificationsUnsupported;
     return null;
   })();
@@ -1204,23 +1221,20 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
             <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-3 space-y-3">
               <div className="flex items-start gap-3">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-blue-300">
-                  <Bell className="h-5 w-5" />
+                  <Smartphone className="h-5 w-5" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/30">
-                    {pushStateLabel}
+                    {t.account.notificationMode}: {pushModeLabel}
                   </p>
                   <p className="mt-1 text-sm font-medium leading-relaxed text-white/45">
-                    {pushFailureDetail ??
-                      (push.permission === 'denied'
-                        ? t.account.notificationsDenied
-                        : push.permission === 'unsupported'
-                          ? t.account.notificationsUnsupported
-                          : language === 'en'
-                            ? 'Timer alerts use the service worker locally. Streak reminders use your saved push subscription.'
-                            : 'Las alertas de descanso usan el service worker localmente. Los recordatorios diarios usan tu suscripción push guardada.')}
+                    {pushModeDetail}
                   </p>
                 </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-white/45">
+                {language === 'en' ? 'Permission' : 'Permiso'}: {pushPermissionLabel}
               </div>
 
               <div className="grid gap-2 sm:grid-cols-2">
@@ -1231,8 +1245,10 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
                   disabled={
                     push.loading ||
                     push.state === 'unsupported' ||
-                    push.permission === 'unsupported' ||
-                    push.permission === 'denied'
+                    (push.state !== 'active' && (
+                      push.permission === 'unsupported' ||
+                      push.permission === 'denied'
+                    ))
                   }
                 >
                   {push.loading ? (
@@ -1244,16 +1260,53 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
                   )}
                   {push.state === 'active' ? t.account.disablePush : t.account.enablePush}
                 </Button>
-                <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-white/45">
-                  {language === 'en' ? 'Permission' : 'Permiso'}: {pushPermissionLabel}
-                </div>
+                <Button
+                  variant="glass"
+                  className="min-h-12 rounded-2xl text-[11px] font-black uppercase tracking-widest"
+                  onClick={() => {
+                    void push.testNotification({
+                      title: language === 'en' ? 'Routyne test' : 'Prueba de Routyne',
+                      body: language === 'en'
+                        ? 'This is a test notification.'
+                        : 'Esta es una notificación de prueba.',
+                      kind: 'test-notification',
+                      url: '/',
+                    });
+                  }}
+                  disabled={
+                    push.loading ||
+                    push.state === 'unsupported' ||
+                    push.permission !== 'granted'
+                  }
+                >
+                  {t.account.testNotification}
+                </Button>
               </div>
+
+              {pushErrorMessage && (
+                <p className="text-xs font-medium leading-relaxed text-white/40">
+                  {pushErrorMessage}
+                </p>
+              )}
+
+              {push.permission === 'denied' && (
+                <div className="rounded-2xl border border-amber-300/20 bg-amber-400/10 p-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-amber-100/80">
+                    {t.account.notificationsBlocked}
+                  </p>
+                  <p className="mt-1 text-xs font-medium leading-relaxed text-amber-50/78">
+                    {language === 'en'
+                      ? 'Open the app settings on your phone and re-enable notifications for Routyne.'
+                      : 'Abre los ajustes del teléfono y vuelve a activar las notificaciones para Routyne.'}
+                  </p>
+                </div>
+              )}
 
               {(!session?.access_token && supabaseEnabled) && (
                 <p className="text-xs font-medium leading-relaxed text-white/35">
                   {language === 'en'
-                    ? 'Sign in to persist push subscriptions.'
-                    : 'Inicia sesión para guardar las suscripciones push.'}
+                    ? 'Sign in to persist native device registration and Web Push subscriptions.'
+                    : 'Inicia sesión para guardar el dispositivo nativo y las suscripciones Web Push.'}
                 </p>
               )}
 
@@ -1298,6 +1351,22 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
                   <span className="text-[9px] font-black uppercase tracking-[0.18em] text-white/35">
                     {profile.preferences.streakReminderEnabled ? t.account.remindersOn : t.account.remindersOff}
                   </span>
+                </button>
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                <input
+                  type="time"
+                  value={profile.preferences.streakReminderTime}
+                  onChange={(e) => updatePreferences({ streakReminderTime: e.target.value })}
+                  className="sunken-glass min-h-11 rounded-2xl border-none bg-transparent px-3 py-2 text-sm font-semibold text-white outline-none placeholder:text-white/20"
+                />
+                <button
+                  type="button"
+                  onClick={() => updatePreferences({ streakReminderTime: '20:00' })}
+                  className="min-h-11 rounded-2xl border border-white/10 bg-white/[0.04] px-3 text-[11px] font-black uppercase tracking-widest text-white/65 transition-colors hover:text-white"
+                >
+                  {language === 'en' ? 'Reset 20:00' : 'Volver a 20:00'}
                 </button>
               </div>
 

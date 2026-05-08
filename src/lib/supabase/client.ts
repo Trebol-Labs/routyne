@@ -83,6 +83,29 @@ export interface Database {
         };
         Update: Partial<Database['public']['Tables']['push_subscriptions']['Row']>;
       };
+      notification_devices: {
+        Row: {
+          device_id: string;
+          user_id: string;
+          token: string;
+          platform: 'ios' | 'android';
+          provider: 'fcm';
+          app_id: string;
+          created_at: string;
+          updated_at: string;
+          last_seen_at: string;
+          disabled_at: string | null;
+        };
+        Insert: Partial<Database['public']['Tables']['notification_devices']['Row']> & {
+          device_id: string;
+          user_id: string;
+          token: string;
+          platform: 'ios' | 'android';
+          provider: 'fcm';
+          app_id: string;
+        };
+        Update: Partial<Database['public']['Tables']['notification_devices']['Row']>;
+      };
       sync_cursors: {
         Row: { user_id: string; last_pulled: string; last_pushed: string };
         Insert: { user_id: string; last_pulled?: string; last_pushed?: string };
