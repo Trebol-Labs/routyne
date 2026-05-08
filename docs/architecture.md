@@ -18,6 +18,26 @@ Main views:
 
 Standalone pages include `/landing`, `/privacy`, `/terms`, `/support`, `/onboarding`, and `/auth/callback`.
 
+## Routine Builder
+
+The visual routine builder in [`src/components/workout/views/RoutineBuilderView.tsx`](/Users/sierra/Code/routyne/src/components/workout/views/RoutineBuilderView.tsx) is optimized around a selected-day workflow:
+
+- Routine title and the currently selected day stay visible at the top of the builder.
+- A horizontal day rail lets users switch or add days without flattening every session into one long column.
+- Exercise rows stay compact by default and expand only when the user edits sets, reps, or rest.
+- Exercise search is demo-first: on desktop it renders inline beside the builder, and on mobile it opens as a bottom sheet via [`src/components/workout/overlays/SearchSheet.tsx`](/Users/sierra/Code/routyne/src/components/workout/overlays/SearchSheet.tsx).
+- The search results are enriched by [`src/app/api/exercises/browse/route.ts`](/Users/sierra/Code/routyne/src/app/api/exercises/browse/route.ts) with target muscles, secondary muscles, instructions, difficulty, and demo media when the ExerciseDB data is available.
+- Markdown import remains in [`src/components/workout/RoutineUploader.tsx`](/Users/sierra/Code/routyne/src/components/workout/RoutineUploader.tsx) behind an advanced disclosure so the primary create path stays visually focused.
+
+## Native Shell
+
+Routyne also ships checked-in Capacitor projects in [`/android`](/Users/sierra/Code/routyne/android) and [`/ios`](/Users/sierra/Code/routyne/ios). The native shell loads the hosted Vercel app instead of a static export, which keeps cookies, route handlers, API routes, and Supabase auth callbacks working inside the app container.
+
+- [`src/lib/site.ts`](/Users/sierra/Code/routyne/src/lib/site.ts) picks `com.trebollabs.routyne://auth/callback` for native auth redirects and maps the custom scheme back to the hosted callback URL.
+- [`src/hooks/useNativeDeepLinks.ts`](/Users/sierra/Code/routyne/src/hooks/useNativeDeepLinks.ts) handles launch URLs, app URL opens, and notification tap routing.
+- [`src/hooks/useStreakReminderSync.ts`](/Users/sierra/Code/routyne/src/hooks/useStreakReminderSync.ts) reschedules native streak reminders when profile or history changes.
+- [`CAPACITOR_SERVER_URL`](/Users/sierra/Code/routyne/.env.example) can override the hosted URL during device testing; otherwise the shell loads `NEXT_PUBLIC_SITE_URL`.
+
 ## State And Persistence
 
 - [`src/store/useWorkoutStore.ts`](/Users/sierra/Code/routyne/src/store/useWorkoutStore.ts) is the canonical app state.
@@ -93,13 +113,18 @@ The coach never queries Supabase directly. Current context includes workout hist
 
 ## Push Notifications
 
-- [`worker/push.ts`](/Users/sierra/Code/routyne/worker/push.ts): service worker push/rest timer behavior.
+- [`src/lib/notifications/provider.ts`](/Users/sierra/Code/routyne/src/lib/notifications/provider.ts): platform selection plus the shared notification API used by the UI.
+- [`src/lib/notifications/native.ts`](/Users/sierra/Code/routyne/src/lib/notifications/native.ts): Capacitor local notifications, channels, permissions, and native push registration.
+- [`src/app/api/push/devices/route.ts`](/Users/sierra/Code/routyne/src/app/api/push/devices/route.ts): authenticated native device register/unregister API.
+- [`worker/push.ts`](/Users/sierra/Code/routyne/worker/push.ts): service worker push/rest timer behavior for the Web Push fallback.
 - [`src/lib/push/client.ts`](/Users/sierra/Code/routyne/src/lib/push/client.ts): browser subscription logic.
 - [`src/lib/push/subscriptions.ts`](/Users/sierra/Code/routyne/src/lib/push/subscriptions.ts): in-memory local fallback.
 - [`src/lib/push/server.ts`](/Users/sierra/Code/routyne/src/lib/push/server.ts): Supabase service-role storage helpers.
 - [`src/app/api/push/subscribe/route.ts`](/Users/sierra/Code/routyne/src/app/api/push/subscribe/route.ts): subscribe/unsubscribe API.
-- [`src/app/api/push/notify/route.ts`](/Users/sierra/Code/routyne/src/app/api/push/notify/route.ts): immediate push API.
+- [`src/app/api/push/notify/route.ts`](/Users/sierra/Code/routyne/src/app/api/push/notify/route.ts): guarded immediate push API used by the web fallback.
 - [`src/app/api/cron/streak-reminders/route.ts`](/Users/sierra/Code/routyne/src/app/api/cron/streak-reminders/route.ts): protected daily reminder cron.
+
+Native installs use `notification_devices` for FCM/APNs token storage, while browser and PWA installs continue to use `push_subscriptions` for Web Push.
 
 ## Workers
 
@@ -122,6 +147,7 @@ Generated markdown comes from [`src/lib/markdown/generator.ts`](/Users/sierra/Co
 
 - [`src/lib/media/resolver.ts`](/Users/sierra/Code/routyne/src/lib/media/resolver.ts) maps exercise names to `/api/media/{slug}`.
 - [`src/app/api/media/[slug]/route.ts`](/Users/sierra/Code/routyne/src/app/api/media/[slug]/route.ts) resolves/fetches media from provider data.
+- [`src/app/api/exercises/browse/route.ts`](/Users/sierra/Code/routyne/src/app/api/exercises/browse/route.ts) powers builder/search browsing with ExerciseDB-backed fixtures, metadata enrichment, and body-part/equipment filters.
 - [`src/lib/media/providers/exercisedb.ts`](/Users/sierra/Code/routyne/src/lib/media/providers/exercisedb.ts) uses RapidAPI ExerciseDB.
 - Exercise card fallback order is video, GIF, image, dumbbell icon.
 

@@ -5,6 +5,7 @@
 - Node `20` from [`.nvmrc`](/Users/sierra/Code/routyne/.nvmrc).
 - pnpm from `packageManager` in [`package.json`](/Users/sierra/Code/routyne/package.json).
 - `RAPIDAPI_KEY` for ExerciseDB-backed media/search and production builds.
+- Android Studio + a Java 17+ JDK for the native shell.
 
 ## Local Setup
 
@@ -15,6 +16,8 @@ pnpm dev
 ```
 
 Open `http://localhost:3000`.
+
+If you are testing the Capacitor shell on a real Android phone, keep `pnpm dev` running and set `CAPACITOR_SERVER_URL` to a LAN-reachable URL such as `http://192.168.1.20:3000` before running `pnpm cap:sync`. The native shell defaults to `NEXT_PUBLIC_SITE_URL` when `CAPACITOR_SERVER_URL` is unset.
 
 ## Commands
 
@@ -28,6 +31,7 @@ Open `http://localhost:3000`.
 | `pnpm test:coverage` | Run Vitest with coverage. |
 | `pnpm build` | Build the production app. |
 | `pnpm test:e2e` | Run Playwright smoke tests. |
+| `pnpm cap:sync` | Sync the web build and plugin config into the native Capacitor projects. |
 | `pnpm import:exercises` | Import ExerciseDB data into `src/lib/data/`. |
 
 ## Environment Variables
@@ -36,6 +40,7 @@ Open `http://localhost:3000`.
 |---|---:|---|
 | `RAPIDAPI_KEY` | Production | ExerciseDB media lookup, exercise search, and import script. |
 | `NEXT_PUBLIC_SITE_URL` | Optional | Canonical links, OG metadata, server-side auth redirect fallback. Defaults to production URL. |
+| `CAPACITOR_SERVER_URL` | Optional | URL loaded by the Capacitor shell. Defaults to `NEXT_PUBLIC_SITE_URL`; use a LAN-reachable dev URL for on-device testing. |
 | `NEXT_PUBLIC_SUPABASE_URL` | Optional | Enables Supabase auth and cloud sync. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Optional | Browser Supabase client key. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Optional | Server-side push subscription storage and streak reminder cron. |
@@ -63,6 +68,14 @@ Pull Vercel-linked environment:
 vercel link
 vercel env pull
 ```
+
+## Native Shell
+
+- Native app id and bundle id: `com.trebollabs.routyne`.
+- Deep-link scheme for auth and notification taps: `com.trebollabs.routyne://auth/callback`.
+- Use `pnpm cap:sync` after changing web assets, Capacitor config, or notification assets.
+- Use `pnpm exec cap open android` to open the generated Android project in Android Studio.
+- Install `android/app/google-services.json` before testing native push registration.
 
 ## Verification Matrix
 

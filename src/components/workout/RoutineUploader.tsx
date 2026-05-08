@@ -12,7 +12,6 @@ import { PROGRAM_TEMPLATES, type ProgramTemplate } from '@/lib/data/programs/ind
 import { useI18n } from '@/components/i18n/LanguageProvider';
 
 type Tab = 'templates' | 'create';
-type CreateMode = 'visual' | 'markdown';
 
 // ── Level badge ───────────────────────────────────────────────────────────────
 
@@ -78,7 +77,7 @@ function ProgramCard({
 
 export function RoutineUploader() {
   const [activeTab, setActiveTab] = useState<Tab>('templates');
-  const [createMode, setCreateMode] = useState<CreateMode>('visual');
+  const [showMarkdownImport, setShowMarkdownImport] = useState(false);
   const [text, setText] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -188,65 +187,50 @@ export function RoutineUploader() {
             transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
             className="flex flex-col gap-3"
           >
-            <div className="grid gap-3 sm:grid-cols-2">
-              <button
-                type="button"
-                onClick={() => setCurrentView('routine-builder')}
-                className="flex h-full items-start gap-3 rounded-[1.6rem] border border-sky-400/15 bg-sky-500/[0.06] p-4 text-left transition-all hover:border-sky-400/30 hover:bg-sky-500/[0.09]"
-              >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-sky-400/20 bg-sky-500/10">
-                  <Zap className="h-4 w-4 text-sky-400" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[12px] font-black uppercase tracking-tight text-sky-100">
-                    {t.createFlow.buildVisual}
-                  </p>
-                  <p className="mt-1 text-[10px] font-medium leading-relaxed text-white/35">
-                    {t.createFlow.buildVisualBody}
-                  </p>
-                  <span className="mt-3 inline-flex text-[10px] font-black uppercase tracking-[0.2em] text-sky-200/80">
-                    {t.createFlow.createRoutine}
-                  </span>
-                </div>
-                <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-white/20" />
-              </button>
+            <button
+              type="button"
+              onClick={() => setCurrentView('routine-builder')}
+              className="flex h-full items-start gap-3 rounded-[1.6rem] border border-sky-400/15 bg-sky-500/[0.06] p-4 text-left transition-all hover:border-sky-400/30 hover:bg-sky-500/[0.09]"
+            >
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-sky-400/20 bg-sky-500/10">
+                <Zap className="h-4 w-4 text-sky-400" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[12px] font-black uppercase tracking-tight text-sky-100">
+                  {t.createFlow.buildVisual}
+                </p>
+                <p className="mt-1 text-[10px] font-medium leading-relaxed text-white/35">
+                  {t.createFlow.buildVisualBody}
+                </p>
+                <span className="mt-3 inline-flex text-[10px] font-black uppercase tracking-[0.2em] text-sky-200/80">
+                  {t.createFlow.createRoutine}
+                </span>
+              </div>
+              <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-white/20" />
+            </button>
 
-              <button
-                type="button"
-                onClick={() => setCreateMode('markdown')}
-                className={cn(
-                  'flex h-full items-start gap-3 rounded-[1.6rem] border p-4 text-left transition-all',
-                  createMode === 'markdown'
-                    ? 'border-white/18 bg-white/[0.07]'
-                    : 'border-white/8 bg-white/[0.03] hover:border-white/15 hover:bg-white/[0.05]',
-                )}
-                aria-pressed={createMode === 'markdown'}
-              >
-                <div className={cn(
-                  'flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border',
-                  createMode === 'markdown'
-                    ? 'border-blue-300/25 bg-blue-500/15'
-                    : 'border-white/10 bg-white/[0.05]',
-                )}>
-                  <Code className={cn('h-4 w-4', createMode === 'markdown' ? 'text-blue-300' : 'text-white/55')} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[12px] font-black uppercase tracking-tight text-white">
-                    {t.createFlow.fromMarkdown}
-                  </p>
-                  <p className="mt-1 text-[10px] font-medium leading-relaxed text-white/35">
-                    {t.createFlow.importBody}
-                  </p>
-                  <span className="mt-3 inline-flex text-[10px] font-black uppercase tracking-[0.2em] text-white/45">
-                    {t.createFlow.importMarkdown}
-                  </span>
-                </div>
-                <ChevronRight className={cn('mt-0.5 h-4 w-4 shrink-0', createMode === 'markdown' ? 'text-white/45' : 'text-white/20')} />
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setShowMarkdownImport((current) => !current)}
+              className="flex items-center justify-between gap-3 rounded-[1.4rem] border border-white/8 bg-white/[0.03] px-4 py-3 text-left transition-all hover:border-white/15 hover:bg-white/[0.05]"
+              aria-expanded={showMarkdownImport}
+            >
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/25">
+                  {t.createFlow.advanced}
+                </p>
+                <p className="mt-1 text-sm font-black uppercase tracking-tight text-white">
+                  {showMarkdownImport ? t.createFlow.hideMarkdownImport : t.createFlow.showMarkdownImport}
+                </p>
+                <p className="mt-1 text-[10px] font-medium leading-relaxed text-white/32">
+                  {t.createFlow.markdownImportHelp}
+                </p>
+              </div>
+              <Code className="h-4 w-4 shrink-0 text-white/35" />
+            </button>
 
             <AnimatePresence mode="wait">
-              {createMode === 'markdown' && (
+              {showMarkdownImport && (
                 <motion.div
                   key="markdown-create"
                   initial={{ opacity: 0, y: 10 }}

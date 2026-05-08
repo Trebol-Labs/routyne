@@ -1,22 +1,25 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
-  subscribeToPush,
-  registerSubscription,
-  unsubscribeFromPush,
-  isPushActive,
-  scheduleLocalNotification,
   cancelLocalNotification,
+  disableNotifications,
+  enableNotifications,
+  getNotificationMode,
   getNotificationPermission,
-  isWebPushSupported,
-  PushSetupError,
-  type PushSetupFailureReason,
-} from '@/lib/push/client';
+  isNotificationsActive,
+  scheduleLocalNotification,
+  testNotification,
+  type LocalNotificationRequest,
+  type NotificationMode,
+} from '@/lib/notifications/provider';
+import { PushSetupError } from '@/lib/push/client';
 
 type PushState = 'idle' | 'active' | 'denied' | 'unsupported';
 
-interface UsePushNotificationsResult {
+export interface UsePushNotificationsResult {
+  /** Current notification mode. */
+  mode: NotificationMode;
   /** Current subscription state. */
   state: PushState;
   /** Current notification permission. */
@@ -24,118 +27,143 @@ interface UsePushNotificationsResult {
   /** True while a subscribe/unsubscribe operation is in progress. */
   loading: boolean;
   /** Last setup error, if the latest push action failed before becoming active. */
-  error: PushSetupFailureReason | null;
+  error: string | null;
   /** Enable push notifications (requests permission if needed). */
   enable: () => Promise<void>;
   /** Disable push notifications. */
   disable: () => Promise<void>;
-  /**
-   * Schedule a local notification via the Service Worker (no server call).
-   * Use this for rest-timer alerts — the SW fires the notification after delayMs.
-   */
-  scheduleLocal: (opts: { id: string; delayMs: number; title: string; body: string; tag?: string }) => void;
+  /** Schedule a local notification on the active platform. */
+  scheduleLocal: (opts: LocalNotificationRequest) => void;
   /** Cancel a scheduled local notification by ID. */
   cancelLocal: (id: string) => void;
+  /** Show a test notification immediately. */
+  testNotification: (opts: { title: string; body: string; kind?: string; url?: string }) => Promise<void>;
+}
+
+function mapErrorToCode(error: unknown): string {
+  if (error instanceof PushSetupError) {
+    return error.reason;
+  }
+
+  if (error instanceof Error) {
+    if (error.message.includes('Native device registration failed')) {
+      return 'native-registration-failed';
+    }
+    if (error.message.includes('Native device removal failed')) {
+      return 'native-unregister-failed';
+    }
+    if (error.message.includes('Timed out waiting for push registration')) {
+      return 'native-registration-failed';
+    }
+    if (error.message.includes('Push registration did not return a token')) {
+      return 'native-registration-failed';
+    }
+  }
+
+  return 'subscription-failed';
 }
 
 export function usePushNotifications(accessToken?: string): UsePushNotificationsResult {
+  const [mode, setMode] = useState<NotificationMode>('unsupported');
   const [state, setState] = useState<PushState>('idle');
   const [permission, setPermission] = useState<NotificationPermission | 'unsupported'>('unsupported');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<PushSetupFailureReason | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Detect support + existing subscription on mount
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (!isWebPushSupported()) {
+  const refreshState = useCallback(async () => {
+    const nextMode = getNotificationMode();
+    setMode(nextMode);
+
+    const currentPermission = await getNotificationPermission();
+    setPermission(currentPermission);
+
+    if (currentPermission === 'unsupported' || nextMode === 'unsupported') {
       setState('unsupported');
-      setPermission('unsupported');
       return;
     }
-    const currentPermission = getNotificationPermission();
-    setPermission(currentPermission);
+
     if (currentPermission === 'denied') {
       setState('denied');
       return;
     }
+
+    const active = await isNotificationsActive(accessToken);
+    setState(active ? 'active' : 'idle');
+  }, [accessToken]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
     let cancelled = false;
-    isPushActive().then((active) => {
+    void (async () => {
       if (cancelled) return;
-      if (active) setState('active');
-    });
+      await refreshState();
+    })();
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [refreshState]);
 
   const enable = useCallback(async () => {
-    if (state === 'unsupported' || loading) return;
+    if (loading) return;
+
     setLoading(true);
     setError(null);
+
     try {
-      const sub = await subscribeToPush();
-      const currentPermission = getNotificationPermission();
-      setPermission(currentPermission);
-      if (!sub) {
-        setState(currentPermission === 'denied' ? 'denied' : 'idle');
-        return;
-      }
-      try {
-        await registerSubscription(sub, accessToken);
-      } catch (err) {
-        await sub.unsubscribe().catch((unsubscribeErr: unknown) => {
-          console.error('[usePushNotifications] rollback unsubscribe failed', unsubscribeErr);
-        });
-        throw err;
-      }
-      setState('active');
+      await enableNotifications(accessToken);
+      await refreshState();
     } catch (err) {
       console.error('[usePushNotifications] enable failed', err);
-      const reason = err instanceof PushSetupError ? err.reason : 'subscription-failed';
-      setError(reason);
-      setPermission(getNotificationPermission());
-      setState(
-        reason === 'unsupported' || reason === 'missing-vapid-key' || reason === 'service-worker-unavailable'
-          ? 'unsupported'
-          : 'idle'
-      );
+      setError(mapErrorToCode(err));
+      await refreshState();
     } finally {
       setLoading(false);
     }
-  }, [state, loading, accessToken]);
+  }, [accessToken, loading, refreshState]);
 
   const disable = useCallback(async () => {
     if (loading) return;
+
     setLoading(true);
     setError(null);
+
     try {
-      await unsubscribeFromPush(accessToken);
-      setPermission(getNotificationPermission());
-      setState('idle');
+      await disableNotifications(accessToken);
+      await refreshState();
     } catch (err) {
       console.error('[usePushNotifications] disable failed', err);
+      setError(mapErrorToCode(err));
     } finally {
       setLoading(false);
     }
-  }, [loading, accessToken]);
+  }, [accessToken, loading, refreshState]);
 
-  const scheduleLocal = useCallback(
-    ({ id, delayMs, title, body, tag }: { id: string; delayMs: number; title: string; body: string; tag?: string }) => {
-      void scheduleLocalNotification({
-        id,
-        delayMs,
-        title,
-        body,
-        tag,
-      });
-    },
-    []
-  );
+  const scheduleLocal = useCallback((opts: LocalNotificationRequest) => {
+    void scheduleLocalNotification(opts);
+  }, []);
 
   const cancelLocal = useCallback((id: string) => {
     void cancelLocalNotification(id);
   }, []);
 
-  return { state, permission, loading, error, enable, disable, scheduleLocal, cancelLocal };
+  const showTestNotification = useCallback(async (opts: { title: string; body: string; kind?: string; url?: string }) => {
+    await testNotification(opts);
+  }, []);
+
+  return {
+    mode,
+    state,
+    permission,
+    loading,
+    error,
+    enable,
+    disable,
+    scheduleLocal,
+    cancelLocal,
+    testNotification: showTestNotification,
+  };
 }

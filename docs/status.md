@@ -11,13 +11,14 @@ This file is the current source of truth for shipped state, roadmap health, and 
 - Supabase sync is opt-in and covers profile, history, bodyweight, routines, rich nutrition profile, and push subscription rows when the required environment variables are configured.
 - First authenticated sync on a device now performs a full remote pull before queue drain and local seeding, so a fresh device is not blocked by an already-advanced shared cursor.
 - Supabase OAuth/magic-link auth uses a cookie-backed browser client so the server `/auth/callback` route can complete PKCE exchange.
+- The Capacitor native shell is checked in for Android/iOS under the `com.trebollabs.routyne` app id. Installed apps now load the hosted Vercel app, route auth through the custom scheme, and use native local notifications first.
 - The app supports manual `es`/`en` language selection, localized standalone pages, and a persisted language cookie.
 - Nutrition onboarding, profile calculations, plan card, adaptive kcal adjustment banner, and block planner are in `main`.
 - Daily nutrition logging still uses the legacy local `nutritionEntries` and `nutritionGoals` stores.
 - The AI Coach is optional. Its prompt is nutrition-aware around saved daily macro targets, but the full rich nutrition profile and pending adaptive adjustment are not yet structured into `UserCoachContext`.
-- Push subscriptions can persist to Supabase when the service role key is configured; local/dev can fall back to the in-memory subscription map, and browser activation now stays available for that fallback path.
-- Daily streak reminders run through the protected Vercel Cron route `/api/cron/streak-reminders`.
-- Exercise media/search depend on ExerciseDB through RapidAPI.
+- Push subscriptions can persist to Supabase when the service role key is configured; browser and PWA installs still fall back to Web Push, while native installs register FCM/APNs tokens through authenticated device rows.
+- Daily streak reminders still run through the protected Vercel Cron route `/api/cron/streak-reminders` for the web fallback, while native installs now reschedule local reminders on device.
+- Exercise media/search depend on ExerciseDB through RapidAPI, and the visual routine builder now uses demo-first exercise search with a selected-day editor and a collapsed Markdown import fallback.
 
 ## Recent Changes From Last Commits
 
@@ -36,7 +37,7 @@ This file is the current source of truth for shipped state, roadmap health, and 
 |---|---|---|---|
 | A. Foundation | Complete | Exercise library, persistent storage request, visual onboarding, landing page, OG metadata, localized legal/support pages | No active work left |
 | B. Cloud Sync | Complete | Supabase auth, sync queue, merge engine, profile/history/bodyweight/routine/nutrition-profile sync, first-device bootstrap, push subscriptions, streak reminder cron | Monitor production sync traces after deploys |
-| C. Differentiation | Mostly complete | AI Coach, push notifications, Web Workers, share cards, achievements, body tracking, bilingual UI, history detail, nutrition onboarding/planner | Wire rich nutrition profile and pending adjustment into AI Coach context if nutrition coaching remains a priority |
+| C. Differentiation | Mostly complete | AI Coach, push notifications, native mobile shell, Web Workers, share cards, achievements, body tracking, bilingual UI, history detail, nutrition onboarding/planner | Wire rich nutrition profile and pending adjustment into AI Coach context if nutrition coaching remains a priority; finish store packaging and mobile release assets |
 | D. Growth | Pending | Current feed share card only | Share Cards v2, challenges, referrals, app-store packaging |
 | E. Monetization | Pending | Nothing production-ready | Stripe, subscription gate, premium themes, analytics |
 
@@ -48,13 +49,15 @@ This file is the current source of truth for shipped state, roadmap health, and 
 - `NEXT_PUBLIC_COACH_ENABLED=false` hides the AI Coach button even if `/api/coach` is configured.
 - `VERCEL_OIDC_TOKEN` is required for `/api/coach`.
 - `NEXT_PUBLIC_VAPID_PUBLIC_KEY` and `VAPID_PUBLIC_KEY` should match.
-- `SUPABASE_SERVICE_ROLE_KEY` is required for server-side push subscription storage and the streak reminder cron.
+- `SUPABASE_SERVICE_ROLE_KEY` is required for server-side push subscription storage, native device registration, and the streak reminder cron.
 - `CRON_SECRET` protects `/api/cron/streak-reminders`.
+- `CAPACITOR_SERVER_URL` overrides the URL loaded by the native shell during device testing. If unset, the shell uses `NEXT_PUBLIC_SITE_URL`.
+- `android/app/google-services.json` and `ios/App/App/GoogleService-Info.plist` are required for native push testing.
 
 ## Next Steps
 
 1. Verify the latest `main` deployment on Vercel after merging documentation changes.
-2. Decide whether to wire the rich nutrition profile and pending adaptive adjustment into `UserCoachContext`.
-3. Monitor `window.__routyneSync.dump()` output while validating first-device sync and nutrition profile sync on real accounts.
-4. Start Phase D with Share Cards v2 if product work resumes.
-5. Wire worker hooks deeper into search and stats only if profiling shows main-thread pressure.
+2. Finish Firebase/APNs asset setup and do a real-device Android notification matrix before releasing the native shell.
+3. Decide whether to wire the rich nutrition profile and pending adaptive adjustment into `UserCoachContext`.
+4. Monitor `window.__routyneSync.dump()` output while validating first-device sync and nutrition profile sync on real accounts.
+5. Start Phase D with Share Cards v2 if product work resumes.

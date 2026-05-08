@@ -83,7 +83,6 @@ export async function upsertPushSubscriptionRow(
       ...subscription,
       user_id: userId,
       updated_at: now,
-      created_at: now,
       last_sent_at: null,
     },
     { onConflict: 'user_id,endpoint' }

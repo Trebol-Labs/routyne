@@ -2,14 +2,13 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import webpush from 'web-push';
-import { getLocalDateKey, shouldSendStreakReminder } from '@/lib/notifications/reminders';
+import { buildStreakReminderCopy, getCurrentStreak, getLocalDateKey, shouldSendStreakReminder } from '@/lib/notifications/reminders';
 import {
   deletePushSubscriptionRow,
   loadAllPushSubscriptionRows,
   markPushSubscriptionSent,
 } from '@/lib/push/server';
 import type { Database } from '@/lib/supabase/client';
-import { translations } from '@/lib/i18n/translations';
 import type { AppLanguage } from '@/types/workout';
 
 const VAPID_PUBLIC = process.env.VAPID_PUBLIC_KEY ?? '';
@@ -19,10 +18,6 @@ const VAPID_SUBJECT = process.env.VAPID_SUBJECT ?? 'mailto:admin@example.com';
 function assertCronAuth(request: NextRequest): boolean {
   const authHeader = request.headers.get('authorization');
   return authHeader === `Bearer ${process.env.CRON_SECRET}`;
-}
-
-function getReminderCopy(language: AppLanguage) {
-  return translations[language].notifications;
 }
 
 function createServiceClient() {
@@ -59,7 +54,7 @@ export async function GET(request: NextRequest) {
 
   const sb = createServiceClient();
   const [profilesResult, historyResult, subscriptionsResult] = await Promise.all([
-    sb.from('profiles').select('user_id, rest_days, preferences'),
+    sb.from('profiles').select('user_id, display_name, rest_days, preferences'),
     sb.from('history').select('user_id, completed_at').order('completed_at', { ascending: false }),
     loadAllPushSubscriptionRows(),
   ]);
@@ -95,6 +90,7 @@ export async function GET(request: NextRequest) {
   for (const profileRow of profilesResult.data ?? []) {
     const profile = profileRow as {
       user_id: string;
+      display_name: string | null;
       rest_days: number[] | null;
       preferences: Record<string, unknown> | null;
     };
@@ -109,7 +105,17 @@ export async function GET(request: NextRequest) {
     }
     const restDays = profile.rest_days ?? [];
     const historyForUser = historiesByUser.get(profile.user_id) ?? [];
-    const reminderCopy = getReminderCopy(language as AppLanguage);
+    const currentStreak = getCurrentStreak({
+      history: historyForUser,
+      restDays,
+      timezone,
+      now,
+    });
+    const reminderCopy = buildStreakReminderCopy({
+      displayName: profile.display_name,
+      currentStreak,
+      language: language as AppLanguage,
+    });
 
     if (!shouldSendStreakReminder({
       history: historyForUser,
@@ -133,10 +139,14 @@ export async function GET(request: NextRequest) {
         await webpush.sendNotification(
           { endpoint: subscription.endpoint, keys: subscription.keys },
           JSON.stringify({
-            title: reminderCopy.streakTitle,
-            body: reminderCopy.streakBody,
+            title: reminderCopy.title,
+            body: reminderCopy.body,
             tag: 'routyne-streak',
             url: '/',
+            data: {
+              kind: 'streak-reminder',
+              url: '/',
+            },
           })
         );
         await markPushSubscriptionSent(profile.user_id, subscription.endpoint);

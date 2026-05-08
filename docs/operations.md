@@ -55,6 +55,17 @@ Run the current schema SQL in the Supabase SQL Editor after schema changes. The 
 - OAuth/magic-link callbacks return to `/auth/callback`.
 - The main app reopens the account sync panel when the callback redirects with `?account=sync`.
 
+## Native Mobile Release
+
+- Checked-in native projects live in [`android/`](/Users/sierra/Code/routyne/android) and [`ios/`](/Users/sierra/Code/routyne/ios).
+- Native app id and bundle id are `com.trebollabs.routyne`.
+- The native shell loads the hosted Vercel app by default; use `CAPACITOR_SERVER_URL` when you want a device to load a local dev server.
+- Run `pnpm cap:sync` after changing web assets, Capacitor config, or notification behavior.
+- Open the Android project with `pnpm exec cap open android`, then install it from Android Studio to a connected device.
+- Native push registration uses Firebase on Android and APNs through Firebase on iOS. Add `android/app/google-services.json` before Android push tests.
+- iOS release testing requires a paid Apple Developer account, the Push Notifications capability, an APNs key uploaded to Firebase, and a physical device.
+- `POST /api/push/devices` requires an authenticated bearer token plus `SUPABASE_SERVICE_ROLE_KEY` on the server.
+
 ## Sync Debugging
 
 Every `syncCloudData(userId)` call creates a structured trace through [`src/lib/sync/debug.ts`](/Users/sierra/Code/routyne/src/lib/sync/debug.ts).
@@ -83,7 +94,9 @@ Routes:
 
 - `POST /api/push/subscribe`: subscribe current authenticated user when Supabase service credentials exist; local fallback stores in memory.
 - `DELETE /api/push/subscribe`: remove a subscription.
-- `POST /api/push/notify`: immediate notification.
+- `POST /api/push/notify`: immediate notification for the Web Push fallback. Production access is gated by `CRON_SECRET`.
+- `POST /api/push/devices`: register a native device token for the signed-in user.
+- `DELETE /api/push/devices`: remove a native device token for the signed-in user.
 - `GET /api/cron/streak-reminders`: daily streak reminders, protected by `CRON_SECRET`.
 
 Vercel Cron schedule in `vercel.json`: `0 1 * * *`.

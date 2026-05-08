@@ -12,6 +12,7 @@ import type {
   UserProfile,
   UserProfilePreferences,
 } from '@/types/workout';
+import { normalizeReminderTime } from '@/lib/notifications/reminders';
 
 const PROFILE_KEY = 'profile' as const;
 const EPOCH = new Date(0).toISOString();
@@ -43,6 +44,7 @@ export const DEFAULT_PROFILE_PREFERENCES: UserProfilePreferences = {
   reducedMotion: false,
   language: 'es',
   streakReminderEnabled: true,
+  streakReminderTime: '20:00',
   timerNotificationsEnabled: true,
   timezone: DEFAULT_TIMEZONE,
 };
@@ -81,6 +83,7 @@ function normalizePreferences(
   const streakReminderEnabled = typeof raw.streakReminderEnabled === 'boolean'
     ? raw.streakReminderEnabled
     : DEFAULT_PROFILE_PREFERENCES.streakReminderEnabled;
+  const streakReminderTime = normalizeReminderTime(typeof raw.streakReminderTime === 'string' ? raw.streakReminderTime : null);
   const timerNotificationsEnabled = typeof raw.timerNotificationsEnabled === 'boolean'
     ? raw.timerNotificationsEnabled
     : DEFAULT_PROFILE_PREFERENCES.timerNotificationsEnabled;
@@ -100,6 +103,7 @@ function normalizePreferences(
     reducedMotion,
     language,
     streakReminderEnabled,
+    streakReminderTime,
     timerNotificationsEnabled,
     timezone,
   };

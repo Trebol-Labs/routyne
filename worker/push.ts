@@ -11,6 +11,11 @@ interface PushPayload {
   body: string;
   tag?: string;
   url?: string;
+  data?: {
+    kind?: string;
+    url?: string;
+    [key: string]: unknown;
+  };
 }
 
 interface ScheduleMessage {
@@ -20,6 +25,7 @@ interface ScheduleMessage {
   title: string;
   body: string;
   tag?: string;
+  data?: PushPayload['data'];
 }
 
 interface CancelMessage {
@@ -45,7 +51,7 @@ self.addEventListener('message', (event: ExtendableMessageEvent) => {
     return;
   }
 
-  const { id, delayMs, title, body, tag } = data;
+  const { id, delayMs, title, body, tag, data: payloadData } = data;
   const existing = scheduledNotifications.get(id);
   if (existing) {
     clearTimeout(existing);
@@ -58,6 +64,14 @@ self.addEventListener('message', (event: ExtendableMessageEvent) => {
       tag: tag ?? 'routyne-timer',
       icon: '/icons/icon-192x192.png',
       badge: '/icons/icon-192x192.png',
+      silent: false,
+      renotify: true,
+      vibrate: [120, 60, 120],
+      data: {
+        kind: payloadData?.kind ?? 'rest-timer',
+        url: payloadData?.url ?? '/',
+        ...(payloadData ?? {}),
+      },
     });
   }, delayMs);
   scheduledNotifications.set(id, timer);
@@ -79,21 +93,34 @@ self.addEventListener('push', (event) => {
       tag: payload.tag ?? 'routyne',
       icon: '/icons/icon-192x192.png',
       badge: '/icons/icon-192x192.png',
-      data: { url: payload.url ?? '/' },
+      silent: false,
+      renotify: true,
+      vibrate: [120, 60, 120],
+      data: {
+        kind: payload.data?.kind ?? 'push',
+        url: payload.data?.url ?? payload.url ?? '/',
+        ...(payload.data ?? {}),
+      },
     })
   );
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url: string = (event.notification.data as { url?: string }).url ?? '/';
+  const payload = event.notification.data as { url?: string } | undefined;
+  const url: string = payload?.url ?? '/';
 
   event.waitUntil(
     (self.clients as Clients)
       .matchAll({ type: 'window', includeUncontrolled: true })
       .then((clientList) => {
         for (const client of clientList) {
-          if ('navigate' in client && 'focus' in client) {
+          if ('navigate' in client && url) {
+            return (client as WindowClient)
+              .navigate(url)
+              .then((navigatedClient) => navigatedClient.focus());
+          }
+          if ('focus' in client) {
             return (client as WindowClient).focus();
           }
         }

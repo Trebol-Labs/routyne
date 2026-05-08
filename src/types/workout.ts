@@ -87,6 +87,7 @@ export interface UserProfilePreferences {
   reducedMotion: boolean;
   language: AppLanguage;
   streakReminderEnabled: boolean;
+  streakReminderTime: string;
   timerNotificationsEnabled: boolean;
   timezone: string;
 }
@@ -114,6 +115,11 @@ export interface ExerciseBrowseItem {
   bodyPart: string;
   equipment: string;
   gifUrl?: string;
+  mediaUrl?: string | null;
+  target?: string;
+  secondaryMuscles?: string[];
+  instructions?: string[];
+  difficulty?: string;
 }
 
 // ── History / volume tracking ─────────────────────────────────────────────────

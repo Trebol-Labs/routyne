@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { Clock, Play, Pause, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
-import { cancelLocalNotification, scheduleLocalNotification } from '@/lib/push/client';
+import { cancelLocalNotification, scheduleLocalNotification } from '@/lib/notifications/provider';
 import { useI18n } from '@/components/i18n/LanguageProvider';
 
 interface RestTimerProps {
@@ -67,7 +67,7 @@ export function RestTimer({ duration, onFinish, onClose }: RestTimerProps) {
   }, [isRunning]);
 
   useEffect(() => {
-    if (!isRunning || !timerNotificationsEnabled || typeof Notification === 'undefined' || Notification.permission !== 'granted') {
+    if (!isRunning || !timerNotificationsEnabled) {
       void cancelLocalNotification(localNotificationId);
       return;
     }
@@ -79,6 +79,11 @@ export function RestTimer({ duration, onFinish, onClose }: RestTimerProps) {
       title: t.notifications.restTitle,
       body: t.notifications.restBody,
       tag: localNotificationId,
+      data: {
+        kind: 'rest-timer',
+        url: '/',
+      },
+      channelId: 'rest-timers',
     });
 
     return () => {
