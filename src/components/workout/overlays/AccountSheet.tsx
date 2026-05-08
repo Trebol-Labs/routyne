@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowRight,
@@ -16,6 +17,7 @@ import {
   Minus,
   Plus,
   RefreshCw,
+  RotateCcw,
   Smartphone,
   ShieldCheck,
   Upload,
@@ -38,6 +40,7 @@ import {
   importAllData,
   type ExportFile,
 } from '@/lib/db/export';
+import { resetOnboarding } from '@/lib/db/nutritionProfile';
 import type {
   AccentColor,
   AppLanguage,
@@ -213,6 +216,7 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
   const { status: syncStatus, pendingCount, lastSyncAt, lastError, syncNow } = useSync(user?.id);
   const { language, setLanguage, t } = useI18n();
   const push = usePushNotifications(session?.access_token);
+  const router = useRouter();
 
   const [isPersisted, setIsPersisted] = useState<boolean | null>(null);
   const [isExporting, setIsExporting] = useState(false);
@@ -222,7 +226,29 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
   const [email, setEmail] = useState('');
   const [authMode, setAuthMode] = useState<'setup' | 'email' | 'sent'>('setup');
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const [isResettingOnboarding, setIsResettingOnboarding] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Dev-only: account-specific reset for the maintainer to redo onboarding.
+  const canResetOnboarding = user?.email === 'npadilla133@gmail.com';
+
+  const handleResetOnboarding = async () => {
+    if (!canResetOnboarding || isResettingOnboarding) return;
+    const confirmMsg = language === 'en'
+      ? 'Reset onboarding for this account? Your nutrition profile and pending adjustment will be cleared, and you will be sent back to the onboarding flow.'
+      : '¿Reiniciar el onboarding de esta cuenta? Se borrará tu perfil de nutrición y el ajuste pendiente, y volverás al flujo de onboarding.';
+    if (!window.confirm(confirmMsg)) return;
+    setIsResettingOnboarding(true);
+    try {
+      await resetOnboarding();
+      onClose();
+      router.push('/onboarding');
+    } catch (err) {
+      console.error('[AccountSheet] resetOnboarding failed', err);
+      setIsResettingOnboarding(false);
+      window.alert(language === 'en' ? 'Reset failed. Check console.' : 'Falló el reinicio. Revisa la consola.');
+    }
+  };
 
   const canUseLocalBackup = process.env.NODE_ENV !== 'production' || process.env.NEXT_PUBLIC_LOCAL_BACKUP_TOOLS === 'true';
   const localOnlyMode = process.env.NEXT_PUBLIC_LOCAL_ONLY === 'true';
@@ -1477,6 +1503,42 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
                   </motion.p>
                 )}
               </AnimatePresence>
+            </motion.section>
+          )}
+
+          {canResetOnboarding && (
+            <motion.section
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
+              className="glass-panel space-y-3 rounded-3xl border-amber-500/20 p-4"
+            >
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-300/70">
+                  {language === 'en' ? 'Maintainer tools' : 'Herramientas de maintainer'}
+                </p>
+                <p className="mt-1 text-sm font-medium text-white/55">
+                  {language === 'en'
+                    ? 'Wipe local nutrition profile + onboarding flags and re-run the onboarding wizard.'
+                    : 'Borra el perfil de nutrición local + las flags de onboarding y vuelve a correr el wizard.'}
+                </p>
+              </div>
+              <Button
+                variant="glass-primary"
+                className="h-11 w-full rounded-2xl text-[11px] font-black uppercase tracking-widest"
+                onClick={handleResetOnboarding}
+                disabled={isResettingOnboarding}
+              >
+                {isResettingOnboarding
+                  ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  : <RotateCcw className="mr-2 h-4 w-4" />}
+                {language === 'en' ? 'Reset onboarding' : 'Reiniciar onboarding'}
+              </Button>
+              <p className="text-[10px] font-medium leading-relaxed text-white/30">
+                {language === 'en'
+                  ? `Visible only for ${user?.email}.`
+                  : `Solo visible para ${user?.email}.`}
+              </p>
             </motion.section>
           )}
         </div>
