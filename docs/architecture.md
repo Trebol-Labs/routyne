@@ -18,6 +18,15 @@ Main views:
 
 Standalone pages include `/landing`, `/privacy`, `/terms`, `/support`, `/onboarding`, and `/auth/callback`.
 
+## Native Shell
+
+Routyne also ships checked-in Capacitor projects in [`/android`](/Users/sierra/Code/routyne/android) and [`/ios`](/Users/sierra/Code/routyne/ios). The native shell loads the hosted Vercel app instead of a static export, which keeps cookies, route handlers, API routes, and Supabase auth callbacks working inside the app container.
+
+- [`src/lib/site.ts`](/Users/sierra/Code/routyne/src/lib/site.ts) picks `com.trebollabs.routyne://auth/callback` for native auth redirects and maps the custom scheme back to the hosted callback URL.
+- [`src/hooks/useNativeDeepLinks.ts`](/Users/sierra/Code/routyne/src/hooks/useNativeDeepLinks.ts) handles launch URLs, app URL opens, and notification tap routing.
+- [`src/hooks/useStreakReminderSync.ts`](/Users/sierra/Code/routyne/src/hooks/useStreakReminderSync.ts) reschedules native streak reminders when profile or history changes.
+- [`CAPACITOR_SERVER_URL`](/Users/sierra/Code/routyne/.env.example) can override the hosted URL during device testing; otherwise the shell loads `NEXT_PUBLIC_SITE_URL`.
+
 ## State And Persistence
 
 - [`src/store/useWorkoutStore.ts`](/Users/sierra/Code/routyne/src/store/useWorkoutStore.ts) is the canonical app state.
@@ -93,13 +102,18 @@ The coach never queries Supabase directly. Current context includes workout hist
 
 ## Push Notifications
 
-- [`worker/push.ts`](/Users/sierra/Code/routyne/worker/push.ts): service worker push/rest timer behavior.
+- [`src/lib/notifications/provider.ts`](/Users/sierra/Code/routyne/src/lib/notifications/provider.ts): platform selection plus the shared notification API used by the UI.
+- [`src/lib/notifications/native.ts`](/Users/sierra/Code/routyne/src/lib/notifications/native.ts): Capacitor local notifications, channels, permissions, and native push registration.
+- [`src/app/api/push/devices/route.ts`](/Users/sierra/Code/routyne/src/app/api/push/devices/route.ts): authenticated native device register/unregister API.
+- [`worker/push.ts`](/Users/sierra/Code/routyne/worker/push.ts): service worker push/rest timer behavior for the Web Push fallback.
 - [`src/lib/push/client.ts`](/Users/sierra/Code/routyne/src/lib/push/client.ts): browser subscription logic.
 - [`src/lib/push/subscriptions.ts`](/Users/sierra/Code/routyne/src/lib/push/subscriptions.ts): in-memory local fallback.
 - [`src/lib/push/server.ts`](/Users/sierra/Code/routyne/src/lib/push/server.ts): Supabase service-role storage helpers.
 - [`src/app/api/push/subscribe/route.ts`](/Users/sierra/Code/routyne/src/app/api/push/subscribe/route.ts): subscribe/unsubscribe API.
-- [`src/app/api/push/notify/route.ts`](/Users/sierra/Code/routyne/src/app/api/push/notify/route.ts): immediate push API.
+- [`src/app/api/push/notify/route.ts`](/Users/sierra/Code/routyne/src/app/api/push/notify/route.ts): guarded immediate push API used by the web fallback.
 - [`src/app/api/cron/streak-reminders/route.ts`](/Users/sierra/Code/routyne/src/app/api/cron/streak-reminders/route.ts): protected daily reminder cron.
+
+Native installs use `notification_devices` for FCM/APNs token storage, while browser and PWA installs continue to use `push_subscriptions` for Web Push.
 
 ## Workers
 
