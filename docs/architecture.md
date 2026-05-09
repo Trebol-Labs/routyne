@@ -160,5 +160,6 @@ Generated markdown comes from [`src/lib/markdown/generator.ts`](/Users/sierra/Co
 - Translations live in [`src/lib/i18n/translations.ts`](/Users/sierra/Code/routyne/src/lib/i18n/translations.ts).
 - Language preference is stored in the user profile and mirrored to a cookie for standalone pages.
 - Core visual utilities are `glass-panel`, `sunken-glass`, `active-glass-btn`, and `liquid-bg-dark`.
+- Scrollable app shells and sheets use the shared `no-scrollbar` utility so scrolling stays available without showing the browser chrome unless it is actually needed.
 - Motion uses Framer Motion easing `[0.23, 1, 0.32, 1]`.
 - Preserve the blue/liquid-glass identity when extending workout UI.
