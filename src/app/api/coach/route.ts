@@ -30,6 +30,27 @@ function checkRateLimit(key: string): { allowed: boolean; remaining: number } {
   return { allowed: true, remaining: LIMIT - bucket.count };
 }
 
+// ── Hybrid model selection ───────────────────────────────────────────────────
+//
+// Q&A goes to Haiku 4.5 (cheap, fast).
+// Routine generation goes to Sonnet 4.6 (better at multi-constraint reasoning).
+// Both route through Vercel AI Gateway — no API keys to manage, OIDC auto-refreshes.
+
+const ROUTINE_INTENT_RE = /\b(rutina|routine|programa|workout\s*(plan|program)|split|periodi(z|s)aci[oó]n|hazme|cr[eé]ame?|cr[eé]a\s+(una|un|me)|gener(a|ame)|dise[ñn]a|build\s+(me|a)|mi\s+plan)\b/i;
+
+function detectsRoutineGeneration(messages: { role: string; content: string }[]): boolean {
+  const lastUser = [...messages].reverse().find((m) => m.role === 'user');
+  return lastUser ? ROUTINE_INTENT_RE.test(lastUser.content) : false;
+}
+
+const ROUTINE_MODE_HINT = `
+
+═══════════════════════════════════════════════════════
+MODO RUTINA ACTIVO
+═══════════════════════════════════════════════════════
+El usuario está pidiendo una rutina/programa estructurado. Ignora el límite de "3-4 oraciones".
+Genera una rutina completa con: días de la semana, ejercicios por día, sets × reps, RPE/RIR objetivo, descanso, y notas de progresión semanal. Si faltan datos críticos del usuario (split preferido, días disponibles, ejercicios que evitar, lesiones, foco muscular), pregúntalos PRIMERO en una sola tanda antes de generar.`;
+
 // ── Handler ───────────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
@@ -65,17 +86,41 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No messages provided' }, { status: 400 });
   }
 
+  const isRoutineMode = detectsRoutineGeneration(messages);
+  const model = isRoutineMode ? 'anthropic/claude-sonnet-4.6' : 'anthropic/claude-haiku-4.5';
+  const maxOutputTokens = isRoutineMode ? 2048 : 512;
+
+  const systemPrompt = buildSystemPrompt(userContext) + (isRoutineMode ? ROUTINE_MODE_HINT : '');
+
   try {
-    const { text } = await generateText({
-      model: 'anthropic/claude-haiku-4.5', // routes through Vercel AI Gateway
-      maxOutputTokens: 512,
-      system: buildSystemPrompt(userContext),
-      messages,
+    const { text, usage } = await generateText({
+      model,
+      maxOutputTokens,
+      messages: [
+        {
+          role: 'system',
+          content: systemPrompt,
+          // Cache the system prompt — identical across turns of a session.
+          // ~90% input-cost reduction on follow-ups (5min TTL covers a chat).
+          providerOptions: {
+            anthropic: { cacheControl: { type: 'ephemeral' } },
+          },
+        },
+        ...messages,
+      ],
     });
 
     return NextResponse.json(
-      { reply: text },
-      { headers: { 'X-RateLimit-Remaining': String(remaining) } }
+      { reply: text, mode: isRoutineMode ? 'routine' : 'qa' },
+      {
+        headers: {
+          'X-RateLimit-Remaining': String(remaining),
+          'X-Coach-Model': model,
+          'X-Coach-Tokens-In': String(usage?.inputTokens ?? 0),
+          'X-Coach-Tokens-Out': String(usage?.outputTokens ?? 0),
+          'X-Coach-Tokens-Cached': String(usage?.cachedInputTokens ?? 0),
+        },
+      }
     );
   } catch (err) {
     console.error('[/api/coach] generateText error', err);
