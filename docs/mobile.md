@@ -21,7 +21,7 @@ Routyne ships a Capacitor shell for Android and iOS. The shell loads the hosted 
 
 ## Required Accounts And Assets
 
-- Android Studio, Android SDK, and a Java 17+ JDK.
+- Android Studio, Android SDK, and a Java 21 JDK. Android Studio's bundled JBR 21 is the easiest option.
 - A Firebase project with an Android app for native push registration.
 - `android/app/google-services.json` for Android push builds.
 - `ios/App/App/GoogleService-Info.plist` for iOS push builds later.
@@ -33,7 +33,7 @@ Do not expect the app to bypass silent mode, Focus, DND, or user-disabled channe
 
 ## Install On An Android Phone
 
-1. Install Node 20, pnpm, Android Studio, and a Java 17+ JDK.
+1. Install Node 20, pnpm, Android Studio, and a Java 21 JDK.
 2. Enable Developer options and USB debugging on the phone.
 3. Copy `.env.example` to `.env.local` and fill in the required values.
 4. Add `android/app/google-services.json` from your Firebase Android app.
@@ -42,6 +42,15 @@ Do not expect the app to bypass silent mode, Focus, DND, or user-disabled channe
 7. Run `pnpm cap:sync` so Capacitor copies the latest web build, config, and plugins into `android/` and `ios/`.
 8. Open Android Studio with `pnpm exec cap open android`.
 9. Connect the phone and press Run in Android Studio.
+
+If you want a debug APK from the command line, use Android Studio's bundled JDK 21:
+
+```bash
+cd android
+JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" \
+PATH="/Applications/Android Studio.app/Contents/jbr/Contents/Home/bin:$PATH" \
+./gradlew assembleDebug
+```
 
 If you are testing the production site instead of local changes, leave `CAPACITOR_SERVER_URL` unset. The shell then loads `NEXT_PUBLIC_SITE_URL`.
 
@@ -58,7 +67,7 @@ If you are testing the production site instead of local changes, leave `CAPACITO
 ## Troubleshooting
 
 - If the app opens to a blank screen, confirm the phone can reach the URL in `CAPACITOR_SERVER_URL`.
+- If the build fails with `invalid source release: 21`, make sure Gradle is using Android Studio's bundled JDK 21 instead of a system JDK 17.
 - If notifications do not appear, check the Android notification permission and the notification channel settings in the OS.
 - If sign-in returns to the browser instead of the app, verify the custom URL scheme is present in the generated Android and iOS projects.
 - If native push registration fails, make sure the Firebase file is present and the user is signed in.
-

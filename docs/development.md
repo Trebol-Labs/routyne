@@ -5,7 +5,7 @@
 - Node `20` from [`.nvmrc`](/Users/sierra/Code/routyne/.nvmrc).
 - pnpm from `packageManager` in [`package.json`](/Users/sierra/Code/routyne/package.json).
 - `RAPIDAPI_KEY` for ExerciseDB-backed media/search and production builds.
-- Android Studio + a Java 17+ JDK for the native shell.
+- Android Studio + a Java 21 JDK for the native shell. Android Studio's bundled JBR 21 also works.
 
 ## Local Setup
 
@@ -77,6 +77,13 @@ vercel env pull
 - Use `pnpm cap:sync` after changing web assets, Capacitor config, or notification assets.
 - Use `pnpm exec cap open android` to open the generated Android project in Android Studio.
 - Install `android/app/google-services.json` before testing native push registration.
+- If `./gradlew assembleDebug` fails with `invalid source release: 21`, run it with Android Studio's bundled JDK 21:
+
+  ```bash
+  JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" \
+  PATH="/Applications/Android Studio.app/Contents/jbr/Contents/Home/bin:$PATH" \
+  ./gradlew assembleDebug
+  ```
 
 ## Verification Matrix
 
