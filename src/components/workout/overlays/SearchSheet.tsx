@@ -289,7 +289,7 @@ function SearchPanelContent({
             </p>
           </div>
 
-          <div className="flex-1 min-h-0 space-y-1.5 overflow-y-auto overscroll-contain pr-1">
+          <div className="flex-1 min-h-0 space-y-1.5 overflow-y-auto overscroll-contain pr-1 no-scrollbar">
             {isLoading ? (
               Array.from({ length: 5 }).map((_, index) => (
                 <Skeleton key={index} className="h-[4.35rem] rounded-[1.15rem] bg-white/5" />

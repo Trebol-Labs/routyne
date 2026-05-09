@@ -33,7 +33,7 @@ export function OnboardingShell({ step, totalSteps, stepKey, children }: Onboard
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto pb-6">
+        <div className="flex-1 overflow-y-auto pb-6 no-scrollbar">
           <AnimatePresence mode="wait">
             <motion.div
               key={stepKey}

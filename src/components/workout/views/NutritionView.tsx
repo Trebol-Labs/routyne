@@ -355,7 +355,7 @@ export function NutritionView() {
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -30 }}
       transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
-      className="space-y-4 px-4 pb-48 overflow-y-auto"
+      className="space-y-4 px-4 pb-48 overflow-y-auto no-scrollbar"
       id="main-content"
     >
       {NUTRITION_ENABLED && coachLoaded && (

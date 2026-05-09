@@ -125,7 +125,7 @@ export function BodyFatGuide({ sex, onSelect, onClose }: BodyFatGuideProps) {
       />
 
       {/* Sheet */}
-      <div className="relative z-10 w-full max-w-md rounded-3xl border border-white/10 bg-[#0d1117] p-6 flex flex-col gap-5 max-h-[85dvh] overflow-y-auto">
+      <div className="relative z-10 w-full max-w-md rounded-3xl border border-white/10 bg-[#0d1117] p-6 flex flex-col gap-5 max-h-[85dvh] overflow-y-auto no-scrollbar">
         {/* Header */}
         <div className="flex items-start justify-between gap-3">
           <div>

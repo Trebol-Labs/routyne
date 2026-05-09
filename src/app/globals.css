@@ -97,6 +97,12 @@
       radial-gradient(ellipse 140% 90% at 105% 105%, rgba(67, 56, 202, 0.14) 0%, transparent 100%);
     background-attachment: fixed;
     min-height: 100%;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  html::-webkit-scrollbar {
+    display: none;
   }
 
   body {
@@ -104,28 +110,16 @@
     background: transparent;
     font-family: var(--font-sans);
     overflow-x: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
     -webkit-tap-highlight-color: transparent;
     -webkit-font-smoothing: antialiased;
     overscroll-behavior-y: contain;
     padding-top: env(safe-area-inset-top);
   }
 
-  /* Hide scrollbars on touch devices */
-  @media (hover: none) {
-    ::-webkit-scrollbar {
-      display: none;
-    }
-    * {
-      -ms-overflow-style: none;
-      scrollbar-width: none;
-    }
-  }
-
-  /* Thin scrollbars on pointer devices (desktop) */
-  @media (hover: hover) and (pointer: fine) {
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
-    ::-webkit-scrollbar-track { background: transparent; }
+  body::-webkit-scrollbar {
+    display: none;
   }
 
   * {
@@ -157,6 +151,15 @@
     background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 50%, rgba(255,255,255,0.02) 100%);
     pointer-events: none;
     border-radius: inherit;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
   }
 
   .text-liquid {

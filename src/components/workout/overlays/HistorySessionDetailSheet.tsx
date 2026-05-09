@@ -45,7 +45,7 @@ export function HistorySessionDetailSheet({
 
   return (
     <Sheet onClose={onClose} title={t.history.detailTitle} height="82vh">
-      <div className="h-full overflow-y-auto px-4 pb-6">
+      <div className="h-full overflow-y-auto px-4 pb-6 no-scrollbar">
         <div className="space-y-4">
           <div className="glass-panel rounded-3xl border-white/10 p-4 space-y-2">
             <div className="flex items-center justify-between gap-3">

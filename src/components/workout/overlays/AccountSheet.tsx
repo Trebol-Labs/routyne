@@ -479,7 +479,7 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
   const deviceTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || profile.preferences.timezone;
   return (
     <Sheet onClose={onClose} title={t.account.title}>
-      <div className="h-full overflow-y-auto px-4 pb-6">
+      <div className="h-full overflow-y-auto px-4 pb-6 no-scrollbar">
         <div className="space-y-4">
           <motion.section
             ref={(node) => { sectionRefs.current.profile = node; }}

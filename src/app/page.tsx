@@ -180,7 +180,7 @@ function HomeContent() {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 1.1, y: -40 }}
                 transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
-                className="flex-1 flex flex-col justify-center overflow-y-auto"
+                className="flex-1 flex flex-col justify-center overflow-y-auto no-scrollbar"
                 id="main-content"
               >
                 <ErrorBoundary
@@ -201,7 +201,7 @@ function HomeContent() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -40 }}
                 transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
-                className="flex-1 flex flex-col overflow-y-auto"
+                className="flex-1 flex flex-col overflow-y-auto no-scrollbar"
                 id="main-content"
               >
                 <RoutineBuilderView />
@@ -214,7 +214,7 @@ function HomeContent() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -30 }}
                 transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
-                className="flex-1 flex flex-col overflow-y-auto"
+                className="flex-1 flex flex-col overflow-y-auto no-scrollbar"
                 id="main-content"
               >
                 <RoutineManagerView />
@@ -233,7 +233,7 @@ function HomeContent() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -30 }}
                 transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
-                className="flex-1 flex flex-col overflow-y-auto"
+                className="flex-1 flex flex-col overflow-y-auto no-scrollbar"
                 id="main-content"
               >
                 <WorkoutSummaryView />

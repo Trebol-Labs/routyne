@@ -129,7 +129,7 @@ export function ShareCardSheet({ summary, weightUnit, onClose }: ShareCardSheetP
         style={{ position: 'fixed', bottom: 0, left: 0, right: 0, y: panOffset }}
         onPan={handlePan}
         onPanEnd={handlePanEnd}
-        className="z-[var(--z-overlay)] glass-panel rounded-t-3xl border-white/10 overscroll-none touch-pan-x cursor-grab active:cursor-grabbing max-h-[92dvh] overflow-y-auto"
+        className="z-[var(--z-overlay)] glass-panel rounded-t-3xl border-white/10 overscroll-none touch-pan-x cursor-grab active:cursor-grabbing max-h-[92dvh] overflow-y-auto no-scrollbar"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Drag handle */}

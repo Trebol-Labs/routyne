@@ -173,7 +173,7 @@ export function CoachSheet({ onClose }: CoachSheetProps) {
       <div className="h-full flex flex-col overflow-hidden px-4 pb-4">
 
         {/* Chat area */}
-        <div className="flex-1 overflow-y-auto space-y-3 py-3 pr-1 -mr-1">
+        <div className="flex-1 overflow-y-auto space-y-3 py-3 pr-1 -mr-1 no-scrollbar">
 
           {/* Welcome bubble */}
           <AssistantBubble content={welcomeMessage} />
@@ -265,7 +265,7 @@ export function CoachSheet({ onClose }: CoachSheetProps) {
             className={cn(
               'flex-1 sunken-glass rounded-xl px-3.5 py-3 text-white text-sm font-medium',
               'placeholder:text-white/20 bg-transparent border-none outline-none resize-none',
-              'max-h-28 overflow-y-auto',
+              'max-h-28 overflow-y-auto no-scrollbar',
               (isLoading || limitReached) && 'opacity-40 cursor-not-allowed'
             )}
           />
