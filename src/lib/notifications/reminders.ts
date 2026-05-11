@@ -2,12 +2,11 @@ import type { AppLanguage } from '@/types/workout';
 
 export function getLocalDateKey(date: Date, timeZone: string): string {
   const safeTimeZone = isValidTimeZone(timeZone) ? timeZone : 'UTC';
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: safeTimeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(date);
+  if (safeTimeZone === 'UTC') {
+    return formatUtcDateKey(date);
+  }
+
+  const parts = getDateKeyFormatter(safeTimeZone).formatToParts(date);
 
   const year = parts.find((part) => part.type === 'year')?.value ?? '1970';
   const month = parts.find((part) => part.type === 'month')?.value ?? '01';
@@ -17,10 +16,11 @@ export function getLocalDateKey(date: Date, timeZone: string): string {
 
 export function getLocalDayOfWeek(date: Date, timeZone: string): number {
   const safeTimeZone = isValidTimeZone(timeZone) ? timeZone : 'UTC';
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: safeTimeZone,
-    weekday: 'short',
-  }).formatToParts(date);
+  if (safeTimeZone === 'UTC') {
+    return date.getUTCDay();
+  }
+
+  const parts = getWeekdayFormatter(safeTimeZone).formatToParts(date);
   const weekday = parts.find((part) => part.type === 'weekday')?.value ?? 'Sun';
   const map: Record<string, number> = {
     Sun: 0,
@@ -52,14 +52,82 @@ export interface StreakReminderCopy {
 
 const DEFAULT_REMINDER_TIME = '20:00';
 const DAY_MS = 24 * 60 * 60 * 1000;
+const timeZoneValidityCache = new Map<string, boolean>();
+const dateKeyFormatters = new Map<string, Intl.DateTimeFormat>();
+const weekdayFormatters = new Map<string, Intl.DateTimeFormat>();
+const offsetFormatters = new Map<string, Intl.DateTimeFormat>();
 
 function isValidTimeZone(timeZone: string): boolean {
+  const cached = timeZoneValidityCache.get(timeZone);
+  if (cached !== undefined) {
+    return cached;
+  }
+
   try {
     new Intl.DateTimeFormat('en-US', { timeZone }).format(new Date());
+    timeZoneValidityCache.set(timeZone, true);
     return true;
   } catch {
+    timeZoneValidityCache.set(timeZone, false);
     return false;
   }
+}
+
+function formatUtcDateKey(date: Date): string {
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function getDateKeyFormatter(timeZone: string): Intl.DateTimeFormat {
+  const cached = dateKeyFormatters.get(timeZone);
+  if (cached) {
+    return cached;
+  }
+
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  dateKeyFormatters.set(timeZone, formatter);
+  return formatter;
+}
+
+function getWeekdayFormatter(timeZone: string): Intl.DateTimeFormat {
+  const cached = weekdayFormatters.get(timeZone);
+  if (cached) {
+    return cached;
+  }
+
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    weekday: 'short',
+  });
+  weekdayFormatters.set(timeZone, formatter);
+  return formatter;
+}
+
+function getOffsetFormatter(timeZone: string): Intl.DateTimeFormat {
+  const cached = offsetFormatters.get(timeZone);
+  if (cached) {
+    return cached;
+  }
+
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+  offsetFormatters.set(timeZone, formatter);
+  return formatter;
 }
 
 function parseDateKey(dateKey: string): { year: number; month: number; day: number } | null {
@@ -77,16 +145,11 @@ function parseDateKey(dateKey: string): { year: number; month: number; day: numb
 }
 
 function getTimeZoneOffsetMinutes(date: Date, timeZone: string): number {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    hourCycle: 'h23',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  }).formatToParts(date);
+  if (timeZone === 'UTC') {
+    return 0;
+  }
+
+  const parts = getOffsetFormatter(timeZone).formatToParts(date);
 
   const year = Number(parts.find((part) => part.type === 'year')?.value ?? '1970');
   const month = Number(parts.find((part) => part.type === 'month')?.value ?? '01');
@@ -113,6 +176,10 @@ function createZonedDate(
 
   const safeTimeZone = isValidTimeZone(timeZone) ? timeZone : 'UTC';
   const baseUtc = Date.UTC(parts.year, parts.month - 1, parts.day, hour, minute, second);
+  if (safeTimeZone === 'UTC') {
+    return new Date(baseUtc);
+  }
+
   let utc = baseUtc;
 
   for (let i = 0; i < 3; i += 1) {
@@ -126,13 +193,22 @@ function createZonedDate(
 }
 
 function getDateKeyAtOffset(dateKey: string, timeZone: string, offsetDays: number): string {
-  const anchor = createZonedDate(dateKey, timeZone, 12, 0);
+  const safeTimeZone = isValidTimeZone(timeZone) ? timeZone : 'UTC';
+  if (safeTimeZone === 'UTC') {
+    const parts = parseDateKey(dateKey);
+    if (!parts) {
+      return dateKey;
+    }
+    return formatUtcDateKey(new Date(Date.UTC(parts.year, parts.month - 1, parts.day + offsetDays)));
+  }
+
+  const anchor = createZonedDate(dateKey, safeTimeZone, 12, 0);
   if (Number.isNaN(anchor.getTime())) {
     return dateKey;
   }
 
   const candidate = new Date(anchor.getTime() + offsetDays * DAY_MS);
-  return getLocalDateKey(candidate, timeZone);
+  return getLocalDateKey(candidate, safeTimeZone);
 }
 
 function isFulfilledOnDate(params: {
