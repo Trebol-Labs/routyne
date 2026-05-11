@@ -26,6 +26,8 @@ const eslintConfig = defineConfig([
     // PWA service worker build artifacts (gitignored, regenerated on each build):
     "public/sw.js",
     "public/workbox-*.js",
+    // Android Gradle build outputs:
+    "android/**/build/**",
   ]),
 ]);
 
