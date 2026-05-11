@@ -128,7 +128,7 @@ It also includes an imported Hevy archive digest when present, loaded from local
 - [`src/app/api/push/notify/route.ts`](/Users/sierra/Code/routyne/src/app/api/push/notify/route.ts): guarded immediate push API used by the web fallback.
 - [`src/app/api/cron/streak-reminders/route.ts`](/Users/sierra/Code/routyne/src/app/api/cron/streak-reminders/route.ts): protected daily reminder cron.
 
-Native installs use `notification_devices` for FCM/APNs token storage, while browser and PWA installs continue to use `push_subscriptions` for Web Push.
+Native installs use local notification permissions for rest timers and reminders. When `NEXT_PUBLIC_NATIVE_PUSH_ENABLED=true`, native installs also use `notification_devices` for FCM/APNs token storage. Browser and PWA installs continue to use `push_subscriptions` for Web Push.
 
 ## Workers
 

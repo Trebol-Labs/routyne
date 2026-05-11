@@ -51,6 +51,7 @@ If you are testing the Capacitor shell on a real Android phone, keep `pnpm dev` 
 | `NEXT_PUBLIC_NUTRITION_ENABLED` | Optional | Rich nutrition onboarding/profile flag. Defaults on; set `false` to disable. |
 | `NEXT_PUBLIC_LOCAL_BACKUP_TOOLS` | Optional | Shows local backup import/export in production when `true`. |
 | `NEXT_PUBLIC_LOCAL_ONLY` | Optional | Forces local-only account UI mode when `true`. |
+| `NEXT_PUBLIC_NATIVE_PUSH_ENABLED` | Optional | Attempts native FCM/APNs device-token registration when `true`. Defaults off; native local notifications do not require it. |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | Optional | Browser push public key. |
 | `VAPID_PUBLIC_KEY` | Optional | Server push public key. Should match `NEXT_PUBLIC_VAPID_PUBLIC_KEY`. |
 | `VAPID_PRIVATE_KEY` | Optional | Server push private key. |
@@ -76,7 +77,7 @@ vercel env pull
 - Deep-link scheme for auth and notification taps: `com.trebollabs.routyne://auth/callback`.
 - Use `pnpm cap:sync` after changing web assets, Capacitor config, or notification assets.
 - Use `pnpm exec cap open android` to open the generated Android project in Android Studio.
-- Install `android/app/google-services.json` before testing native push registration.
+- Native local notifications do not require Firebase. Install `android/app/google-services.json` and set `NEXT_PUBLIC_NATIVE_PUSH_ENABLED=true` only before testing native FCM token registration.
 - If `./gradlew assembleDebug` fails with `invalid source release: 21`, run it with Android Studio's bundled JDK 21:
 
   ```bash

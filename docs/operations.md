@@ -86,6 +86,7 @@ Use traces to inspect auth mismatch, bootstrap, push, pull, merge counts, cursor
 
 Push setup:
 
+- Native app installs use local notifications by default. Set `NEXT_PUBLIC_NATIVE_PUSH_ENABLED=true` only when Firebase/APNs assets are installed and native remote push device-token registration should run.
 - Generate keys with `node scripts/generate-vapid-keys.mjs`.
 - Set `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, and `VAPID_SUBJECT`.
 - Set `SUPABASE_SERVICE_ROLE_KEY` for production subscription storage.

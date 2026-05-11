@@ -1,6 +1,6 @@
 # Native Mobile Shell
 
-Updated: 2026-05-08
+Updated: 2026-05-11
 
 Routyne ships a Capacitor shell for Android and iOS. The shell loads the hosted Next app by default, then adds native deep links, native local notifications, and native push registration on top.
 
@@ -15,16 +15,17 @@ Routyne ships a Capacitor shell for Android and iOS. The shell loads the hosted 
 
 - Loads the hosted Vercel app instead of a static export.
 - Routes auth callbacks back into the hosted `/auth/callback` handler so Supabase PKCE cookies can finish the session exchange.
-- Registers a native push token and stores it through `/api/push/devices` when the user is signed in.
+- Enables native local notifications without requiring Firebase.
+- Registers a native push token and stores it through `/api/push/devices` only when `NEXT_PUBLIC_NATIVE_PUSH_ENABLED=true` and the user is signed in.
 - Schedules rest timers and streak reminders locally on the device.
 - Keeps Web Push as the fallback for browser installs and the installed PWA.
 
 ## Required Accounts And Assets
 
 - Android Studio, Android SDK, and a Java 21 JDK. Android Studio's bundled JBR 21 is the easiest option.
-- A Firebase project with an Android app for native push registration.
-- `android/app/google-services.json` for Android push builds.
-- `ios/App/App/GoogleService-Info.plist` for iOS push builds later.
+- A Firebase project with an Android app only if testing native remote push registration.
+- `android/app/google-services.json` only when `NEXT_PUBLIC_NATIVE_PUSH_ENABLED=true` for Android FCM token registration.
+- `ios/App/App/GoogleService-Info.plist` only when native remote push registration is enabled for iOS later.
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` for device registration.
 - `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, and `VAPID_SUBJECT` if you still want Web Push fallback.
 - `CRON_SECRET` if you keep the protected streak reminder cron enabled.
@@ -70,4 +71,5 @@ If you are testing the production site instead of local changes, leave `CAPACITO
 - If the build fails with `invalid source release: 21`, make sure Gradle is using Android Studio's bundled JDK 21 instead of a system JDK 17.
 - If notifications do not appear, check the Android notification permission and the notification channel settings in the OS.
 - If sign-in returns to the browser instead of the app, verify the custom URL scheme is present in the generated Android and iOS projects.
-- If native push registration fails, make sure the Firebase file is present and the user is signed in.
+- If native local notifications fail, check the OS notification permission and app notification channels first.
+- If native push token registration fails after setting `NEXT_PUBLIC_NATIVE_PUSH_ENABLED=true`, make sure the Firebase file is present and the user is signed in.

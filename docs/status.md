@@ -1,6 +1,6 @@
 # Routyne Status
 
-Updated: 2026-05-08
+Updated: 2026-05-11
 
 This file is the current source of truth for shipped state, roadmap health, and near-term implementation moves.
 
@@ -17,7 +17,7 @@ This file is the current source of truth for shipped state, roadmap health, and 
 - Daily nutrition logging still uses the legacy local `nutritionEntries` and `nutritionGoals` stores.
 - The AI Coach is optional. Its prompt is nutrition-aware around saved daily macro targets; the full rich nutrition profile and pending adaptive adjustment are not yet structured into `UserCoachContext`, while the imported Hevy archive digest is now available through Supabase-backed local sync.
 - The AI Coach can also ingest an imported Hevy archive digest. The archive is pulled once with `HEVY_API_KEY`, stored in Supabase `hevy_archives`, synced locally, and then passed to the coach without needing the Hevy key at runtime.
-- Push subscriptions can persist to Supabase when the service role key is configured; browser and PWA installs still fall back to Web Push, while native installs register FCM/APNs tokens through authenticated device rows.
+- Push subscriptions can persist to Supabase when the service role key is configured; browser and PWA installs still fall back to Web Push, while native installs use local notifications first and register FCM/APNs tokens only when native remote push is explicitly enabled.
 - Daily streak reminders still run through the protected Vercel Cron route `/api/cron/streak-reminders` for the web fallback, while native installs now reschedule local reminders on device.
 - Exercise media/search depend on ExerciseDB through RapidAPI, and the visual routine builder now uses demo-first exercise search with a selected-day editor and a collapsed Markdown import fallback.
 
@@ -52,6 +52,7 @@ This file is the current source of truth for shipped state, roadmap health, and 
 - `NEXT_PUBLIC_COACH_ENABLED=false` hides the AI Coach button even if `/api/coach` is configured.
 - `VERCEL_OIDC_TOKEN` is required for `/api/coach`.
 - `NEXT_PUBLIC_VAPID_PUBLIC_KEY` and `VAPID_PUBLIC_KEY` should match.
+- `NEXT_PUBLIC_NATIVE_PUSH_ENABLED=true` opts native installs into FCM/APNs token registration. Leave it unset or `false` for local-only native alerts.
 - `SUPABASE_SERVICE_ROLE_KEY` is required for server-side push subscription storage, native device registration, and the streak reminder cron.
 - `CRON_SECRET` protects `/api/cron/streak-reminders`.
 - `CAPACITOR_SERVER_URL` overrides the URL loaded by the native shell during device testing. If unset, the shell uses `NEXT_PUBLIC_SITE_URL`.

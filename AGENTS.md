@@ -43,6 +43,7 @@ High-impact variables:
 - `VERCEL_OIDC_TOKEN`: required by `/api/coach` for Vercel AI Gateway.
 - `NEXT_PUBLIC_NUTRITION_ENABLED=false`: disables the nutrition onboarding/profile layer; default is enabled.
 - `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`: enable web push.
+- `NEXT_PUBLIC_NATIVE_PUSH_ENABLED=true`: opts native installs into FCM/APNs token registration; native local alerts work without it.
 - `CRON_SECRET`: protects `/api/cron/streak-reminders`.
 
 Generate VAPID keys with `node scripts/generate-vapid-keys.mjs`.
@@ -121,6 +122,10 @@ See [`docs/nutrition.md`](/Users/sierra/Code/routyne/docs/nutrition.md) before c
 
 ## Push Notifications
 
+- Native app installs use local notifications first; do not require Firebase for activation.
+- Native remote push token registration is opt-in through `NEXT_PUBLIC_NATIVE_PUSH_ENABLED=true`.
+- `src/lib/notifications/provider.ts` selects native vs web mode and owns the shared notification API.
+- `src/lib/notifications/native.ts` handles Capacitor local notifications, Android channels, permissions, and optional native push registration.
 - `worker/push.ts` handles service worker push events and rest-timer scheduling.
 - `src/lib/push/client.ts` handles browser subscription logic.
 - `src/lib/push/subscriptions.ts` is the local in-memory fallback.
