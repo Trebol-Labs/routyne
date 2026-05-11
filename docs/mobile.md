@@ -53,6 +53,11 @@ PATH="/Applications/Android Studio.app/Contents/jbr/Contents/Home/bin:$PATH" \
 ./gradlew assembleDebug
 ```
 
+The repo also includes helper scripts:
+
+- `pnpm mobile:android:install` builds the debug APK and installs it with `adb install -r`.
+- `pnpm mobile:android:refresh` pulls the latest `main` branch and reminds you to force-close/reopen the installed app after the hosted Vercel deploy finishes.
+
 If you are testing the production site instead of local changes, leave `CAPACITOR_SERVER_URL` unset. The shell then loads `NEXT_PUBLIC_SITE_URL`.
 
 ## What To Test On The Phone

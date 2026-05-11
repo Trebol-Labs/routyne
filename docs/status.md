@@ -12,6 +12,8 @@ This file is the current source of truth for shipped state, roadmap health, and 
 - First authenticated sync on a device now performs a full remote pull before queue drain and local seeding, so a fresh device is not blocked by an already-advanced shared cursor.
 - Supabase OAuth/magic-link auth uses a cookie-backed browser client so the server `/auth/callback` route can complete PKCE exchange.
 - The Capacitor native shell is checked in for Android/iOS under the `com.trebollabs.routyne` app id. Installed apps now load the hosted Vercel app, route auth through the custom scheme, and use native local notifications first.
+- Rest timers now persist through active-session IDB state, reschedule/cancel native local notifications on pause/resume/adjust/hydration, and auto-clear after completion.
+- Returning users now see a shell-matched startup skeleton while IDB hydrates; new users keep the lighter uploader-first startup.
 - The app supports manual `es`/`en` language selection, localized standalone pages, and a persisted language cookie.
 - Nutrition onboarding, profile calculations, plan card, adaptive kcal adjustment banner, and block planner are in `main`.
 - Daily nutrition logging still uses the legacy local `nutritionEntries` and `nutritionGoals` stores.
@@ -27,6 +29,7 @@ This file is the current source of truth for shipped state, roadmap health, and 
 - `aebaf91` / PR #9: added nutrition onboarding, rich nutrition profile persistence, Supabase `nutrition_profiles` sync, nutrition plan card, adaptive adjustment logic/banner, and onboarding gate.
 - Current worktree: added Hevy archive migration, digest generation, Supabase archive storage, and coach context wiring.
 - `3a5b00a` / PR #8: added structured sync traces in `src/lib/sync/debug.ts`, exposed through `window.__routyneSync`.
+- Current worktree: rest timer persistence + notification reconciliation, startup shell skeleton, streak timezone alignment, and mobile helper scripts.
 - `4d96352` / PR #7: forced a full pull during first-device sync so a new local IDB can hydrate from existing remote data.
 - `fff70bc` and `42d7929`: switched browser Supabase auth to `createBrowserClient` and added coverage for the cookie-backed client.
 - `dd77537` and `786a496`: removed anonymous sign-in and deduped bodyweight sync by date.
@@ -56,6 +59,7 @@ This file is the current source of truth for shipped state, roadmap health, and 
 - `SUPABASE_SERVICE_ROLE_KEY` is required for server-side push subscription storage, native device registration, and the streak reminder cron.
 - `CRON_SECRET` protects `/api/cron/streak-reminders`.
 - `CAPACITOR_SERVER_URL` overrides the URL loaded by the native shell during device testing. If unset, the shell uses `NEXT_PUBLIC_SITE_URL`.
+- For web-only changes, the default Android loop is deploy to Vercel, then force-close and reopen the installed app. Use `pnpm mobile:android:install` only when native shell files change.
 - `android/app/google-services.json` and `ios/App/App/GoogleService-Info.plist` are required for native push testing.
 
 ## Next Steps
