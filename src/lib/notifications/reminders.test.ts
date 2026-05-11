@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   buildStreakReminderCopy,
   buildUpcomingStreakReminderSchedule,
+  getLocalDayOfWeek,
   getCurrentStreak,
+  getLongestFulfilledStreak,
   normalizeReminderTime,
   shouldSendStreakReminder,
 } from './reminders';
@@ -43,6 +45,22 @@ describe('streak reminder scheduling', () => {
       restDays: [],
       timezone: 'UTC',
       now: new Date('2026-04-01T12:00:00Z'),
+    });
+
+    expect(streak).toBe(3);
+  });
+
+  it('counts rest days and timezone-local dates when computing the longest streak', () => {
+    const timezone = 'America/New_York';
+    const restDay = getLocalDayOfWeek(new Date('2026-04-02T12:00:00Z'), timezone);
+
+    const streak = getLongestFulfilledStreak({
+      history: [
+        { completedAt: new Date('2026-04-02T02:30:00Z') },
+        { completedAt: new Date('2026-04-04T02:30:00Z') },
+      ],
+      restDays: [restDay],
+      timezone,
     });
 
     expect(streak).toBe(3);

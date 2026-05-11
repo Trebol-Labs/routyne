@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { loadEarnedAchievements } from '@/lib/db/achievements';
 import { saveHistoryEntry } from '@/lib/db/history';
-import type { HistoryEntry } from '@/types/workout';
+import type { HistoryEntry, UserProfile } from '@/types/workout';
+import { getLocalDayOfWeek } from '@/lib/notifications/reminders';
 import { findReplayableAchievements, reconcileAchievementsFromHistory } from './reconcile';
 
 function makeEntry(index: number, overrides: Partial<HistoryEntry> = {}): HistoryEntry {
@@ -31,8 +32,14 @@ function makeEntry(index: number, overrides: Partial<HistoryEntry> = {}): Histor
 describe('findReplayableAchievements', () => {
   it('unlocks session trophies from synced history thresholds', () => {
     const history = Array.from({ length: 38 }, (_, index) => makeEntry(index));
+    const profile: Pick<UserProfile, 'restDays' | 'preferences'> = {
+      restDays: [],
+      preferences: {
+        timezone: 'UTC',
+      } as UserProfile['preferences'],
+    };
 
-    const unlocked = findReplayableAchievements(history, new Set());
+    const unlocked = findReplayableAchievements(history, new Set(), profile);
 
     expect(unlocked).toEqual(expect.arrayContaining([
       'first-session',
@@ -44,6 +51,13 @@ describe('findReplayableAchievements', () => {
   });
 
   it('does not infer perfect sessions from replayed history', () => {
+    const profile: Pick<UserProfile, 'restDays' | 'preferences'> = {
+      restDays: [],
+      preferences: {
+        timezone: 'UTC',
+      } as UserProfile['preferences'],
+    };
+
     const unlocked = findReplayableAchievements([
       makeEntry(0, {
         volumeData: [
@@ -59,7 +73,7 @@ describe('findReplayableAchievements', () => {
         totalVolume: 2000,
         durationSeconds: 6000,
       }),
-    ], new Set());
+    ], new Set(), profile);
 
     expect(unlocked).toEqual(expect.arrayContaining([
       'session-volume-1000',
@@ -67,6 +81,26 @@ describe('findReplayableAchievements', () => {
       'sets-20',
     ]));
     expect(unlocked).not.toContain('perfect-session');
+  });
+
+  it('uses the user timezone and rest days for streak achievements', () => {
+    const timezone = 'America/New_York';
+    const restDay = getLocalDayOfWeek(new Date('2026-04-02T12:00:00Z'), timezone);
+    const profile: Pick<UserProfile, 'restDays' | 'preferences'> = {
+      restDays: [restDay],
+      preferences: {
+        timezone,
+      } as UserProfile['preferences'],
+    };
+
+    const history: HistoryEntry[] = [
+      makeEntry(0, { id: 'local-day-1', completedAt: new Date('2026-04-02T02:30:00Z') }),
+      makeEntry(1, { id: 'local-day-3', completedAt: new Date('2026-04-04T02:30:00Z') }),
+    ];
+
+    const unlocked = findReplayableAchievements(history, new Set(), profile);
+
+    expect(unlocked).toContain('streak-3');
   });
 });
 
