@@ -19,8 +19,8 @@ import {
   getNativeNotificationPermission,
   isNativeNotificationRuntime,
   registerNativePushNotifications,
+  requestNativeNotificationPermission,
   scheduleNativeLocalNotification,
-  unregisterNativePushNotifications,
   toNativeNotificationId,
   type NativeNotificationChannelId,
   type NativeNotificationPermission,
@@ -75,6 +75,7 @@ const DEVICE_TOKEN_KEY = 'routyne-native-device-token';
 const DEVICE_PLATFORM_KEY = 'routyne-native-device-platform';
 const DEVICE_APP_ID_KEY = 'routyne-native-device-app-id';
 const DEVICE_PROVIDER_KEY = 'routyne-native-device-provider';
+const NATIVE_NOTIFICATIONS_ENABLED_KEY = 'routyne-native-notifications-enabled';
 const STREAK_TIMEZONE_KEY = 'routyne-native-streak-timezone';
 const STREAK_REMINDER_TIME_KEY = 'routyne-native-streak-reminder-time';
 const STREAK_HORIZON_KEY = 'routyne-native-streak-horizon-days';
@@ -160,6 +161,22 @@ function clearStoredNativeToken(): void {
   removeStoredValue(DEVICE_PROVIDER_KEY);
 }
 
+function isNativeNotificationsEnabled(): boolean {
+  return readStoredValue(NATIVE_NOTIFICATIONS_ENABLED_KEY) === 'true';
+}
+
+function setNativeNotificationsEnabled(): void {
+  writeStoredValue(NATIVE_NOTIFICATIONS_ENABLED_KEY, 'true');
+}
+
+function clearNativeNotificationsEnabled(): void {
+  removeStoredValue(NATIVE_NOTIFICATIONS_ENABLED_KEY);
+}
+
+function isNativePushRegistrationEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_NATIVE_PUSH_ENABLED === 'true';
+}
+
 function storeNativeStreakReminderConfig(timezone: string, reminderTime: string, horizonDays: number): void {
   writeStoredValue(STREAK_TIMEZONE_KEY, timezone);
   writeStoredValue(STREAK_REMINDER_TIME_KEY, reminderTime);
@@ -213,40 +230,11 @@ async function getNativePermissionState(): Promise<NotificationPermission | 'uns
 
 async function requestNativePermissionState(): Promise<NotificationPermission | 'unsupported'> {
   const permission = await getNativeNotificationPermission();
-  if (permission === 'granted') {
-    if (!getStoredNativeToken()) {
-      const requested = await registerNativePushNotifications();
-      if (requested) {
-        setStoredNativeToken({
-          deviceId: getOrCreateNativeDeviceId() ?? 'device',
-          token: requested.token,
-          platform: requested.platform,
-          appId: requested.appId,
-          provider: 'fcm',
-        });
-      }
-    }
-    return 'granted';
+  if (permission === 'granted' || permission === 'denied') {
+    return mapNativePermission(permission);
   }
 
-  if (permission === 'denied') {
-    return permission;
-  }
-
-  const requested = await registerNativePushNotifications();
-  if (!requested) {
-    return 'default';
-  }
-
-  setStoredNativeToken({
-    deviceId: getOrCreateNativeDeviceId() ?? 'device',
-    token: requested.token,
-    platform: requested.platform,
-    appId: requested.appId,
-    provider: 'fcm',
-  });
-
-  return 'granted';
+  return mapNativePermission(await requestNativeNotificationPermission());
 }
 
 async function registerNativeDeviceOnServer(accessToken?: string): Promise<boolean> {
@@ -291,6 +279,11 @@ async function unregisterNativeDeviceOnServer(accessToken?: string): Promise<voi
     return;
   }
 
+  const token = getStoredNativeToken();
+  if (!token) {
+    return;
+  }
+
   const deviceId = getOrCreateNativeDeviceId();
   if (!deviceId) {
     return;
@@ -316,6 +309,10 @@ async function syncNativeRegistration(accessToken?: string): Promise<boolean> {
     return false;
   }
 
+  if (!isNativePushRegistrationEnabled()) {
+    return false;
+  }
+
   const permission = await getNativePermissionState();
   if (permission !== 'granted') {
     return false;
@@ -327,6 +324,33 @@ async function syncNativeRegistration(accessToken?: string): Promise<boolean> {
   }
 
   return registerNativeDeviceOnServer(accessToken);
+}
+
+async function refreshNativePushRegistration(accessToken?: string): Promise<void> {
+  if (!isNativePushRegistrationEnabled()) {
+    return;
+  }
+
+  try {
+    if (!getStoredNativeToken()) {
+      const requested = await registerNativePushNotifications();
+      if (!requested) {
+        return;
+      }
+
+      setStoredNativeToken({
+        deviceId: getOrCreateNativeDeviceId() ?? 'device',
+        token: requested.token,
+        platform: requested.platform,
+        appId: requested.appId,
+        provider: 'fcm',
+      });
+    }
+
+    await syncNativeRegistration(accessToken);
+  } catch (error) {
+    console.error('[notifications/provider] native push registration failed', error);
+  }
 }
 
 async function scheduleWebLocalNotificationSafe(input: LocalNotificationRequest): Promise<void> {
@@ -453,6 +477,11 @@ async function syncNativeStreakReminders(input: StreakReminderSyncInput): Promis
     return;
   }
 
+  if (!isNativeNotificationsEnabled()) {
+    await clearPendingStreakReminders();
+    return;
+  }
+
   await schedulePendingStreakReminders(input);
 }
 
@@ -490,19 +519,16 @@ export async function isNotificationsActive(accessToken?: string): Promise<boole
   const mode = getPlatformMode();
   if (mode === 'native') {
     const permission = await getNativePermissionState();
-    const token = getStoredNativeToken();
-    if (permission !== 'granted' || !token) {
+    if (permission !== 'granted') {
       return false;
     }
 
-    if (accessToken) {
-      try {
-        await syncNativeRegistration(accessToken);
-      } catch (error) {
-        console.error('[notifications/provider] native registration sync failed', error);
-      }
+    const active = isNativeNotificationsEnabled() || !!getStoredNativeToken();
+    if (!active) {
+      return false;
     }
 
+    void refreshNativePushRegistration(accessToken);
     return true;
   }
 
@@ -522,9 +548,8 @@ export async function enableNotifications(accessToken?: string): Promise<void> {
       return;
     }
 
-    if (accessToken) {
-      await syncNativeRegistration(accessToken);
-    }
+    setNativeNotificationsEnabled();
+    void refreshNativePushRegistration(accessToken);
     return;
   }
 
@@ -555,9 +580,7 @@ export async function disableNotifications(accessToken?: string): Promise<void> 
     try {
       await unregisterNativeDeviceOnServer(accessToken);
     } finally {
-      await unregisterNativePushNotifications().catch((error) => {
-        console.error('[notifications/provider] native push unregister failed', error);
-      });
+      clearNativeNotificationsEnabled();
       clearStoredNativeToken();
       await clearPendingStreakReminders();
     }

@@ -7,8 +7,9 @@
  */
 
 const SERVICE_WORKER_READY_TIMEOUT_MS = 2500;
-const SERVICE_WORKER_DISCOVERY_TIMEOUT_MS = 750;
 const NOTIFICATION_PERMISSION_TIMEOUT_MS = 15000;
+const SERVICE_WORKER_URL = '/sw.js';
+const SERVICE_WORKER_SCOPE = '/';
 
 export type PushSetupFailureReason =
   | 'unsupported'
@@ -65,6 +66,21 @@ async function waitForReadyServiceWorker(timeoutMs: number): Promise<ServiceWork
   }
 }
 
+async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
+  if (!isWebPushSupported() || typeof navigator.serviceWorker.register !== 'function') {
+    return null;
+  }
+
+  try {
+    return await navigator.serviceWorker.register(SERVICE_WORKER_URL, {
+      scope: SERVICE_WORKER_SCOPE,
+    });
+  } catch (error) {
+    console.error('[Push] service worker registration failed', error);
+    return null;
+  }
+}
+
 async function getReadyServiceWorkerRegistration(): Promise<ServiceWorkerRegistration | null> {
   if (!isWebPushSupported()) return null;
 
@@ -72,9 +88,16 @@ async function getReadyServiceWorkerRegistration(): Promise<ServiceWorkerRegistr
     const registration = await navigator.serviceWorker.getRegistration();
     if (registration?.active) return registration;
 
-    return await waitForReadyServiceWorker(
-      registration ? SERVICE_WORKER_READY_TIMEOUT_MS : SERVICE_WORKER_DISCOVERY_TIMEOUT_MS
-    );
+    if (registration) {
+      return await waitForReadyServiceWorker(SERVICE_WORKER_READY_TIMEOUT_MS);
+    }
+
+    const registered = await registerServiceWorker();
+    if (registered?.active) {
+      return registered;
+    }
+
+    return registered ? await waitForReadyServiceWorker(SERVICE_WORKER_READY_TIMEOUT_MS) : null;
   } catch {
     return null;
   }

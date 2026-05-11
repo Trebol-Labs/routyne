@@ -3,9 +3,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const webSchedule = vi.fn();
 const nativeSchedule = vi.fn();
 const nativePermission = vi.fn();
+const nativeRequestPermission = vi.fn();
 const nativeRuntime = vi.fn();
 const webSupport = vi.fn();
 const webPermission = vi.fn();
+const nativePushRegister = vi.fn();
 
 vi.mock('@/lib/push/client', () => ({
   cancelLocalNotification: vi.fn(),
@@ -33,10 +35,10 @@ vi.mock('@/lib/notifications/native', () => ({
   ensureNativeNotificationChannels: vi.fn(),
   getNativeNotificationPermission: nativePermission,
   isNativeNotificationRuntime: nativeRuntime,
-  registerNativePushNotifications: vi.fn(async () => null),
+  registerNativePushNotifications: nativePushRegister,
+  requestNativeNotificationPermission: nativeRequestPermission,
   scheduleNativeLocalNotification: nativeSchedule,
   toNativeNotificationId: (value: string) => value.length,
-  unregisterNativePushNotifications: vi.fn(),
   NATIVE_NOTIFICATION_CHANNELS: {
     restTimers: 'rest-timers',
     streakReminders: 'streak-reminders',
@@ -54,6 +56,8 @@ vi.mock('@/lib/notifications/reminders', () => ({
 describe('notification provider selection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.unstubAllEnvs();
+    nativePushRegister.mockResolvedValue(null);
   });
 
   it('reports native mode when Capacitor is available', async () => {
@@ -129,5 +133,36 @@ describe('notification provider selection', () => {
       data: { kind: 'rest-timer' },
     });
     expect(webSchedule).not.toHaveBeenCalled();
+  });
+
+  it('enables native notifications without requiring FCM registration', async () => {
+    nativeRuntime.mockReturnValue(true);
+    webSupport.mockReturnValue(false);
+    nativePermission
+      .mockResolvedValueOnce('prompt')
+      .mockResolvedValue('granted');
+    nativeRequestPermission.mockResolvedValue('granted');
+
+    const { enableNotifications, isNotificationsActive } = await import('./provider');
+    await enableNotifications('access-token');
+
+    await expect(isNotificationsActive('access-token')).resolves.toBe(true);
+    expect(nativeRequestPermission).toHaveBeenCalledTimes(1);
+    expect(nativePushRegister).not.toHaveBeenCalled();
+  });
+
+  it('clears native activation locally without calling FCM unregister', async () => {
+    nativeRuntime.mockReturnValue(true);
+    webSupport.mockReturnValue(false);
+    nativePermission.mockResolvedValue('granted');
+
+    const { enableNotifications, disableNotifications, isNotificationsActive } = await import('./provider');
+    await enableNotifications();
+    await expect(isNotificationsActive()).resolves.toBe(true);
+
+    await disableNotifications('access-token');
+
+    await expect(isNotificationsActive()).resolves.toBe(false);
+    expect(nativePushRegister).not.toHaveBeenCalled();
   });
 });

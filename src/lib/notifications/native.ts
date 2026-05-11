@@ -94,17 +94,30 @@ export function toNativeNotificationId(value: string): number {
   return normalized === 0 ? 1 : normalized;
 }
 
-async function readPermissionState(): Promise<NativeNotificationPermission> {
+function normalizeNativePermission(value: string | undefined): NativeNotificationPermission {
+  if (
+    value === 'granted' ||
+    value === 'denied' ||
+    value === 'prompt' ||
+    value === 'prompt-with-rationale'
+  ) {
+    return value;
+  }
+
+  return 'prompt';
+}
+
+async function readLocalPermissionState(): Promise<NativeNotificationPermission> {
   if (!isNativeNotificationRuntime()) {
     return 'unsupported';
   }
 
-  const permissions = await PushNotifications.checkPermissions();
-  return permissions.receive;
+  const permissions = await LocalNotifications.checkPermissions();
+  return normalizeNativePermission(permissions.display);
 }
 
 export async function getNativeNotificationPermission(): Promise<NativeNotificationPermission> {
-  return readPermissionState();
+  return readLocalPermissionState();
 }
 
 export async function requestNativeNotificationPermission(): Promise<NativeNotificationPermission> {
@@ -112,13 +125,13 @@ export async function requestNativeNotificationPermission(): Promise<NativeNotif
     return 'unsupported';
   }
 
-  const current = await PushNotifications.checkPermissions();
-  if (current.receive === 'granted' || current.receive === 'denied') {
-    return current.receive;
+  const current = await LocalNotifications.checkPermissions();
+  if (current.display === 'granted' || current.display === 'denied') {
+    return normalizeNativePermission(current.display);
   }
 
-  const requested = await PushNotifications.requestPermissions();
-  return requested.receive;
+  const requested = await LocalNotifications.requestPermissions();
+  return normalizeNativePermission(requested.display);
 }
 
 export async function ensureNativeNotificationChannels(): Promise<void> {
