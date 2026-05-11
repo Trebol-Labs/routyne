@@ -88,17 +88,16 @@ export function ActiveSessionView() {
     setCompletion,
     history,
     toggleSetCompletion,
+    startRestTimer,
     finishSession,
     abandonSession,
     profile,
     updateActiveSessionExercises,
+    restTimer,
   } = useWorkoutStore();
 
   const { isLocked } = useWakeLock(true);
 
-  const [showRestTimer, setShowRestTimer] = useState(false);
-  const [restTimerKey, setRestTimerKey] = useState(0);
-  const [restDuration, setRestDuration] = useState(profile.defaultRestSeconds);
   const [showAbandon, setShowAbandon] = useState(false);
   const [pendingSet, setPendingSet] = useState<PendingSet | null>(null);
   const [armedPreview, setArmedPreview] = useState<ArmedPreview | null>(null);
@@ -134,9 +133,7 @@ export function ActiveSessionView() {
     clearArmedPreview();
     setPendingSet(null);
     dismissHint();
-    setRestDuration(restSeconds || profile.defaultRestSeconds);
-    setRestTimerKey((prev) => prev + 1);
-    setShowRestTimer(true);
+    void startRestTimer(restSeconds || profile.defaultRestSeconds);
   };
 
   const openManualEntry = (
@@ -148,7 +145,6 @@ export function ActiveSessionView() {
     suggestion?: AutoSuggestion | null
   ) => {
     clearArmedPreview();
-    setRestDuration(restSeconds || profile.defaultRestSeconds);
     setPendingSet({
       exerciseId,
       exerciseName,
@@ -274,9 +270,7 @@ export function ActiveSessionView() {
     if (anyCompleted) {
       clearArmedPreview();
       setPendingSet(null);
-      setRestDuration(restSeconds || profile.defaultRestSeconds);
-      setRestTimerKey((prev) => prev + 1);
-      setShowRestTimer(true);
+      void startRestTimer(restSeconds || profile.defaultRestSeconds);
       if ('vibrate' in navigator) navigator.vibrate([30, 50, 30]);
     }
   };
@@ -362,8 +356,13 @@ export function ActiveSessionView() {
           <Button
             variant="glass-icon"
             size="icon-lg"
-            onClick={() => setShowRestTimer(true)}
-            aria-label="Abrir temporizador de descanso"
+            onClick={() => {
+              if (!restTimer) {
+                void startRestTimer(profile.defaultRestSeconds);
+              }
+            }}
+            aria-label={restTimer ? 'Temporizador activo' : 'Abrir temporizador de descanso'}
+            disabled={!!restTimer}
           >
             <Clock className="h-6 w-6 text-blue-400" />
           </Button>
@@ -477,18 +476,11 @@ export function ActiveSessionView() {
     <>
       {mainContent}
 
-      <AnimatePresence>
-        {showRestTimer && (
-          <RestTimer
-            key={restTimerKey}
-            duration={restDuration}
-            onClose={() => setShowRestTimer(false)}
-            onFinish={() => {
-              if ('vibrate' in navigator) navigator.vibrate([100, 50, 100]);
-            }}
-          />
-        )}
-      </AnimatePresence>
+      <RestTimer
+        onFinish={() => {
+          if ('vibrate' in navigator) navigator.vibrate([100, 50, 100]);
+        }}
+      />
 
       <AnimatePresence>
         {pendingSet && (

@@ -16,6 +16,7 @@ import { getMuscleGroupVolume } from '@/lib/analytics/muscle-map';
 import { useAnalyticsWorker } from '@/hooks/useAnalyticsWorker';
 import { reconcileAchievementsFromHistory } from '@/lib/achievements/reconcile';
 import { ACHIEVEMENTS } from '@/lib/achievements/definitions';
+import { getLongestFulfilledStreak } from '@/lib/notifications/reminders';
 import { cn } from '@/lib/utils';
 import type { Bodyweight } from '@/types/workout';
 import type { AchievementRecord } from '@/lib/db/schema';
@@ -157,22 +158,12 @@ export function StatsView() {
   }, [history]);
 
   const longestStreak = useMemo(() => {
-    if (history.length === 0) return 0;
-    const days = [...new Set(
-      history.map((e) => {
-        const d = e.completedAt instanceof Date ? e.completedAt : new Date(e.completedAt);
-        return d.toISOString().split('T')[0];
-      }),
-    )].sort();
-    if (days.length === 0) return 0;
-    let longest = 1, current = 1;
-    for (let i = 1; i < days.length; i++) {
-      const diff = (new Date(days[i]).getTime() - new Date(days[i - 1]).getTime()) / 86400000;
-      if (diff === 1) { current++; longest = Math.max(longest, current); }
-      else current = 1;
-    }
-    return longest;
-  }, [history]);
+    return getLongestFulfilledStreak({
+      history,
+      restDays: profile.restDays,
+      timezone: profile.preferences.timezone,
+    });
+  }, [history, profile.preferences.timezone, profile.restDays]);
 
   const levelInfo = useMemo(() => computeLevel(totalSessions), [totalSessions]);
   const earnedIds = useMemo(() => new Set(earnedAchievements.map((a) => a.id)), [earnedAchievements]);
@@ -313,6 +304,7 @@ export function StatsView() {
                       <StreakCalendar
                         history={history}
                         restDays={profile.restDays ?? []}
+                        timezone={profile.preferences.timezone}
                         weekStartsOn={profile.preferences.weekStartsOn}
                       />
                     </div>

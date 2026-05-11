@@ -1,22 +1,32 @@
 import { getDB } from './index';
+import { deserializeRestTimer, serializeRestTimer } from '@/lib/rest-timer';
 import type { ActiveSessionRecord } from './schema';
-import type { SetStatus } from '@/types/workout';
+import type { RestTimerState, SetStatus } from '@/types/workout';
 
 const ACTIVE_KEY = 'current' as const;
+
+interface SaveActiveSessionOptions {
+  startedAt?: Date;
+  restTimer?: RestTimerState | null;
+}
 
 export async function saveActiveSession(
   routineId: string,
   sessionId: string,
   sessionIdx: number,
-  setCompletion: Record<string, SetStatus>
+  setCompletion: Record<string, SetStatus>,
+  options: SaveActiveSessionOptions = {}
 ): Promise<void> {
   const db = await getDB();
+  const existing = await db.get('activeSession', ACTIVE_KEY);
   const record: ActiveSessionRecord = {
     id: ACTIVE_KEY,
     routineId,
     sessionId,
     sessionIdx,
-    startedAt: new Date().toISOString(),
+    startedAt: options.startedAt?.toISOString()
+      ?? existing?.startedAt
+      ?? new Date().toISOString(),
     setCompletion: Object.fromEntries(
       Object.entries(setCompletion).map(([k, v]) => [
         k,
@@ -33,6 +43,13 @@ export async function saveActiveSession(
       ])
     ),
   };
+
+  if (Object.prototype.hasOwnProperty.call(options, 'restTimer')) {
+    record.restTimer = serializeRestTimer(options.restTimer);
+  } else if (existing?.restTimer) {
+    record.restTimer = deserializeRestTimer(existing.restTimer) ? existing.restTimer : null;
+  }
+
   await db.put('activeSession', record);
 }
 

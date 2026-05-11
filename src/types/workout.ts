@@ -175,6 +175,18 @@ export interface WorkoutSummary {
   previousEntry: HistoryEntry | null;
 }
 
+// ── Rest timer ───────────────────────────────────────────────────────────────
+
+export type RestTimerStatus = 'running' | 'paused' | 'finished';
+
+export interface RestTimerState {
+  id: string;
+  durationSeconds: number;
+  targetAt: Date;
+  remainingMs: number;
+  status: RestTimerStatus;
+}
+
 // ── Progression engine types ──────────────────────────────────────────────────
 
 export type ProgressionModel = 'linear' | 'double' | 'rpe';
@@ -284,6 +296,7 @@ export interface WorkoutState {
 
   // Session timing
   sessionStartTime: Date | null;             // ← NEW
+  restTimer: RestTimerState | null;
 
   // Post-workout summary (populated by finishSession)
   lastWorkoutSummary: WorkoutSummary | null; // ← NEW
@@ -297,6 +310,12 @@ export interface WorkoutState {
   loadRoutineFromLibrary: (routineId: string) => Promise<void>;
   deleteRoutineFromLibrary: (routineId: string) => Promise<void>;
   startSession: (sessionIdx: number) => Promise<void>;
+  startRestTimer: (durationSeconds: number) => Promise<void>;
+  pauseRestTimer: () => Promise<void>;
+  resumeRestTimer: () => Promise<void>;
+  adjustRestTimer: (deltaSeconds: number) => Promise<void>;
+  finishRestTimer: () => Promise<void>;
+  clearRestTimer: () => Promise<void>;
   finishSession: () => Promise<void>;
   abandonSession: () => Promise<void>;
   loadMoreHistory: () => Promise<void>;

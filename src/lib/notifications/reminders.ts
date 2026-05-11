@@ -137,16 +137,14 @@ function getDateKeyAtOffset(dateKey: string, timeZone: string, offsetDays: numbe
 
 function isFulfilledOnDate(params: {
   date: Date;
-  history: Array<{ completedAt: Date }>;
+  historyDateKeys: Set<string>;
   restDays: number[];
   timezone: string;
 }): boolean {
   const dateKey = getLocalDateKey(params.date, params.timezone);
   const dayOfWeek = getLocalDayOfWeek(params.date, params.timezone);
 
-  return params.restDays.includes(dayOfWeek) || params.history.some(
-    (entry) => getLocalDateKey(new Date(entry.completedAt), params.timezone) === dateKey
-  );
+  return params.restDays.includes(dayOfWeek) || params.historyDateKeys.has(dateKey);
 }
 
 export function parseReminderTime(value: string): ReminderTimeParts | null {
@@ -185,9 +183,12 @@ export function getCurrentStreak(params: {
   now?: Date;
 }): number {
   const now = params.now ?? new Date();
+  const historyDateKeys = new Set(
+    params.history.map((entry) => getLocalDateKey(new Date(entry.completedAt), params.timezone))
+  );
   const todayFulfilled = isFulfilledOnDate({
     date: now,
-    history: params.history,
+    historyDateKeys,
     restDays: params.restDays,
     timezone: params.timezone,
   });
@@ -196,7 +197,7 @@ export function getCurrentStreak(params: {
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayFulfilled = isFulfilledOnDate({
     date: yesterday,
-    history: params.history,
+    historyDateKeys,
     restDays: params.restDays,
     timezone: params.timezone,
   });
@@ -209,7 +210,7 @@ export function getCurrentStreak(params: {
   let streak = 0;
   while (isFulfilledOnDate({
     date: cursor,
-    history: params.history,
+    historyDateKeys,
     restDays: params.restDays,
     timezone: params.timezone,
   })) {
@@ -218,6 +219,54 @@ export function getCurrentStreak(params: {
   }
 
   return streak;
+}
+
+export function getLongestFulfilledStreak(params: {
+  history: Array<{ completedAt: Date }>;
+  restDays: number[];
+  timezone: string;
+}): number {
+  if (params.history.length === 0) {
+    return 0;
+  }
+
+  const historyDateKeys = new Set(
+    params.history.map((entry) => getLocalDateKey(new Date(entry.completedAt), params.timezone))
+  );
+  const dateKeys = [...historyDateKeys].sort();
+
+  if (dateKeys.length === 0) {
+    return 0;
+  }
+
+  let longest = 0;
+  let current = 0;
+  let cursor = dateKeys[0];
+  const lastDateKey = dateKeys[dateKeys.length - 1];
+
+  while (true) {
+    const fulfilled = isFulfilledOnDate({
+      date: createZonedDate(cursor, params.timezone, 12, 0),
+      historyDateKeys,
+      restDays: params.restDays,
+      timezone: params.timezone,
+    });
+
+    if (fulfilled) {
+      current += 1;
+      longest = Math.max(longest, current);
+    } else {
+      current = 0;
+    }
+
+    if (cursor === lastDateKey) {
+      break;
+    }
+
+    cursor = getDateKeyAtOffset(cursor, params.timezone, 1);
+  }
+
+  return longest;
 }
 
 export function shouldSendStreakReminder(params: {
@@ -229,14 +278,15 @@ export function shouldSendStreakReminder(params: {
   const now = params.now ?? new Date();
   const todayKey = getLocalDateKey(now, params.timezone);
   const todayDow = getLocalDayOfWeek(now, params.timezone);
+  const historyDateKeys = new Set(
+    params.history.map((entry) => getLocalDateKey(new Date(entry.completedAt), params.timezone))
+  );
 
   if (params.restDays.includes(todayDow)) {
     return false;
   }
 
-  return !params.history.some(
-    (entry) => getLocalDateKey(new Date(entry.completedAt), params.timezone) === todayKey
-  );
+  return !historyDateKeys.has(todayKey);
 }
 
 export function buildUpcomingStreakReminderSchedule(params: {
@@ -251,6 +301,9 @@ export function buildUpcomingStreakReminderSchedule(params: {
   const safeTimeZone = isValidTimeZone(params.timezone) ? params.timezone : 'UTC';
   const time = parseReminderTime(normalizeReminderTime(params.reminderTime)) ?? { hour: 20, minute: 0 };
   const todayKey = getLocalDateKey(now, safeTimeZone);
+  const historyDateKeys = new Set(
+    params.history.map((entry) => getLocalDateKey(new Date(entry.completedAt), safeTimeZone))
+  );
   const horizonDays = Math.max(1, Math.min(90, Math.floor(params.horizonDays ?? 30)));
   const anchorDateKey = getDateKeyAtOffset(todayKey, safeTimeZone, 0);
   const schedule: StreakReminderScheduleItem[] = [];
@@ -267,9 +320,7 @@ export function buildUpcomingStreakReminderSchedule(params: {
       continue;
     }
 
-    if (params.history.some(
-      (entry) => getLocalDateKey(new Date(entry.completedAt), safeTimeZone) === dateKey
-    )) {
+    if (historyDateKeys.has(dateKey)) {
       continue;
     }
 

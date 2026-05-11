@@ -5,8 +5,9 @@ import {
   saveAchievement,
 } from '@/lib/db/achievements';
 import { loadAllHistory } from '@/lib/db/history';
+import { loadProfile } from '@/lib/db/profile';
 import type { AchievementRecord } from '@/lib/db/schema';
-import type { HistoryEntry } from '@/types/workout';
+import type { HistoryEntry, UserProfile } from '@/types/workout';
 import { evaluateAchievements } from './evaluator';
 
 const NON_REPLAYABLE_ACHIEVEMENT_IDS = new Set([
@@ -27,6 +28,7 @@ function sortOldestFirst(history: HistoryEntry[]): HistoryEntry[] {
 export function findReplayableAchievements(
   history: HistoryEntry[],
   earnedIds: Set<string>,
+  profile: Pick<UserProfile, 'restDays' | 'preferences'>,
 ): string[] {
   if (history.length === 0) {
     return [];
@@ -51,6 +53,7 @@ export function findReplayableAchievements(
       history: replayHistoryNewestFirst,
       summary,
       earnedIds: replayEarnedIds,
+      profile,
     });
 
     for (const achievement of unlocked) {
@@ -66,11 +69,12 @@ export function findReplayableAchievements(
 }
 
 export async function reconcileAchievementsFromHistory(): Promise<AchievementRecord[]> {
-  const [history, earnedIds] = await Promise.all([
+  const [history, earnedIds, profile] = await Promise.all([
     loadAllHistory(),
     loadEarnedAchievementIds(),
+    loadProfile(),
   ]);
-  const unlockedIds = findReplayableAchievements(history, earnedIds);
+  const unlockedIds = findReplayableAchievements(history, earnedIds, profile);
 
   if (unlockedIds.length > 0) {
     await Promise.all(unlockedIds.map((id) => saveAchievement(id)));

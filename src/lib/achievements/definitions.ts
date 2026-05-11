@@ -1,10 +1,12 @@
 import type { AchievementDefinition } from '@/types/workout';
-import type { HistoryEntry, WorkoutSummary } from '@/types/workout';
+import type { HistoryEntry, WorkoutSummary, UserProfile } from '@/types/workout';
+import { getLongestFulfilledStreak } from '@/lib/notifications/reminders';
 
 export interface AchievementContext {
   history: HistoryEntry[];      // full history (new entry is history[0])
   summary: WorkoutSummary;
   earnedIds: Set<string>;
+  profile: Pick<UserProfile, 'restDays' | 'preferences'>;
 }
 
 export interface CheckableAchievement extends AchievementDefinition {
@@ -31,32 +33,6 @@ function uniqueExercises(history: HistoryEntry[]): number {
 
 function maxSingleSessionVolume(history: HistoryEntry[]): number {
   return history.reduce((max, e) => Math.max(max, e.totalVolume), 0);
-}
-
-/** Returns the longest consecutive-day streak (checking completedAt dates) */
-function longestStreak(history: HistoryEntry[]): number {
-  if (history.length === 0) return 0;
-  const days = [...new Set(
-    history.map((e) => {
-      const d = e.completedAt instanceof Date ? e.completedAt : new Date(e.completedAt);
-      return d.toISOString().split('T')[0];
-    })
-  )].sort();
-
-  let longest = 1;
-  let current = 1;
-  for (let i = 1; i < days.length; i++) {
-    const prev = new Date(days[i - 1]);
-    const curr = new Date(days[i]);
-    const diffDays = (curr.getTime() - prev.getTime()) / 86_400_000;
-    if (diffDays === 1) {
-      current++;
-      longest = Math.max(longest, current);
-    } else {
-      current = 1;
-    }
-  }
-  return longest;
 }
 
 function completionPercent(summary: WorkoutSummary): number {
@@ -231,7 +207,11 @@ export const ACHIEVEMENTS: CheckableAchievement[] = [
     description: '3 consecutive training days',
     emoji: '🔗',
     category: 'streak',
-    check: ({ history }) => longestStreak(history) >= 3,
+    check: ({ history, profile }) => getLongestFulfilledStreak({
+      history,
+      restDays: profile.restDays,
+      timezone: profile.preferences.timezone,
+    }) >= 3,
   },
   {
     id: 'streak-7',
@@ -239,7 +219,11 @@ export const ACHIEVEMENTS: CheckableAchievement[] = [
     description: '7 consecutive training days',
     emoji: '📅',
     category: 'streak',
-    check: ({ history }) => longestStreak(history) >= 7,
+    check: ({ history, profile }) => getLongestFulfilledStreak({
+      history,
+      restDays: profile.restDays,
+      timezone: profile.preferences.timezone,
+    }) >= 7,
   },
   {
     id: 'streak-14',
@@ -247,7 +231,11 @@ export const ACHIEVEMENTS: CheckableAchievement[] = [
     description: '14 consecutive training days',
     emoji: '🌙',
     category: 'streak',
-    check: ({ history }) => longestStreak(history) >= 14,
+    check: ({ history, profile }) => getLongestFulfilledStreak({
+      history,
+      restDays: profile.restDays,
+      timezone: profile.preferences.timezone,
+    }) >= 14,
   },
   {
     id: 'streak-30',
@@ -255,7 +243,11 @@ export const ACHIEVEMENTS: CheckableAchievement[] = [
     description: '30 consecutive training days',
     emoji: '🌟',
     category: 'streak',
-    check: ({ history }) => longestStreak(history) >= 30,
+    check: ({ history, profile }) => getLongestFulfilledStreak({
+      history,
+      restDays: profile.restDays,
+      timezone: profile.preferences.timezone,
+    }) >= 30,
   },
   // ── Special ───────────────────────────────────────────────────────────────
   {

@@ -18,6 +18,7 @@ import { saveHistoryEntry, loadHistory } from '@/lib/db/history';
 import {
   saveActiveSession, loadActiveSession, clearActiveSession,
 } from '@/lib/db/activeSession';
+import type { ActiveSessionRecord } from '@/lib/db/schema';
 import { DEFAULT_PROFILE, loadProfile, saveProfile } from '@/lib/db/profile';
 import {
   DEFAULT_NUTRITION_GOAL,
@@ -29,6 +30,13 @@ import {
   saveNutritionGoal,
 } from '@/lib/db/nutrition';
 import { clearWorkoutData } from '@/lib/db/index';
+import { clearLocalDataMarker, syncLocalDataMarker } from '@/lib/local-data-marker';
+import {
+  deserializeRestTimer,
+  normalizeRestTimerState,
+  syncRestTimerNotification,
+} from '@/lib/rest-timer';
+import type { RestTimerState } from '@/types/workout';
 
 function createInitialProfile(): UserProfile {
   return {
@@ -55,6 +63,93 @@ async function reconcileAchievementsSilently(source: string): Promise<void> {
   } catch (err) {
     console.error(`[useWorkoutStore] ${source} achievement reconciliation failed`, err);
   }
+}
+
+const REST_TIMER_AUTO_CLEAR_DELAY_MS = 5000;
+let restTimerAutoClearTimeout: ReturnType<typeof setTimeout> | null = null;
+
+function hasLocalData(state: Pick<WorkoutState, 'currentRoutine' | 'activeSessionIdx' | 'history' | 'routineLibrary' | 'restTimer'>): boolean {
+  return Boolean(
+    state.currentRoutine ||
+    state.activeSessionIdx !== null ||
+    state.restTimer ||
+    state.history.length > 0 ||
+    state.routineLibrary.length > 0
+  );
+}
+
+function syncLocalDataMarkerFromState(state: Pick<WorkoutState, 'currentRoutine' | 'activeSessionIdx' | 'history' | 'routineLibrary' | 'restTimer'>): void {
+  syncLocalDataMarker(hasLocalData(state));
+}
+
+function clearRestTimerAutoClearTimeout(): void {
+  if (restTimerAutoClearTimeout) {
+    clearTimeout(restTimerAutoClearTimeout);
+    restTimerAutoClearTimeout = null;
+  }
+}
+
+function scheduleRestTimerAutoClear(clearTimer: () => Promise<void>): void {
+  clearRestTimerAutoClearTimeout();
+  restTimerAutoClearTimeout = setTimeout(() => {
+    void clearTimer().catch((err) => {
+      console.error('[useWorkoutStore] rest timer auto-clear failed', err);
+    });
+  }, REST_TIMER_AUTO_CLEAR_DELAY_MS);
+}
+
+function deserializeSetCompletion(
+  setCompletion: ActiveSessionRecord['setCompletion']
+): WorkoutState['setCompletion'] {
+  const next: WorkoutState['setCompletion'] = {};
+  for (const [key, val] of Object.entries(setCompletion)) {
+    next[key] = {
+      completed: val.completed,
+      repsDone: val.repsDone,
+      weight: val.weight,
+      timestamp: val.timestamp ? new Date(val.timestamp) : undefined,
+      rpe: val.rpe,
+      rir: val.rir,
+      setType: val.setType,
+      notes: val.notes,
+    };
+  }
+  return next;
+}
+
+async function persistRestTimerState(
+  timer: RestTimerState | null,
+  previousTimerId: string | null,
+  language: UserProfile['preferences']['language'],
+  notificationsEnabled: boolean,
+  clearTimer: () => Promise<void>,
+): Promise<void> {
+  clearRestTimerAutoClearTimeout();
+
+  if (timer?.status === 'finished') {
+    scheduleRestTimerAutoClear(clearTimer);
+  }
+
+  await syncRestTimerNotification({
+    timer,
+    previousTimerId,
+    language,
+    enabled: notificationsEnabled,
+  });
+}
+
+let activeSessionWriteQueue: Promise<void> = Promise.resolve();
+
+function queueActiveSessionWrite(task: () => Promise<void>): Promise<void> {
+  const next = activeSessionWriteQueue.then(task, task).catch((err) => {
+    console.error('[useWorkoutStore] active session write failed', err);
+  });
+  activeSessionWriteQueue = next;
+  return next;
+}
+
+async function waitForActiveSessionWrites(): Promise<void> {
+  await activeSessionWriteQueue.catch(() => {});
 }
 
 // ── Volume helper ─────────────────────────────────────────────────────────────
@@ -111,6 +206,7 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
   profile: createInitialProfile(),
   routineLibrary: [],
   sessionStartTime: null,
+  restTimer: null,
   lastWorkoutSummary: null,
   pendingAchievements: [],
   nutritionEntries: [],
@@ -131,55 +227,104 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
         loadNutritionEntriesByDate(today),
       ]);
 
-      // Base state update
-      set({
+      const nextState: Partial<WorkoutState> = {
         profile,
         routineLibrary: library,
         history: historyResult.entries,
         historyHasMore: historyResult.hasMore,
         nutritionGoal,
         nutritionEntries,
-        isHydrated: true,
-      });
-
-      await reconcileAchievementsSilently('hydrate');
+        activeSessionIdx: null,
+        setCompletion: {},
+        sessionStartTime: null,
+        restTimer: null,
+      };
 
       // Restore in-progress session if one exists
       if (activeSession) {
         const routine = await loadRoutine(activeSession.routineId);
         if (routine) {
-          const setCompletion: WorkoutState['setCompletion'] = {};
-          for (const [key, val] of Object.entries(activeSession.setCompletion)) {
-            setCompletion[key] = {
-              completed: val.completed,
-              repsDone: val.repsDone,
-              weight: val.weight,
-              timestamp: val.timestamp ? new Date(val.timestamp) : undefined,
-              rpe: val.rpe,
-              rir: val.rir,
-              setType: val.setType,
-              notes: val.notes,
-            };
-          }
+          const setCompletion = deserializeSetCompletion(activeSession.setCompletion);
+          const normalizedRestTimer = normalizeRestTimerState(
+            deserializeRestTimer(activeSession.restTimer),
+            new Date()
+          );
+
+          nextState.currentRoutine = routine;
+          nextState.activeSessionIdx = activeSession.sessionIdx;
+          nextState.setCompletion = setCompletion;
+          nextState.sessionStartTime = new Date(activeSession.startedAt);
+          nextState.currentView = 'active-session';
+          nextState.restTimer = normalizedRestTimer;
+
           set({
-            currentRoutine: routine,
-            activeSessionIdx: activeSession.sessionIdx,
-            setCompletion,
-            sessionStartTime: new Date(activeSession.startedAt),
-            currentView: 'active-session',
+            ...nextState,
+            isHydrated: true,
           });
+
+          syncLocalDataMarkerFromState(get());
+
+          if (normalizedRestTimer) {
+            await queueActiveSessionWrite(() => saveActiveSession(
+              activeSession.routineId,
+              activeSession.sessionId,
+              activeSession.sessionIdx,
+              setCompletion,
+              {
+                startedAt: new Date(activeSession.startedAt),
+                restTimer: normalizedRestTimer,
+              }
+            ));
+            await persistRestTimerState(
+              normalizedRestTimer,
+              activeSession.restTimer?.id ?? null,
+              profile.preferences.language,
+              profile.preferences.timerNotificationsEnabled,
+              () => get().clearRestTimer()
+            );
+          } else if (activeSession.restTimer?.id) {
+            await persistRestTimerState(
+              null,
+              activeSession.restTimer.id,
+              profile.preferences.language,
+              profile.preferences.timerNotificationsEnabled,
+              () => get().clearRestTimer()
+            );
+          }
+          await reconcileAchievementsSilently('hydrate');
           return;
+        }
+      }
+
+      if (activeSession) {
+        await clearActiveSession();
+        if (activeSession.restTimer?.id) {
+          await persistRestTimerState(
+            null,
+            activeSession.restTimer.id,
+            profile.preferences.language,
+            profile.preferences.timerNotificationsEnabled,
+            async () => {}
+          );
         }
       }
 
       // No active session — decide initial view
       if (library.length > 0) {
-        // Load most-recently-used routine
-        const routine = await loadRoutine(library[0].id);
-        if (routine) {
-          set({ currentRoutine: routine, currentView: 'routine-overview' });
+        const restoredRoutine = await loadRoutine(library[0].id);
+        if (restoredRoutine) {
+          nextState.currentRoutine = restoredRoutine;
+          nextState.currentView = 'routine-overview';
         }
       }
+
+      set({
+        ...nextState,
+        isHydrated: true,
+      });
+
+      syncLocalDataMarkerFromState(get());
+      await reconcileAchievementsSilently('hydrate');
     } catch (err) {
       console.error('[useWorkoutStore] hydrate failed', err);
       set({ isHydrated: true });
@@ -200,16 +345,19 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
     };
 
     // Sync Zustand update first (instant UI)
+    clearRestTimerAutoClearTimeout();
     set((state) => ({
       currentRoutine: routine,
       currentView: 'routine-overview',
       activeSessionIdx: 0,
       setCompletion: {},
+      restTimer: null,
       routineLibrary: [
         summary,
         ...state.routineLibrary.filter((r) => r.id !== routine.id),
       ],
     }));
+    syncLocalDataMarkerFromState(get());
 
     // Ensure IDB write completes before import is considered done
     try {
@@ -238,21 +386,35 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
   loadRoutineFromLibrary: async (routineId: string) => {
     const routine = await loadRoutine(routineId);
     if (!routine) return;
+    clearRestTimerAutoClearTimeout();
     set({
       currentRoutine: routine,
       currentView: 'routine-overview',
       activeSessionIdx: 0,
       setCompletion: {},
+      restTimer: null,
     });
+    syncLocalDataMarkerFromState(get());
   },
 
   deleteRoutineFromLibrary: async (routineId: string) => {
+    if (get().currentRoutine?.id === routineId) {
+      clearRestTimerAutoClearTimeout();
+    }
     set((state) => ({
       routineLibrary: state.routineLibrary.filter((r) => r.id !== routineId),
       ...(state.currentRoutine?.id === routineId
-        ? { currentRoutine: null, currentView: 'uploader' as WorkoutView }
+        ? {
+            currentRoutine: null,
+            currentView: 'uploader' as WorkoutView,
+            activeSessionIdx: null,
+            setCompletion: {},
+            sessionStartTime: null,
+            restTimer: null,
+          }
         : {}),
     }));
+    syncLocalDataMarkerFromState(get());
 
     if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
       import('@/lib/sync/queue')
@@ -271,14 +433,303 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
   startSession: async (sessionIdx: number) => {
     const { currentRoutine } = get();
     const now = new Date();
-    set({ currentView: 'active-session', activeSessionIdx: sessionIdx, sessionStartTime: now });
+    clearRestTimerAutoClearTimeout();
+    set({
+      currentView: 'active-session',
+      activeSessionIdx: sessionIdx,
+      sessionStartTime: now,
+      restTimer: null,
+    });
+    syncLocalDataMarkerFromState(get());
 
     if (currentRoutine) {
       const session = currentRoutine.sessions[sessionIdx];
       if (session) {
-        saveActiveSession(currentRoutine.id, session.id, sessionIdx, {}).catch(console.error);
+        void queueActiveSessionWrite(() => saveActiveSession(currentRoutine.id, session.id, sessionIdx, {}, {
+          startedAt: now,
+          restTimer: null,
+        }));
       }
     }
+  },
+
+  startRestTimer: async (durationSeconds: number) => {
+    const state = get();
+    const { currentRoutine, activeSessionIdx } = state;
+    if (!currentRoutine || activeSessionIdx === null) {
+      return;
+    }
+
+    const session = currentRoutine.sessions[activeSessionIdx];
+    if (!session) {
+      return;
+    }
+
+    const previousTimerId = state.restTimer?.id ?? null;
+    const now = new Date();
+    const normalizedDurationSeconds = Math.max(0, Math.round(durationSeconds));
+    const nextTimer = normalizeRestTimerState({
+      id: uuidv4(),
+      durationSeconds: normalizedDurationSeconds,
+      targetAt: new Date(now.getTime() + normalizedDurationSeconds * 1000),
+      remainingMs: normalizedDurationSeconds * 1000,
+      status: 'running',
+    }, now);
+
+    if (!nextTimer) {
+      return;
+    }
+
+    set({ restTimer: nextTimer });
+    syncLocalDataMarkerFromState(get());
+
+    await queueActiveSessionWrite(() => saveActiveSession(
+      currentRoutine.id,
+      session.id,
+      activeSessionIdx,
+      state.setCompletion,
+      { restTimer: nextTimer }
+    ));
+
+    await persistRestTimerState(
+      nextTimer,
+      previousTimerId,
+      state.profile.preferences.language,
+      state.profile.preferences.timerNotificationsEnabled,
+      () => get().clearRestTimer()
+    );
+  },
+
+  pauseRestTimer: async () => {
+    const state = get();
+    const timer = state.restTimer;
+    const { currentRoutine, activeSessionIdx } = state;
+    if (!currentRoutine || activeSessionIdx === null || !timer || timer.status !== 'running') {
+      return;
+    }
+
+    const session = currentRoutine.sessions[activeSessionIdx];
+    if (!session) {
+      return;
+    }
+
+    const now = new Date();
+    const remainingMs = Math.max(0, timer.targetAt.getTime() - now.getTime());
+    const nextTimer = normalizeRestTimerState({
+      ...timer,
+      targetAt: new Date(now.getTime() + remainingMs),
+      remainingMs,
+      status: remainingMs <= 0 ? 'finished' : 'paused',
+    }, now);
+
+    if (!nextTimer) {
+      return;
+    }
+
+    set({ restTimer: nextTimer });
+    syncLocalDataMarkerFromState(get());
+
+    await queueActiveSessionWrite(() => saveActiveSession(
+      currentRoutine.id,
+      session.id,
+      activeSessionIdx,
+      state.setCompletion,
+      { restTimer: nextTimer }
+    ));
+
+    await persistRestTimerState(
+      nextTimer,
+      timer.id,
+      state.profile.preferences.language,
+      state.profile.preferences.timerNotificationsEnabled,
+      () => get().clearRestTimer()
+    );
+  },
+
+  resumeRestTimer: async () => {
+    const state = get();
+    const timer = state.restTimer;
+    const { currentRoutine, activeSessionIdx } = state;
+    if (!currentRoutine || activeSessionIdx === null || !timer || timer.status !== 'paused') {
+      return;
+    }
+
+    const session = currentRoutine.sessions[activeSessionIdx];
+    if (!session) {
+      return;
+    }
+
+    const now = new Date();
+    const remainingMs = Math.max(0, Math.round(timer.remainingMs));
+    if (remainingMs <= 0) {
+      await get().finishRestTimer();
+      return;
+    }
+
+    const nextTimer = normalizeRestTimerState({
+      ...timer,
+      targetAt: new Date(now.getTime() + remainingMs),
+      remainingMs,
+      status: 'running',
+    }, now);
+
+    if (!nextTimer) {
+      return;
+    }
+
+    set({ restTimer: nextTimer });
+    syncLocalDataMarkerFromState(get());
+
+    await queueActiveSessionWrite(() => saveActiveSession(
+      currentRoutine.id,
+      session.id,
+      activeSessionIdx,
+      state.setCompletion,
+      { restTimer: nextTimer }
+    ));
+
+    await persistRestTimerState(
+      nextTimer,
+      timer.id,
+      state.profile.preferences.language,
+      state.profile.preferences.timerNotificationsEnabled,
+      () => get().clearRestTimer()
+    );
+  },
+
+  adjustRestTimer: async (deltaSeconds: number) => {
+    const state = get();
+    const timer = state.restTimer;
+    const { currentRoutine, activeSessionIdx } = state;
+    if (!currentRoutine || activeSessionIdx === null || !timer || timer.status === 'finished') {
+      return;
+    }
+
+    const session = currentRoutine.sessions[activeSessionIdx];
+    if (!session) {
+      return;
+    }
+
+    const deltaMs = Math.round(deltaSeconds) * 1000;
+    const now = new Date();
+    const nextRemainingMs = timer.status === 'running'
+      ? Math.max(0, timer.targetAt.getTime() - now.getTime() + deltaMs)
+      : Math.max(0, Math.round(timer.remainingMs) + deltaMs);
+
+    if (nextRemainingMs <= 0) {
+      await get().finishRestTimer();
+      return;
+    }
+
+    const nextTimer = normalizeRestTimerState({
+      ...timer,
+      targetAt: new Date(now.getTime() + nextRemainingMs),
+      remainingMs: nextRemainingMs,
+      status: timer.status,
+    }, now);
+
+    if (!nextTimer) {
+      return;
+    }
+
+    set({ restTimer: nextTimer });
+    syncLocalDataMarkerFromState(get());
+
+    await queueActiveSessionWrite(() => saveActiveSession(
+      currentRoutine.id,
+      session.id,
+      activeSessionIdx,
+      state.setCompletion,
+      { restTimer: nextTimer }
+    ));
+
+    await persistRestTimerState(
+      nextTimer,
+      timer.id,
+      state.profile.preferences.language,
+      state.profile.preferences.timerNotificationsEnabled,
+      () => get().clearRestTimer()
+    );
+  },
+
+  finishRestTimer: async () => {
+    const state = get();
+    const timer = state.restTimer;
+    const { currentRoutine, activeSessionIdx } = state;
+    if (!currentRoutine || activeSessionIdx === null || !timer) {
+      return;
+    }
+
+    const session = currentRoutine.sessions[activeSessionIdx];
+    if (!session) {
+      return;
+    }
+
+    const now = new Date();
+    const nextTimer = normalizeRestTimerState({
+      ...timer,
+      targetAt: now,
+      remainingMs: 0,
+      status: 'finished',
+    }, now);
+
+    if (!nextTimer) {
+      return;
+    }
+
+    set({ restTimer: nextTimer });
+    syncLocalDataMarkerFromState(get());
+
+    await queueActiveSessionWrite(() => saveActiveSession(
+      currentRoutine.id,
+      session.id,
+      activeSessionIdx,
+      state.setCompletion,
+      { restTimer: nextTimer }
+    ));
+
+    await persistRestTimerState(
+      nextTimer,
+      timer.id,
+      state.profile.preferences.language,
+      state.profile.preferences.timerNotificationsEnabled,
+      () => get().clearRestTimer()
+    );
+  },
+
+  clearRestTimer: async () => {
+    const state = get();
+    const timer = state.restTimer;
+    const { currentRoutine, activeSessionIdx } = state;
+    clearRestTimerAutoClearTimeout();
+
+    if (!timer) {
+      return;
+    }
+
+    set({ restTimer: null });
+    syncLocalDataMarkerFromState(get());
+
+    if (currentRoutine && activeSessionIdx !== null) {
+      const session = currentRoutine.sessions[activeSessionIdx];
+      if (session) {
+        await queueActiveSessionWrite(() => saveActiveSession(
+          currentRoutine.id,
+          session.id,
+          activeSessionIdx,
+          state.setCompletion,
+          { restTimer: null }
+        ));
+      }
+    }
+
+    await persistRestTimerState(
+      null,
+      timer.id,
+      state.profile.preferences.language,
+      state.profile.preferences.timerNotificationsEnabled,
+      async () => {}
+    );
   },
 
   toggleSetCompletion: (
@@ -314,12 +765,12 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
       if (currentRoutine && activeSessionIdx !== null) {
         const session = currentRoutine.sessions[activeSessionIdx];
         if (session) {
-          saveActiveSession(
+          void queueActiveSessionWrite(() => saveActiveSession(
             currentRoutine.id,
             session.id,
             activeSessionIdx,
             next
-          ).catch(console.error);
+          ));
         }
       }
 
@@ -365,6 +816,8 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
       lastWorkoutSummary: null, // will be populated below
     }));
 
+    await get().clearRestTimer();
+
     // ── Build summary asynchronously (doesn't block history update) ──────
     try {
       const priorHistory = get().history.slice(1); // history without the new entry
@@ -385,6 +838,7 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
           history: get().history,
           summary,
           earnedIds,
+          profile: state.profile,
         });
         if (newAchievements.length > 0) {
           await Promise.all(newAchievements.map((a) => saveAchievement(a.id)));
@@ -403,6 +857,7 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
     // ── IDB writes ────────────────────────────────────────────────────────
     try {
       await saveHistoryEntry(newEntry, state.currentRoutine.id, activeSession.id);
+      await waitForActiveSessionWrites();
       await clearActiveSession();
 
       // ── Enqueue cloud sync mutation (fire-and-forget) ──────────────────
@@ -421,13 +876,17 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
   },
 
   abandonSession: async () => {
+    await get().clearRestTimer();
+    await waitForActiveSessionWrites();
     set({
       currentView: 'routine-overview',
       setCompletion: {},
       activeSessionIdx: null,
       sessionStartTime: null,
+      restTimer: null,
     });
     clearActiveSession().catch(console.error);
+    syncLocalDataMarkerFromState(get());
   },
 
   // ── History ────────────────────────────────────────────────────────────────
@@ -593,10 +1052,11 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
 
   refreshFromPersistence: async () => {
     try {
-      const [profile, library, historyResult] = await Promise.all([
+      const [profile, library, historyResult, activeSession] = await Promise.all([
         loadProfile(),
         listRoutines(),
         loadHistory(50),
+        loadActiveSession(),
       ]);
       await reconcileAchievementsSilently('refreshFromPersistence');
 
@@ -606,7 +1066,73 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
         routineLibrary: library,
         history: historyResult.entries,
         historyHasMore: historyResult.hasMore,
+        activeSessionIdx: null,
+        setCompletion: {},
+        sessionStartTime: null,
+        restTimer: null,
       };
+
+      if (activeSession) {
+        const routine = await loadRoutine(activeSession.routineId);
+        if (routine) {
+          const setCompletion = deserializeSetCompletion(activeSession.setCompletion);
+          const normalizedRestTimer = normalizeRestTimerState(
+            deserializeRestTimer(activeSession.restTimer),
+            new Date()
+          );
+
+          nextState.currentRoutine = routine;
+          nextState.activeSessionIdx = activeSession.sessionIdx;
+          nextState.setCompletion = setCompletion;
+          nextState.sessionStartTime = new Date(activeSession.startedAt);
+          nextState.currentView = 'active-session';
+          nextState.restTimer = normalizedRestTimer;
+
+          set(nextState);
+          syncLocalDataMarkerFromState(get());
+
+          if (normalizedRestTimer) {
+            await queueActiveSessionWrite(() => saveActiveSession(
+              activeSession.routineId,
+              activeSession.sessionId,
+              activeSession.sessionIdx,
+              setCompletion,
+              {
+                startedAt: new Date(activeSession.startedAt),
+                restTimer: normalizedRestTimer,
+              }
+            ));
+            await persistRestTimerState(
+              normalizedRestTimer,
+              activeSession.restTimer?.id ?? null,
+              profile.preferences.language,
+              profile.preferences.timerNotificationsEnabled,
+              () => get().clearRestTimer()
+            );
+          } else if (activeSession.restTimer?.id) {
+            await persistRestTimerState(
+              null,
+              activeSession.restTimer.id,
+              profile.preferences.language,
+              profile.preferences.timerNotificationsEnabled,
+              async () => {}
+            );
+          }
+
+          return;
+        }
+
+        await clearActiveSession();
+        if (activeSession.restTimer?.id) {
+          await persistRestTimerState(
+            null,
+            activeSession.restTimer.id,
+            profile.preferences.language,
+            profile.preferences.timerNotificationsEnabled,
+            async () => {}
+          );
+        }
+      }
 
       if (state.activeSessionIdx === null && state.currentRoutine) {
         const refreshedRoutine = await loadRoutine(state.currentRoutine.id);
@@ -621,6 +1147,7 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
       }
 
       set(nextState);
+      syncLocalDataMarkerFromState(get());
     } catch (err) {
       console.error('[useWorkoutStore] refreshFromPersistence failed', err);
     }
@@ -628,6 +1155,7 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
 
   // ── resetAll ───────────────────────────────────────────────────────────────
   resetAll: async () => {
+    clearRestTimerAutoClearTimeout();
     set({
       currentRoutine: null,
       currentView: 'uploader',
@@ -636,9 +1164,14 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
       history: [],
       routineLibrary: [],
       sessionStartTime: null,
+      restTimer: null,
       lastWorkoutSummary: null,
+      pendingAchievements: [],
     });
+    clearLocalDataMarker();
     // Clear workout data in background, preserving profile
-    clearWorkoutData().catch(console.error);
+    waitForActiveSessionWrites()
+      .then(() => clearWorkoutData())
+      .catch(console.error);
   },
 }));

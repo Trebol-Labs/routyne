@@ -1,5 +1,5 @@
 import type { DBSchema } from 'idb';
-import type { MealType, SetType } from '@/types/workout';
+import type { MealType, RestTimerStatus, SetType } from '@/types/workout';
 
 // ── Record types stored in IndexedDB ────────────────────────────────────────
 
@@ -76,6 +76,7 @@ export interface ActiveSessionRecord {
   sessionId: string;
   sessionIdx: number;
   startedAt: string;    // ISO 8601
+  restTimer?: RestTimerRecord | null;
   setCompletion: Record<string, {
     completed: boolean;
     repsDone?: number;
@@ -86,6 +87,14 @@ export interface ActiveSessionRecord {
     setType?: SetType;  // ← NEW
     notes?: string;
   }>;
+}
+
+export interface RestTimerRecord {
+  id: string;
+  durationSeconds: number;
+  targetAt: string;
+  remainingMs: number;
+  status: RestTimerStatus;
 }
 
 export interface ProfileRecord {

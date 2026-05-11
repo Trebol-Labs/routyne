@@ -29,7 +29,9 @@ import { useOnboardingGate } from '@/hooks/useOnboardingGate';
 import { useI18n } from '@/components/i18n/LanguageProvider';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { AchievementToast } from '@/components/workout/AchievementToast';
+import { ShellSkeleton } from '@/components/workout/ShellSkeleton';
 import { COACH_ENABLED } from '@/lib/feature-flags';
+import { hasLocalDataMarker } from '@/lib/local-data-marker';
 import type { UserProfile, WorkoutView } from '@/types/workout';
 
 const ACCENT_TOKENS: Record<UserProfile['preferences']['accentColor'], { primary: string; secondary: string }> = {
@@ -50,9 +52,11 @@ function applyAppearancePreferences(profile: UserProfile['preferences']): void {
 }
 
 export default function Home() {
+  const hasLocalData = hasLocalDataMarker();
+
   return (
-    <Suspense fallback={<LoadingScreen />}>
-      <HomeContent />
+    <Suspense fallback={hasLocalData ? <ShellSkeleton /> : <LoadingScreen />}>
+      <HomeContent hasLocalData={hasLocalData} />
     </Suspense>
   );
 }
@@ -82,7 +86,7 @@ function LoadingScreen() {
   );
 }
 
-function HomeContent() {
+function HomeContent({ hasLocalData }: { hasLocalData: boolean }) {
   const isReady = useHydration();
 
   const {
@@ -147,7 +151,7 @@ function HomeContent() {
   }, [pathname, router, searchParams]);
 
   if (!isReady) {
-    return <LoadingScreen />;
+    return hasLocalData ? <ShellSkeleton /> : <LoadingScreen />;
   }
 
   const handleNavClick = (view: WorkoutView) => {
@@ -159,7 +163,13 @@ function HomeContent() {
   };
 
   return (
-    <main className="min-h-[100dvh] liquid-bg-dark text-zinc-100 selection:bg-blue-500/40 font-sans">
+    <motion.main
+      key="app"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
+      className="min-h-[100dvh] liquid-bg-dark text-zinc-100 selection:bg-blue-500/40 font-sans"
+    >
       <div className="max-w-screen-md mx-auto h-dvh flex flex-col relative px-[var(--space-page-x)]">
 
         {/* Top Header */}
@@ -299,6 +309,6 @@ function HomeContent() {
         achievementIds={pendingAchievements}
         onDismiss={clearPendingAchievements}
       />
-    </main>
+    </motion.main>
   );
 }

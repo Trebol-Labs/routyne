@@ -4,31 +4,22 @@ import { motion } from 'framer-motion';
 import { Flame } from 'lucide-react';
 import { HistoryEntry } from '@/types/workout';
 import { cn } from '@/lib/utils';
-
-function computeStreak(workoutDays: Set<string>, restDays: number[]): number {
-  const isFulfilled = (d: Date) => workoutDays.has(d.toDateString()) || restDays.includes(d.getDay());
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(today.getDate() - 1);
-  const check: Date | null = isFulfilled(today) ? new Date(today) : isFulfilled(yesterday) ? new Date(yesterday) : null;
-  if (!check) return 0;
-  let streak = 0;
-  while (isFulfilled(check)) {
-    streak++;
-    check.setDate(check.getDate() - 1);
-  }
-  return streak;
-}
+import { getCurrentStreak } from '@/lib/notifications/reminders';
 
 interface StreakCalendarProps {
   history: HistoryEntry[];
   restDays?: number[];
+  timezone: string;
   weekStartsOn?: 0 | 1;
 }
 
-export function StreakCalendar({ history, restDays = [], weekStartsOn = 1 }: StreakCalendarProps) {
+export function StreakCalendar({ history, restDays = [], timezone, weekStartsOn = 1 }: StreakCalendarProps) {
   const workoutDays = new Set(history.map((e) => new Date(e.completedAt).toDateString()));
-  const streak = computeStreak(workoutDays, restDays);
+  const streak = getCurrentStreak({
+    history,
+    restDays,
+    timezone,
+  });
   const today = new Date();
   const todayStr = today.toDateString();
 
