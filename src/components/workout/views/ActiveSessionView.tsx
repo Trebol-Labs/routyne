@@ -13,6 +13,7 @@ import { ChevronLeft, Clock, Zap, CheckCircle2, MousePointerClick, ChevronsRight
 import { EditSessionSheet } from '@/components/workout/overlays/EditSessionSheet';
 import { ExerciseDetailSheet } from '@/components/workout/overlays/ExerciseDetailSheet';
 import { getAutoSetSuggestion } from '@/lib/workout/suggestions';
+import { useI18n } from '@/components/i18n/LanguageProvider';
 
 interface PendingSet {
   exerciseId: string;
@@ -95,6 +96,7 @@ export function ActiveSessionView() {
     updateActiveSessionExercises,
     restTimer,
   } = useWorkoutStore();
+  const { t } = useI18n();
 
   const { isLocked } = useWakeLock(true);
 
@@ -349,7 +351,7 @@ export function ActiveSessionView() {
           <button
             onClick={() => setShowEditSession(true)}
             className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] text-white/50 transition-colors hover:bg-white/10 hover:text-white/80"
-            aria-label="Editar sesión"
+            aria-label={t.editSession.title}
           >
             <Pencil className="h-4 w-4" />
           </button>
@@ -502,6 +504,7 @@ export function ActiveSessionView() {
         {showEditSession && (
           <EditSessionSheet
             exercises={activeSession.exercises}
+            sessionTitle={activeSession.title}
             onClose={() => setShowEditSession(false)}
             onSave={(updated) => {
               updateActiveSessionExercises(updated);

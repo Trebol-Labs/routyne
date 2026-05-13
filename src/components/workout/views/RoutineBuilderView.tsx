@@ -54,6 +54,19 @@ interface DraftSession {
   exercises: DraftExercise[];
 }
 
+type SearchContext =
+  | {
+      intent: 'add';
+      sessionId: string;
+    }
+  | {
+      intent: 'replace';
+      sessionId: string;
+      exerciseId: string;
+      initialQuery: string;
+    }
+  | null;
+
 const REST_OPTIONS = [30, 45, 60, 90, 120, 180] as const;
 
 function makeExercise(): DraftExercise {
@@ -590,7 +603,7 @@ export function RoutineBuilderView() {
   const [expandedExerciseId, setExpandedExerciseId] = useState<string | null>(null);
   const [showErrors, setShowErrors] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [searchTarget, setSearchTarget] = useState<{ sessionId: string; exerciseId: string } | null>(null);
+  const [searchContext, setSearchContext] = useState<SearchContext>(null);
 
   const activeSessionId = selectedSessionId && sessions.some((session) => session.id === selectedSessionId)
     ? selectedSessionId
@@ -608,7 +621,7 @@ export function RoutineBuilderView() {
 
   const handleSelectSession = useCallback((sessionId: string) => {
     setSelectedSessionId(sessionId);
-    setSearchTarget(null);
+    setSearchContext(null);
     setExpandedExerciseId(null);
   }, []);
 
@@ -617,7 +630,7 @@ export function RoutineBuilderView() {
       const next = [...current, makeSession(current.length + 1, language)];
       setSelectedSessionId(next[next.length - 1]?.id ?? null);
       setExpandedExerciseId(null);
-      setSearchTarget(null);
+      setSearchContext(null);
       return next;
     });
   }, [language]);
@@ -629,22 +642,22 @@ export function RoutineBuilderView() {
         const fallback = [makeSession(1, language)];
         setSelectedSessionId(fallback[0].id);
         setExpandedExerciseId(null);
-        setSearchTarget(null);
+        setSearchContext(null);
         return fallback;
       }
 
       if (selectedSessionId === sessionId) {
         setSelectedSessionId(next[0].id);
       }
-      if (searchTarget?.sessionId === sessionId) {
-        setSearchTarget(null);
+      if (searchContext?.sessionId === sessionId) {
+        setSearchContext(null);
       }
       if (next.every((session) => session.exercises.every((exercise) => exercise.id !== expandedExerciseId))) {
         setExpandedExerciseId(null);
       }
       return next;
     });
-  }, [expandedExerciseId, language, searchTarget?.sessionId, selectedSessionId]);
+  }, [expandedExerciseId, language, searchContext?.sessionId, selectedSessionId]);
 
   const handleSessionTitleChange = useCallback((sessionId: string, newTitle: string) => {
     setSessions((current) =>
@@ -655,16 +668,9 @@ export function RoutineBuilderView() {
   }, []);
 
   const handleAddExercise = useCallback((sessionId: string) => {
-    const exercise = makeExercise();
-    setSessions((current) =>
-      current.map((session) =>
-        session.id === sessionId
-          ? { ...session, exercises: [...session.exercises, exercise] }
-          : session
-      )
-    );
-    setExpandedExerciseId(exercise.id);
-    setSearchTarget({ sessionId, exerciseId: exercise.id });
+    setSelectedSessionId(sessionId);
+    setSearchContext({ intent: 'add', sessionId });
+    setExpandedExerciseId(null);
   }, []);
 
   const handleExerciseChange = useCallback(
@@ -695,8 +701,10 @@ export function RoutineBuilderView() {
     );
 
     setExpandedExerciseId((current) => (current === exerciseId ? null : current));
-    setSearchTarget((current) =>
-      current?.sessionId === sessionId && current.exerciseId === exerciseId ? null : current
+    setSearchContext((current) =>
+      current?.sessionId === sessionId && current.intent === 'replace' && current.exerciseId === exerciseId
+        ? null
+        : current
     );
   }, []);
 
@@ -715,32 +723,52 @@ export function RoutineBuilderView() {
     );
   }, []);
 
-  const handleSelectExercise = useCallback((item: ExerciseBrowseItem) => {
-    if (!searchTarget) return;
-
+  const handleCommitExercise = useCallback((item: ExerciseBrowseItem) => {
     const previewUrl = item.mediaUrl ?? item.gifUrl ?? null;
+    const targetSessionId = searchContext?.sessionId ?? selectedSession?.id;
+
+    if (!targetSessionId) return;
+
+    if (searchContext?.intent === 'replace') {
+      setSessions((current) =>
+        current.map((session) =>
+          session.id === searchContext.sessionId
+            ? {
+                ...session,
+                exercises: session.exercises.map((exercise) =>
+                  exercise.id === searchContext.exerciseId
+                    ? {
+                        ...exercise,
+                        name: item.name,
+                        previewUrl,
+                      }
+                    : exercise
+                ),
+              }
+            : session
+        )
+      );
+
+      setExpandedExerciseId(searchContext.exerciseId);
+      setSearchContext(null);
+      return;
+    }
+
+    const exercise = makeExercise();
     setSessions((current) =>
       current.map((session) =>
-        session.id === searchTarget.sessionId
+        session.id === targetSessionId
           ? {
               ...session,
-              exercises: session.exercises.map((exercise) =>
-                exercise.id === searchTarget.exerciseId
-                  ? {
-                      ...exercise,
-                      name: item.name,
-                      previewUrl,
-                    }
-                  : exercise
-              ),
+              exercises: [...session.exercises, { ...exercise, name: item.name, previewUrl }],
             }
           : session
       )
     );
 
-    setExpandedExerciseId(searchTarget.exerciseId);
-    setSearchTarget(null);
-  }, [searchTarget]);
+    setExpandedExerciseId(exercise.id);
+    setSearchContext(null);
+  }, [searchContext, selectedSession?.id]);
 
   const handleSave = async () => {
     if (!canSave) {
@@ -783,8 +811,18 @@ export function RoutineBuilderView() {
   const selectedSessionIndex = selectedSession
     ? sessions.findIndex((session) => session.id === selectedSession.id) + 1
     : 1;
-  const selectedSessionTitle = selectedSession?.title.trim() || `${t.builder.day} ${selectedSessionIndex}`;
-  const searchActionLabel = searchTarget ? `${t.search.addTo} ${selectedSessionTitle}` : undefined;
+  const searchSession = searchContext
+    ? sessions.find((session) => session.id === searchContext.sessionId) ?? null
+    : selectedSession;
+  const searchTargetExercise = searchContext?.intent === 'replace'
+    ? searchSession?.exercises.find((exercise) => exercise.id === searchContext.exerciseId) ?? null
+    : null;
+  const searchIntent = searchContext?.intent ?? 'add';
+  const searchTargetLabel = searchContext?.intent === 'replace'
+    ? searchTargetExercise?.name.trim() || null
+    : searchSession?.title.trim() || `${t.builder.day} ${selectedSessionIndex}`;
+  const searchInitialQuery = searchContext?.intent === 'replace' ? searchTargetExercise?.name ?? '' : '';
+  const showSearchOverlay = Boolean(searchContext);
 
   return (
     <div className="flex min-w-0 flex-col gap-4 pb-10 lg:grid lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
@@ -855,11 +893,22 @@ export function RoutineBuilderView() {
               onAddSession={handleAddSession}
               onDeleteSession={handleDeleteSession}
               onDragEnd={handleDragEnd}
-              onSearchExercise={(sessionId, exerciseId) => setSearchTarget({ sessionId, exerciseId })}
+              onSearchExercise={(sessionId, exerciseId) => {
+                const session = sessions.find((item) => item.id === sessionId);
+                const exercise = session?.exercises.find((item) => item.id === exerciseId);
+                setSearchContext({
+                  intent: 'replace',
+                  sessionId,
+                  exerciseId,
+                  initialQuery: exercise?.name ?? '',
+                });
+              }}
               onToggleExercise={(exerciseId) =>
                 setExpandedExerciseId((current) => (current === exerciseId ? null : exerciseId))
               }
-              targetExerciseId={searchTarget?.sessionId === selectedSession.id ? searchTarget.exerciseId : null}
+              targetExerciseId={searchContext?.intent === 'replace' && searchContext.sessionId === selectedSession.id
+                ? searchContext.exerciseId
+                : null}
             />
           )}
         </AnimatePresence>
@@ -881,20 +930,23 @@ export function RoutineBuilderView() {
       <div className="hidden lg:block lg:sticky lg:top-4">
         <ExerciseSearchPanel
           embedded
-          onClose={() => setSearchTarget(null)}
-          onSelectExercise={handleSelectExercise}
-          actionLabel={searchActionLabel}
-          targetLabel={searchTarget ? selectedSessionTitle : null}
+          intent={searchIntent}
+          targetLabel={searchTargetLabel}
+          initialQuery={searchInitialQuery}
+          autoFocusInput={Boolean(searchContext)}
+          onCommit={handleCommitExercise}
         />
       </div>
 
       <div className="lg:hidden">
-        {searchTarget && (
+        {showSearchOverlay && (
           <SearchSheet
-            onClose={() => setSearchTarget(null)}
-            onSelectExercise={handleSelectExercise}
-            actionLabel={searchActionLabel}
-            targetLabel={searchTarget ? selectedSessionTitle : null}
+            intent={searchIntent}
+            targetLabel={searchTargetLabel}
+            initialQuery={searchInitialQuery}
+            autoFocusInput
+            onClose={() => setSearchContext(null)}
+            onCommit={handleCommitExercise}
           />
         )}
       </div>
