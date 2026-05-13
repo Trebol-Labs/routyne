@@ -4,7 +4,7 @@
 
 - Node `20` from [`.nvmrc`](/Users/sierra/Code/routyne/.nvmrc).
 - pnpm from `packageManager` in [`package.json`](/Users/sierra/Code/routyne/package.json).
-- `RAPIDAPI_KEY` for ExerciseDB-backed media/search and production builds.
+- `RAPIDAPI_KEY` for ExerciseDB-backed media/search supplements and production builds. When it is unset, exercise browsing still falls back to bundled local fixtures.
 - Android Studio + a Java 21 JDK for the native shell. Android Studio's bundled JBR 21 also works.
 
 ## Local Setup
@@ -38,7 +38,7 @@ If you are testing the Capacitor shell on a real Android phone, keep `pnpm dev` 
 
 | Variable | Required | Purpose |
 |---|---:|---|
-| `RAPIDAPI_KEY` | Production | ExerciseDB media lookup, exercise search, and import script. |
+| `RAPIDAPI_KEY` | Production | ExerciseDB media lookup, remote search supplements, and import script. Browsing still works from bundled fixtures when it is unset. |
 | `NEXT_PUBLIC_SITE_URL` | Optional | Canonical links, OG metadata, server-side auth redirect fallback. Defaults to production URL. |
 | `CAPACITOR_SERVER_URL` | Optional | URL loaded by the Capacitor shell. Defaults to `NEXT_PUBLIC_SITE_URL`; use a LAN-reachable dev URL for on-device testing. |
 | `NEXT_PUBLIC_SUPABASE_URL` | Optional | Enables Supabase auth and cloud sync. |

@@ -106,7 +106,7 @@ Vercel Cron schedule in `vercel.json`: `0 1 * * *`.
 
 ## ExerciseDB Media
 
-- `RAPIDAPI_KEY` is required for media/search.
+- `RAPIDAPI_KEY` is required for production media/search supplements and the import script. The browse endpoint still serves bundled local fixtures when it is unset.
 - `pnpm import:exercises` imports ExerciseDB rows into `src/lib/data/`.
 - `src/lib/media/resolver.ts` and `/api/media/[slug]` use fuzzy matching and provider fallbacks.
 - API cache headers are stricter in development and long-lived in production.

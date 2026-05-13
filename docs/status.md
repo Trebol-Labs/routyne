@@ -1,6 +1,6 @@
 # Routyne Status
 
-Updated: 2026-05-11
+Updated: 2026-05-13
 
 This file is the current source of truth for shipped state, roadmap health, and near-term implementation moves.
 
@@ -21,7 +21,7 @@ This file is the current source of truth for shipped state, roadmap health, and 
 - The AI Coach can also ingest an imported Hevy archive digest. The archive is pulled once with `HEVY_API_KEY`, stored in Supabase `hevy_archives`, synced locally, and then passed to the coach without needing the Hevy key at runtime.
 - Push subscriptions can persist to Supabase when the service role key is configured; browser and PWA installs still fall back to Web Push, while native installs use local notifications first and register FCM/APNs tokens only when native remote push is explicitly enabled.
 - Daily streak reminders still run through the protected Vercel Cron route `/api/cron/streak-reminders` for the web fallback, while native installs now reschedule local reminders on device.
-- Exercise media/search depend on ExerciseDB through RapidAPI, and the visual routine builder now uses demo-first exercise search with a selected-day editor and a collapsed Markdown import fallback.
+- Exercise media/search use ExerciseDB through RapidAPI when available, and the visual routine builder now keeps the selected-day editor while a shared liquid-glass picker handles add/replace flows in both the builder and active-session edit sheet. Search results stay local-first and deterministic, remote ExerciseDB supplements are deduped, and Markdown import remains collapsed behind the advanced create path.
 
 ## Recent Changes From Last Commits
 

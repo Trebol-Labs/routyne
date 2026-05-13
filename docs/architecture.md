@@ -25,8 +25,9 @@ The visual routine builder in [`src/components/workout/views/RoutineBuilderView.
 - Routine title and the currently selected day stay visible at the top of the builder.
 - A horizontal day rail lets users switch or add days without flattening every session into one long column.
 - Exercise rows stay compact by default and expand only when the user edits sets, reps, or rest.
-- Exercise search is demo-first: on desktop it renders inline beside the builder, and on mobile it opens as a bottom sheet via [`src/components/workout/overlays/SearchSheet.tsx`](/Users/sierra/Code/routyne/src/components/workout/overlays/SearchSheet.tsx).
-- The search results are enriched by [`src/app/api/exercises/browse/route.ts`](/Users/sierra/Code/routyne/src/app/api/exercises/browse/route.ts) with target muscles, secondary muscles, instructions, difficulty, and demo media when the ExerciseDB data is available.
+- Exercise search is handled by a shared liquid-glass picker in [`src/components/workout/overlays/SearchSheet.tsx`](/Users/sierra/Code/routyne/src/components/workout/overlays/SearchSheet.tsx). Desktop uses an inline panel when space is available; mobile opens a bottom sheet with sticky preview and commit controls.
+- The picker supports add and replace intents. With no targeted row, add commits to the currently selected day; when opened from a row, commit replaces that row. The same picker is reused by active-session editing so the add and replace flows stay aligned.
+- The search results come from [`src/app/api/exercises/browse/route.ts`](/Users/sierra/Code/routyne/src/app/api/exercises/browse/route.ts), which returns local fixture results first, merges remote ExerciseDB supplements when available, and keeps filters deterministic.
 - Markdown import remains in [`src/components/workout/RoutineUploader.tsx`](/Users/sierra/Code/routyne/src/components/workout/RoutineUploader.tsx) behind an advanced disclosure so the primary create path stays visually focused.
 
 ## Native Shell
@@ -151,7 +152,7 @@ Generated markdown comes from [`src/lib/markdown/generator.ts`](/Users/sierra/Co
 
 - [`src/lib/media/resolver.ts`](/Users/sierra/Code/routyne/src/lib/media/resolver.ts) maps exercise names to `/api/media/{slug}`.
 - [`src/app/api/media/[slug]/route.ts`](/Users/sierra/Code/routyne/src/app/api/media/[slug]/route.ts) resolves/fetches media from provider data.
-- [`src/app/api/exercises/browse/route.ts`](/Users/sierra/Code/routyne/src/app/api/exercises/browse/route.ts) powers builder/search browsing with ExerciseDB-backed fixtures, metadata enrichment, and body-part/equipment filters.
+- [`src/app/api/exercises/browse/route.ts`](/Users/sierra/Code/routyne/src/app/api/exercises/browse/route.ts) powers builder/search browsing with local ExerciseDB fixtures, deterministic body-part/equipment filters, remote supplement dedupe, and metadata enrichment.
 - [`src/lib/media/providers/exercisedb.ts`](/Users/sierra/Code/routyne/src/lib/media/providers/exercisedb.ts) uses RapidAPI ExerciseDB.
 - Exercise card fallback order is video, GIF, image, dumbbell icon.
 
