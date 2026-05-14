@@ -21,12 +21,13 @@ This file is the current source of truth for shipped state, roadmap health, and 
 - The AI Coach can also ingest an imported Hevy archive digest. The archive is pulled once with `HEVY_API_KEY`, stored in Supabase `hevy_archives`, synced locally, and then passed to the coach without needing the Hevy key at runtime.
 - Push subscriptions can persist to Supabase when the service role key is configured; browser and PWA installs still fall back to Web Push, while native installs use local notifications first and register FCM/APNs tokens only when native remote push is explicitly enabled.
 - Daily streak reminders still run through the protected Vercel Cron route `/api/cron/streak-reminders` for the web fallback, while native installs now reschedule local reminders on device.
-- Exercise media/search use ExerciseDB through RapidAPI when available, and the visual routine builder now keeps the selected-day editor while a shared liquid-glass picker handles add/replace flows in both the builder and active-session edit sheet. Search results stay local-first and deterministic, remote ExerciseDB supplements are deduped, and Markdown import remains collapsed behind the advanced create path.
+- Exercise media/search use ExerciseDB through RapidAPI when available, and the visual routine builder now keeps the selected-day editor while a shared liquid-glass picker handles add/replace flows in both the builder and active-session edit sheet. Mobile search is now list-first with a compact selected-exercise bar and optional preview expansion, desktop caps the inline picker against the viewport and bottom nav, and the active-session edit sheet uses a deeper lifted surface with a sticky save footer. Search results stay local-first and deterministic, remote ExerciseDB supplements are deduped, and Markdown import remains collapsed behind the advanced create path.
 
 ## Recent Changes From Last Commits
 
 - `6f44544` / PR #10: added the nutrition block planner in `src/lib/nutrition/planner.ts`, planner tests, the live planner UI in `NutritionView`, and prompt tests for saved nutrition targets.
 - `aebaf91` / PR #9: added nutrition onboarding, rich nutrition profile persistence, Supabase `nutrition_profiles` sync, nutrition plan card, adaptive adjustment logic/banner, and onboarding gate.
+- Current worktree: exercise search now uses a mobile list-first picker with a compact selected bar, optional preview expansion, desktop viewport/nav-capped embedded picker, and a lifted active-session edit sheet.
 - Current worktree: added Hevy archive migration, digest generation, Supabase archive storage, and coach context wiring.
 - `3a5b00a` / PR #8: added structured sync traces in `src/lib/sync/debug.ts`, exposed through `window.__routyneSync`.
 - Current worktree: rest timer persistence + notification reconciliation, startup shell skeleton, streak timezone alignment, and mobile helper scripts.
