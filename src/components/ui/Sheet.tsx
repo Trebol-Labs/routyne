@@ -3,6 +3,7 @@
 import { motion, useMotionValue, useTransform, animate, type PanInfo } from 'framer-motion';
 import { X } from 'lucide-react';
 import { useEffect, useRef, useCallback } from 'react';
+import { cn } from '@/lib/utils';
 
 interface SheetProps {
   onClose: () => void;
@@ -10,6 +11,8 @@ interface SheetProps {
   children: React.ReactNode;
   /** Height of the panel. Both sheets use the same value for symmetric animation. */
   height?: string;
+  surfaceVariant?: 'default' | 'deep';
+  bottomOffset?: string;
 }
 
 const FOCUSABLE = [
@@ -29,7 +32,14 @@ const CLOSE_THRESHOLD = 80;
 
 const EASE = [0.23, 1, 0.32, 1] as const;
 
-export function Sheet({ onClose, title, children, height = SHEET_HEIGHT }: SheetProps) {
+export function Sheet({
+  onClose,
+  title,
+  children,
+  height = SHEET_HEIGHT,
+  surfaceVariant = 'default',
+  bottomOffset = '0px',
+}: SheetProps) {
   const panelRef = useRef<HTMLDivElement>(null);
 
   // Motion value for pan-to-dismiss gesture offset (separate from entry animation).
@@ -124,10 +134,15 @@ export function Sheet({ onClose, title, children, height = SHEET_HEIGHT }: Sheet
         // marginTop shifts the panel downward within its fixed positioning.
         // position:fixed must be inline — .glass-panel sets position:relative for its ::before
         // pseudo-element, which overrides Tailwind's .fixed at equal specificity.
-        style={{ position: 'fixed', height, marginTop: panOffset }}
+        style={{ position: 'fixed', height, bottom: bottomOffset, marginTop: panOffset }}
         onPan={handlePan}
         onPanEnd={handlePanEnd}
-        className="inset-x-0 bottom-0 z-[var(--z-overlay)] glass-panel rounded-t-[2rem] border-white/10 flex flex-col overscroll-none touch-pan-x cursor-grab active:cursor-grabbing"
+        className={cn(
+          'inset-x-0 bottom-0 z-[var(--z-overlay)] rounded-t-[2rem] flex flex-col overscroll-none touch-pan-x cursor-grab active:cursor-grabbing',
+          surfaceVariant === 'deep'
+            ? 'glass-panel sheet-surface-deep'
+            : 'glass-panel border-white/10'
+        )}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Drag handle indicator */}

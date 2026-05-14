@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   AlertTriangle,
   Check,
+  ChevronDown,
+  ChevronUp,
   Dumbbell,
   Loader2,
   PlayCircle,
@@ -106,6 +108,8 @@ function ExerciseResultRow({
   return (
     <motion.button
       type="button"
+      data-testid="exercise-search-result"
+      data-exercise-name={item.name}
       whileTap={{ scale: 0.99 }}
       onClick={onSelect}
       aria-pressed={isSelected}
@@ -143,22 +147,39 @@ function SearchStatusCard({
   body,
   actionLabel,
   onAction,
+  compact = false,
 }: {
   icon: LucideIcon;
   title: string;
   body?: string;
   actionLabel?: string;
   onAction?: () => void;
+  compact?: boolean;
 }) {
   return (
-    <div className="flex h-full min-h-[12rem] flex-col items-center justify-center gap-2 rounded-[1.25rem] border border-white/8 bg-white/[0.03] px-4 text-center">
-      <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/8 bg-white/[0.05] text-white/55">
-        <Icon className="h-5 w-5" />
+    <div
+      className={cn(
+        'flex h-full min-h-0 flex-col items-center justify-center rounded-[1.25rem] border border-white/8 bg-white/[0.03] text-center',
+        compact ? 'gap-1.5 px-3 py-3' : 'min-h-[12rem] gap-2 px-4 py-4'
+      )}
+    >
+      <div className={cn(
+        'flex items-center justify-center rounded-2xl border border-white/8 bg-white/[0.05] text-white/55',
+        compact ? 'h-9 w-9' : 'h-11 w-11'
+      )}>
+        <Icon className={cn(compact ? 'h-4 w-4' : 'h-5 w-5', Icon === Loader2 && 'animate-spin')} />
       </div>
       <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/65">
         {title}
       </p>
-      {body && <p className="max-w-[18rem] text-sm leading-relaxed text-white/42">{body}</p>}
+      {body && (
+        <p className={cn(
+          'max-w-[18rem] leading-relaxed text-white/42',
+          compact ? 'text-[11px]' : 'text-sm'
+        )}>
+          {body}
+        </p>
+      )}
       {onAction && actionLabel && (
         <button
           type="button"
@@ -173,6 +194,48 @@ function SearchStatusCard({
   );
 }
 
+function SearchCommitButton({
+  intent,
+  commitLabel,
+  canCommit,
+  onCommit,
+  compact = false,
+}: {
+  intent: 'add' | 'replace';
+  commitLabel: string;
+  canCommit: boolean;
+  onCommit: () => void;
+  compact?: boolean;
+}) {
+  const { t } = useI18n();
+
+  return (
+    <button
+      type="button"
+      data-testid="exercise-search-commit"
+      disabled={!canCommit}
+      onClick={onCommit}
+      className={cn(
+        'flex w-full items-center gap-3 rounded-[1.25rem] border px-4 py-3 text-left transition-colors',
+        compact ? 'px-3 py-2.5' : '',
+        canCommit
+          ? 'active-glass-btn text-white'
+          : 'cursor-not-allowed border-white/8 bg-white/[0.04] text-white/30'
+      )}
+    >
+      <Check className="h-4 w-4 shrink-0" />
+      <span className="min-w-0 flex-1">
+        <span className="block text-[9px] font-black uppercase tracking-[0.18em]">
+          {intent === 'replace' ? t.search.replaceWith : t.search.addTo}
+        </span>
+        <span className="block truncate text-sm font-black uppercase tracking-[0.18em]">
+          {commitLabel}
+        </span>
+      </span>
+    </button>
+  );
+}
+
 function SearchPreviewPane({
   compact,
   status,
@@ -184,6 +247,7 @@ function SearchPreviewPane({
   onRetry,
   onMediaError,
   intent,
+  showCommitButton = true,
 }: {
   compact: boolean;
   status: BrowseStatus;
@@ -195,15 +259,29 @@ function SearchPreviewPane({
   onRetry: () => void;
   onMediaError: () => void;
   intent: 'add' | 'replace';
+  showCommitButton?: boolean;
 }) {
   const { t } = useI18n();
 
+  const panelClassName = cn(
+    'flex min-h-0 flex-1 flex-col gap-3 rounded-[1.4rem] border border-white/8 bg-white/[0.03] p-3',
+    compact ? 'justify-between' : '',
+    !showCommitButton ? 'overflow-hidden' : ''
+  );
+
+  const footer = showCommitButton ? (
+    <SearchCommitButton
+      intent={intent}
+      commitLabel={commitLabel}
+      canCommit={canCommit}
+      onCommit={onCommit}
+      compact={compact}
+    />
+  ) : null;
+
   if (status === 'loading') {
     return (
-      <div className={cn(
-        'flex min-h-0 flex-1 flex-col gap-3 rounded-[1.4rem] border border-white/8 bg-white/[0.03] p-3',
-        compact ? 'justify-center' : ''
-      )}>
+      <div className={panelClassName} data-testid="exercise-search-preview">
         <div className="flex items-center gap-2 text-white/45">
           <Loader2 className="h-4 w-4 animate-spin" />
           <p className="text-[10px] font-black uppercase tracking-[0.24em]">{t.search.loading}</p>
@@ -222,184 +300,267 @@ function SearchPreviewPane({
             <Skeleton className="h-32 rounded-[1.2rem] bg-white/5" />
           </div>
         )}
-        <button
-          type="button"
-          disabled
-          className={cn(
-            'mt-auto flex w-full items-center gap-3 rounded-[1.25rem] border px-4 py-3 text-left',
-            'cursor-not-allowed border-white/8 bg-white/[0.04] text-white/30'
-          )}
-        >
-          <Check className="h-4 w-4 shrink-0" />
-          <span className="min-w-0 flex-1">
-            <span className="block text-[9px] font-black uppercase tracking-[0.18em]">{intent === 'replace' ? t.search.replaceWith : t.search.addTo}</span>
-            <span className="block truncate text-sm font-black uppercase tracking-[0.18em]">{commitLabel}</span>
-          </span>
-        </button>
+        {footer}
       </div>
     );
   }
 
   if (status === 'error') {
     return (
-      <div className={cn(
-        'flex min-h-0 flex-1 flex-col gap-3 rounded-[1.4rem] border border-white/8 bg-white/[0.03] p-3',
-        compact ? 'justify-center' : ''
-      )}>
+      <div className={panelClassName} data-testid="exercise-search-preview">
         <SearchStatusCard
+          compact={compact}
           icon={AlertTriangle}
           title={t.search.loadError}
           body={t.search.previewHint}
           actionLabel={t.search.retry}
           onAction={onRetry}
         />
-        <button
-          type="button"
-          disabled
-          className="mt-auto flex w-full items-center gap-3 rounded-[1.25rem] border border-white/8 bg-white/[0.04] px-4 py-3 text-left text-white/30"
-        >
-          <Check className="h-4 w-4 shrink-0" />
-          <span className="min-w-0 flex-1">
-            <span className="block text-[9px] font-black uppercase tracking-[0.18em]">{intent === 'replace' ? t.search.replaceWith : t.search.addTo}</span>
-            <span className="block truncate text-sm font-black uppercase tracking-[0.18em]">{commitLabel}</span>
-          </span>
-        </button>
+        {footer}
       </div>
     );
   }
 
   if (!selectedExercise) {
     return (
-      <div className={cn(
-        'flex min-h-0 flex-1 flex-col gap-3 rounded-[1.4rem] border border-white/8 bg-white/[0.03] p-3',
-        compact ? 'justify-center' : ''
-      )}>
+      <div className={panelClassName} data-testid="exercise-search-preview">
         <SearchStatusCard
+          compact={compact}
           icon={Dumbbell}
           title={t.search.noExercises}
           body={t.search.previewHint}
         />
-        <button
-          type="button"
-          disabled
-          className="mt-auto flex w-full items-center gap-3 rounded-[1.25rem] border border-white/8 bg-white/[0.04] px-4 py-3 text-left text-white/30"
-        >
-          <Check className="h-4 w-4 shrink-0" />
-          <span className="min-w-0 flex-1">
-            <span className="block text-[9px] font-black uppercase tracking-[0.18em]">{intent === 'replace' ? t.search.replaceWith : t.search.addTo}</span>
-            <span className="block truncate text-sm font-black uppercase tracking-[0.18em]">{commitLabel}</span>
-          </span>
-        </button>
+        {footer}
       </div>
     );
   }
 
   return (
-    <div className={cn(
-      'flex min-h-0 flex-1 flex-col gap-3 rounded-[1.4rem] border border-white/8 bg-white/[0.03] p-3',
-      compact ? 'justify-between' : ''
-    )}>
-      <div className="relative overflow-hidden rounded-[1.2rem] border border-white/10 bg-black/25">
-        <div className={cn('w-full', compact ? 'aspect-[16/10]' : 'aspect-[4/3]')}>
-          {mediaError || (!selectedExercise.mediaUrl && !selectedExercise.gifUrl) ? (
-            <div className="flex h-full w-full items-center justify-center">
-              <Dumbbell className="h-10 w-10 text-white/20" />
-            </div>
-          ) : (
-            <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={selectedExercise.mediaUrl ?? selectedExercise.gifUrl ?? ''}
-                alt={`${selectedExercise.name} demo`}
-                className="h-full w-full object-cover"
-                onError={onMediaError}
-              />
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/10">
-                <PlayCircle className="h-12 w-12 text-white/75 drop-shadow-[0_8px_24px_rgba(0,0,0,0.4)]" />
+    <div className={panelClassName} data-testid="exercise-search-preview">
+      <div className={cn('flex min-h-0 flex-1 flex-col gap-3', compact ? '' : 'overflow-y-auto overscroll-contain pr-1 no-scrollbar')}>
+        <div className="relative overflow-hidden rounded-[1.2rem] border border-white/10 bg-black/25">
+          <div className={cn('w-full', compact ? 'aspect-[16/10]' : 'aspect-[4/3]')}>
+            {mediaError || (!selectedExercise.mediaUrl && !selectedExercise.gifUrl) ? (
+              <div className="flex h-full w-full items-center justify-center">
+                <Dumbbell className="h-10 w-10 text-white/20" />
               </div>
-            </>
-          )}
+            ) : (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={selectedExercise.mediaUrl ?? selectedExercise.gifUrl ?? ''}
+                  alt={`${selectedExercise.name} demo`}
+                  className="h-full w-full object-cover"
+                  onError={onMediaError}
+                />
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/10">
+                  <PlayCircle className="h-12 w-12 text-white/75 drop-shadow-[0_8px_24px_rgba(0,0,0,0.4)]" />
+                </div>
+              </>
+            )}
+          </div>
         </div>
-      </div>
 
-      <div className="space-y-2">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <h4 className={cn(
-              'truncate font-display font-black uppercase tracking-tight text-white',
-              compact ? 'text-base' : 'text-lg'
-            )}>
-              {selectedExercise.name}
-            </h4>
-            <p className="mt-1 text-[10px] font-black uppercase tracking-[0.22em] text-white/35">
-              {selectedExercise.bodyPart} · {selectedExercise.equipment}
-            </p>
+        <div className="space-y-2">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <h4 className={cn(
+                'truncate font-display font-black uppercase tracking-tight text-white',
+                compact ? 'text-base' : 'text-lg'
+              )}>
+                {selectedExercise.name}
+              </h4>
+              <p className="mt-1 text-[10px] font-black uppercase tracking-[0.22em] text-white/35">
+                {selectedExercise.bodyPart} · {selectedExercise.equipment}
+              </p>
+            </div>
+
+            {selectedExercise.difficulty && (
+              <span className="shrink-0 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-white/45">
+                {selectedExercise.difficulty}
+              </span>
+            )}
           </div>
 
-          {selectedExercise.difficulty && (
-            <span className="shrink-0 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-white/45">
-              {selectedExercise.difficulty}
-            </span>
-          )}
+          <div className="flex flex-wrap gap-1.5">
+            {selectedExercise.target && (
+              <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-white/50">
+                {t.search.target} {selectedExercise.target}
+              </span>
+            )}
+            {selectedExercise.secondaryMuscles?.[0] && (
+              <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-white/50">
+                {t.search.secondary} {selectedExercise.secondaryMuscles[0]}
+              </span>
+            )}
+          </div>
         </div>
 
-        <div className="flex flex-wrap gap-1.5">
-          {selectedExercise.target && (
-            <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-white/50">
-              {t.search.target} {selectedExercise.target}
-            </span>
-          )}
-          {selectedExercise.secondaryMuscles?.[0] && (
-            <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-white/50">
-              {t.search.secondary} {selectedExercise.secondaryMuscles[0]}
-            </span>
-          )}
-        </div>
+        {!compact && (
+          <div className="space-y-2">
+            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/28">
+              {t.search.formCues}
+            </p>
+
+            {selectedExercise.instructions?.length ? (
+              <ul className="space-y-1 text-sm text-white/70">
+                {selectedExercise.instructions.slice(0, 3).map((cue) => (
+                  <li key={cue} className="flex gap-2">
+                    <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-300" />
+                    <span className="leading-snug">{cue}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm leading-relaxed text-white/45">
+                {t.search.noDemo}
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
-      {!compact && (
-        <div className="space-y-2">
-          <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/28">
-            {t.search.formCues}
-          </p>
+      {footer}
+    </div>
+  );
+}
 
-          {selectedExercise.instructions?.length ? (
-            <ul className="space-y-1 text-sm text-white/70">
-              {selectedExercise.instructions.slice(0, 3).map((cue) => (
-                <li key={cue} className="flex gap-2">
-                  <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-300" />
-                  <span className="leading-snug">{cue}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm leading-relaxed text-white/45">
-              {t.search.noDemo}
-            </p>
-          )}
+function SearchMobileActionBar({
+  status,
+  selectedExercise,
+  mediaError,
+  commitLabel,
+  canCommit,
+  onCommit,
+  onRetry,
+  onMediaError,
+  intent,
+  targetText,
+}: {
+  status: BrowseStatus;
+  selectedExercise: ExerciseBrowseItem | null;
+  mediaError: boolean;
+  commitLabel: string;
+  canCommit: boolean;
+  onCommit: () => void;
+  onRetry: () => void;
+  onMediaError: () => void;
+  intent: 'add' | 'replace';
+  targetText: string | null;
+}) {
+  const { t } = useI18n();
+  const [showDetails, setShowDetails] = useState(false);
+
+  const contextLabel = `${intent === 'replace' ? t.search.replacing : t.search.addingTo}${targetText ? ` ${targetText}` : ''}`;
+
+  if (!selectedExercise || status !== 'success') {
+    return (
+      <div className="lg:hidden shrink-0 border-t border-white/8 bg-[rgba(4,8,18,0.9)] px-4 pt-3 backdrop-blur-xl">
+        <div data-testid="exercise-search-mobile-bar" className="rounded-[1.45rem] border border-white/8 bg-white/[0.03] p-3">
+          <SearchStatusCard
+            compact
+            icon={status === 'loading' ? Loader2 : status === 'error' ? AlertTriangle : Dumbbell}
+            title={
+              status === 'loading'
+                ? t.search.loading
+                : status === 'error'
+                  ? t.search.loadError
+                  : t.search.noExercises
+            }
+            body={t.search.previewHint}
+            actionLabel={status === 'error' ? t.search.retry : undefined}
+            onAction={status === 'error' ? onRetry : undefined}
+          />
+          <div className="mt-3">
+            <SearchCommitButton
+              intent={intent}
+              commitLabel={commitLabel}
+              canCommit={canCommit}
+              onCommit={onCommit}
+              compact
+            />
+          </div>
         </div>
-      )}
+      </div>
+    );
+  }
 
-      <button
-        type="button"
-        data-testid="exercise-search-commit"
-        disabled={!canCommit}
-        onClick={onCommit}
-        className={cn(
-          'mt-auto flex w-full items-center gap-3 rounded-[1.25rem] border px-4 py-3 text-left transition-colors',
-          canCommit
-            ? 'active-glass-btn text-white'
-            : 'cursor-not-allowed border-white/8 bg-white/[0.04] text-white/30'
-        )}
-      >
-        <Check className="h-4 w-4 shrink-0" />
-        <span className="min-w-0 flex-1">
-          <span className="block text-[9px] font-black uppercase tracking-[0.18em]">
-            {intent === 'replace' ? t.search.replaceWith : t.search.addTo}
-          </span>
-          <span className="block truncate text-sm font-black uppercase tracking-[0.18em]">{commitLabel}</span>
-        </span>
-      </button>
+  return (
+    <div className="lg:hidden shrink-0 border-t border-white/8 bg-[rgba(4,8,18,0.9)] px-4 pt-3 backdrop-blur-xl">
+      <div className="space-y-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+        <AnimatePresence initial={false}>
+          {showDetails && (
+            <motion.div
+              key="mobile-preview"
+              initial={{ opacity: 0, y: 8, height: 0 }}
+              animate={{ opacity: 1, y: 0, height: 'auto' }}
+              exit={{ opacity: 0, y: 8, height: 0 }}
+              transition={{ duration: 0.24, ease: [0.23, 1, 0.32, 1] }}
+              className="overflow-hidden rounded-[1.35rem] border border-white/8 bg-white/[0.03]"
+            >
+              <div className="max-h-[min(34dvh,20rem)] overflow-y-auto overscroll-contain p-3 no-scrollbar">
+                <SearchPreviewPane
+                  compact
+                  status={status}
+                  selectedExercise={selectedExercise}
+                  mediaError={mediaError}
+                  commitLabel={commitLabel}
+                  canCommit={canCommit}
+                  onCommit={onCommit}
+                  onRetry={onRetry}
+                  onMediaError={onMediaError}
+                  intent={intent}
+                  showCommitButton={false}
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <div
+          data-testid="exercise-search-mobile-bar"
+          className="rounded-[1.45rem] border border-white/8 bg-white/[0.03] p-3 shadow-[0_12px_30px_-24px_rgba(0,0,0,0.9)]"
+        >
+          <div className="flex items-start gap-3">
+            <ExerciseThumbnail item={selectedExercise} className="h-12 w-14 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-blue-200/70">
+                {contextLabel}
+              </p>
+              <h4 className="truncate font-display text-sm font-black uppercase tracking-tight text-white">
+                {selectedExercise.name}
+              </h4>
+              <p className="truncate text-[10px] font-black uppercase tracking-[0.22em] text-white/35">
+                {selectedExercise.bodyPart} · {selectedExercise.equipment}
+              </p>
+            </div>
+
+            {selectedExercise.difficulty && (
+              <span className="shrink-0 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-white/45">
+                {selectedExercise.difficulty}
+              </span>
+            )}
+          </div>
+
+          <div className="mt-3 flex items-center gap-2">
+            <SearchCommitButton
+              intent={intent}
+              commitLabel={commitLabel}
+              canCommit={canCommit}
+              onCommit={onCommit}
+              compact
+            />
+            <button
+              type="button"
+              onClick={() => setShowDetails((current) => !current)}
+              className="flex h-11 shrink-0 items-center justify-center rounded-[1.15rem] border border-white/10 bg-white/[0.04] px-3 text-[10px] font-black uppercase tracking-[0.18em] text-white/55 transition-colors hover:border-white/16 hover:bg-white/[0.08] hover:text-white"
+              aria-label={showDetails ? t.search.hidePreviewDetails : t.search.showPreviewDetails}
+            >
+              {showDetails ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -495,9 +656,14 @@ function ExerciseSearchPicker({
   );
 
   const targetText = targetLabel?.trim() || null;
-  const actionText = intent === 'replace' ? t.search.replaceWith : t.search.addTo;
-  const fallbackCommitLabel = intent === 'replace' ? t.editSession.replaceExercise : t.editSession.addExercise;
-  const commitLabel = targetText ? `${actionText} ${targetText}` : fallbackCommitLabel;
+  const selectedExerciseName = selectedExercise?.name.trim() || null;
+  const commitLabel = selectedExerciseName
+    ? (intent === 'replace'
+      ? t.search.commitReplaceSelected.replace('{name}', selectedExerciseName)
+      : t.search.commitAddSelected.replace('{name}', selectedExerciseName))
+    : intent === 'replace'
+      ? t.search.replaceWith
+      : t.search.addTo;
   const statusLabel = status === 'loading'
     ? t.search.loading
     : status === 'error'
@@ -507,8 +673,8 @@ function ExerciseSearchPicker({
         : `${results.length.toLocaleString()} ${results.length === 1 ? t.search.resultSingular : t.search.resultPlural}`;
   const canCommit = Boolean(selectedExercise && status === 'success');
   const surfaceClassName = embedded
-    ? 'glass-panel rounded-[1.9rem] p-4 flex min-h-[32rem] flex-col gap-3 overflow-hidden'
-    : 'h-full flex flex-col gap-3 overflow-hidden px-4 pb-4';
+    ? 'glass-panel rounded-[1.9rem] p-4 flex min-h-0 w-full max-h-[calc(100dvh-var(--space-nav-clear)-1rem)] flex-col gap-3 overflow-hidden'
+    : 'flex h-full min-h-0 flex-col gap-3 overflow-hidden px-4 pb-4';
 
   const handleCommit = () => {
     if (!canCommit || !selectedExercise) return;
@@ -517,7 +683,7 @@ function ExerciseSearchPicker({
   };
 
   return (
-    <div className={surfaceClassName}>
+    <div className={surfaceClassName} data-testid="exercise-search-panel">
       <div className="shrink-0 flex items-start justify-between gap-3">
         <div className="min-w-0">
           {embedded ? (
@@ -604,7 +770,10 @@ function ExerciseSearchPicker({
             )}
           </div>
 
-          <div className="flex-1 min-h-0 space-y-1.5 overflow-y-auto overscroll-contain pb-[24rem] pr-1 scroll-pb-[24rem] no-scrollbar lg:pb-0 lg:scroll-pb-0">
+          <div
+            data-testid="exercise-search-results"
+            className="flex-1 min-h-0 space-y-1.5 overflow-y-auto overscroll-contain pr-1 no-scrollbar"
+          >
             {status === 'loading' ? (
               Array.from({ length: 5 }).map((_, index) => (
                 <Skeleton key={index} className="h-[4.35rem] rounded-[1.15rem] bg-white/5" />
@@ -651,34 +820,34 @@ function ExerciseSearchPicker({
           </div>
 
           <SearchPreviewPane
-          compact={false}
-          status={status}
-          selectedExercise={selectedExercise}
-          mediaError={mediaError}
-          commitLabel={commitLabel}
-          canCommit={canCommit}
-          onCommit={handleCommit}
-          onRetry={() => setSearchNonce((current) => current + 1)}
-          onMediaError={() => setMediaError(true)}
-          intent={intent}
-        />
+            compact={false}
+            status={status}
+            selectedExercise={selectedExercise}
+            mediaError={mediaError}
+            commitLabel={commitLabel}
+            canCommit={canCommit}
+            onCommit={handleCommit}
+            onRetry={() => setSearchNonce((current) => current + 1)}
+            onMediaError={() => setMediaError(true)}
+            intent={intent}
+          />
         </div>
 
-        <div className="lg:hidden sticky bottom-0 z-10 -mx-4 border-t border-white/8 bg-[rgba(5,8,18,0.82)] px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl">
-          <SearchPreviewPane
-          compact
-          status={status}
-          selectedExercise={selectedExercise}
-          mediaError={mediaError}
-          commitLabel={commitLabel}
-          canCommit={canCommit}
-          onCommit={handleCommit}
-          onRetry={() => setSearchNonce((current) => current + 1)}
-          onMediaError={() => setMediaError(true)}
-          intent={intent}
-        />
-        </div>
       </div>
+
+      <SearchMobileActionBar
+        key={`${status}-${selectedExercise?.id ?? 'none'}`}
+        status={status}
+        selectedExercise={selectedExercise}
+        mediaError={mediaError}
+        commitLabel={commitLabel}
+        canCommit={canCommit}
+        onCommit={handleCommit}
+        onRetry={() => setSearchNonce((current) => current + 1)}
+        onMediaError={() => setMediaError(true)}
+        intent={intent}
+        targetText={targetText}
+      />
     </div>
   );
 }

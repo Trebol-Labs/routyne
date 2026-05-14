@@ -144,6 +144,17 @@
     position: relative;
   }
 
+  .sheet-surface-deep {
+    background: rgba(4, 8, 18, 0.94);
+    backdrop-filter: blur(var(--blur-xl)) saturate(190%);
+    -webkit-backdrop-filter: blur(var(--blur-xl)) saturate(190%);
+    border-color: rgba(255, 255, 255, 0.14);
+    box-shadow:
+      0 18px 56px -16px rgba(0, 0, 0, 0.75),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.06),
+      inset 0 -1px 0 0 rgba(0, 0, 0, 0.35);
+  }
+
   .glass-panel::before {
     content: '';
     position: absolute;

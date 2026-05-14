@@ -100,11 +100,26 @@ export function EditSessionSheet({
   }
 
   return (
-    <Sheet onClose={onClose} title={t.editSession.title} height="85vh">
-      <div className="flex h-full flex-col">
-        <div className="flex-1 space-y-4 overflow-y-auto px-4 pb-4 no-scrollbar">
+    <Sheet
+      onClose={onClose}
+      title={t.editSession.title}
+      height="calc(85vh - var(--space-nav-clear) - 1rem)"
+      surfaceVariant="deep"
+      bottomOffset="calc(var(--space-nav-clear) + 1rem + env(safe-area-inset-bottom))"
+    >
+      <div
+        data-testid="edit-session-sheet"
+        className="flex h-full min-h-0 flex-col"
+      >
+        <div
+          data-testid="edit-session-exercise-list"
+          className="flex-1 space-y-4 overflow-y-auto px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] no-scrollbar"
+        >
           {exercises.map((ex, idx) => (
-            <div key={ex.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+            <div
+              key={ex.id}
+              className="rounded-[1.2rem] border border-white/12 bg-black/28 p-4 shadow-[0_16px_40px_-28px_rgba(0,0,0,0.9)]"
+            >
               <div className="mb-3 flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="mb-1 text-[10px] font-black uppercase tracking-[0.25em] text-white/30">
@@ -139,7 +154,7 @@ export function EditSessionSheet({
                   <label className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">
                     {t.editSession.sets}
                   </label>
-                  <div className="flex items-center rounded-lg bg-white/5 p-1">
+                  <div className="flex items-center rounded-lg border border-white/8 bg-white/[0.04] p-1">
                     <button
                       type="button"
                       onClick={() => handleUpdateExercise(ex.id, { sets: Math.max(1, ex.sets - 1) })}
@@ -167,14 +182,14 @@ export function EditSessionSheet({
                       type="number"
                       value={ex.repsMin}
                       onChange={(event) => handleUpdateExercise(ex.id, { repsMin: parseInt(event.target.value, 10) || 0 })}
-                      className="w-full rounded-lg bg-white/5 px-2 py-2 text-center text-sm font-black text-white outline-none"
+                      className="w-full rounded-lg border border-white/8 bg-white/[0.04] px-2 py-2 text-center text-sm font-black text-white outline-none"
                     />
                     <span className="font-black text-white/30">-</span>
                     <input
                       type="number"
                       value={ex.repsMax}
                       onChange={(event) => handleUpdateExercise(ex.id, { repsMax: parseInt(event.target.value, 10) || 0 })}
-                      className="w-full rounded-lg bg-white/5 px-2 py-2 text-center text-sm font-black text-white outline-none"
+                      className="w-full rounded-lg border border-white/8 bg-white/[0.04] px-2 py-2 text-center text-sm font-black text-white outline-none"
                     />
                   </div>
                 </div>
@@ -192,7 +207,10 @@ export function EditSessionSheet({
           </button>
         </div>
 
-        <div className="shrink-0 bg-gradient-to-t from-black via-black/90 to-transparent p-4">
+        <div
+          data-testid="edit-session-save-footer"
+          className="sticky bottom-0 z-20 shrink-0 border-t border-white/8 bg-[linear-gradient(to_top,rgba(4,8,18,0.98),rgba(4,8,18,0.94),rgba(4,8,18,0.75),transparent)] p-4 backdrop-blur-xl"
+        >
           <Button
             variant="glass-primary"
             size="lg"
