@@ -88,6 +88,7 @@ export async function syncRestTimerNotification(params: {
   previousTimerId?: string | null;
   language: AppLanguage;
   enabled: boolean;
+  notifyFinished?: boolean;
 }): Promise<void> {
   const idsToCancel = new Set<string>();
 
@@ -101,7 +102,34 @@ export async function syncRestTimerNotification(params: {
 
   await Promise.all([...idsToCancel].map((id) => cancelLocalNotification(id)));
 
-  if (!params.enabled || !params.timer || params.timer.status !== 'running') {
+  if (!params.enabled || !params.timer) {
+    return;
+  }
+
+  const copy = getRestTimerNotificationCopy(params.language);
+
+  if (params.timer.status === 'finished') {
+    if (!params.notifyFinished) {
+      return;
+    }
+
+    await scheduleLocalNotification({
+      id: params.timer.id,
+      delayMs: 0,
+      title: copy.title,
+      body: copy.body,
+      tag: params.timer.id,
+      allowWhileIdle: true,
+      data: {
+        kind: 'rest-timer',
+        url: '/',
+      },
+      channelId: 'rest-timers',
+    });
+    return;
+  }
+
+  if (params.timer.status !== 'running') {
     return;
   }
 
@@ -110,13 +138,13 @@ export async function syncRestTimerNotification(params: {
     return;
   }
 
-  const copy = getRestTimerNotificationCopy(params.language);
   await scheduleLocalNotification({
     id: params.timer.id,
     delayMs,
     title: copy.title,
     body: copy.body,
     tag: params.timer.id,
+    allowWhileIdle: true,
     data: {
       kind: 'rest-timer',
       url: '/',

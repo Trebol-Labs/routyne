@@ -28,6 +28,7 @@ export interface NativeLocalNotificationInput {
   delayMs?: number;
   tag?: string;
   channelId?: NativeNotificationChannelId;
+  allowWhileIdle?: boolean;
   data?: Record<string, unknown>;
 }
 
@@ -188,7 +189,7 @@ export async function scheduleNativeLocalNotification(input: NativeLocalNotifica
         id: toNativeNotificationId(input.id),
         title: input.title,
         body: input.body,
-        schedule: { at },
+        schedule: { at, allowWhileIdle: input.allowWhileIdle },
         channelId,
         sound: 'default',
         extra: input.data ?? undefined,

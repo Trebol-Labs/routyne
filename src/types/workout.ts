@@ -187,6 +187,10 @@ export interface RestTimerState {
   status: RestTimerStatus;
 }
 
+export interface FinishRestTimerOptions {
+  notify?: boolean;
+}
+
 // ── Progression engine types ──────────────────────────────────────────────────
 
 export type ProgressionModel = 'linear' | 'double' | 'rpe';
@@ -314,7 +318,7 @@ export interface WorkoutState {
   pauseRestTimer: () => Promise<void>;
   resumeRestTimer: () => Promise<void>;
   adjustRestTimer: (deltaSeconds: number) => Promise<void>;
-  finishRestTimer: () => Promise<void>;
+  finishRestTimer: (options?: FinishRestTimerOptions) => Promise<void>;
   clearRestTimer: () => Promise<void>;
   finishSession: () => Promise<void>;
   abandonSession: () => Promise<void>;

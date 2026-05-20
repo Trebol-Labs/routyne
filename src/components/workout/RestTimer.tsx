@@ -16,6 +16,7 @@ interface RestTimerProps {
 // SVG circle: r=66 → circumference = 2 * π * 66 ≈ 414.7
 const RADIUS = 66;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+const FOREGROUND_FINISH_NOTIFICATION_GRACE_MS = 1500;
 
 /**
  * Compact rest timer — floats above the bottom nav as a small glass card.
@@ -31,34 +32,43 @@ export function RestTimer({ onFinish, onClose }: RestTimerProps) {
   const { language } = useI18n();
   const circleRef = useRef<SVGCircleElement>(null);
   const finishNotifiedTimerId = useRef<string | null>(null);
-  const [frame, setFrame] = useState(0);
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  const timerId = timer?.id;
+  const timerStatus = timer?.status;
+  const timerTargetAtMs = timer?.targetAt.getTime();
 
   useEffect(() => {
     finishNotifiedTimerId.current = null;
-  }, [timer?.id]);
+  }, [timerId]);
 
   useEffect(() => {
-    if (!timer || timer.status !== 'running') {
+    if (timerStatus !== 'running') {
       return;
     }
 
+    const kickoffId = window.setTimeout(() => {
+      setNowMs(Date.now());
+    }, 0);
     const id = window.setInterval(() => {
-      setFrame((value) => value + 1);
+      setNowMs(Date.now());
     }, 250);
 
     return () => {
+      window.clearTimeout(kickoffId);
       window.clearInterval(id);
     };
-  }, [timer]);
+  }, [timerId, timerStatus, timerTargetAtMs]);
 
   const remainingMs = timer
     ? (timer.status === 'running'
-      ? getRestTimerRemainingMs(timer)
+      ? getRestTimerRemainingMs(timer, new Date(nowMs))
       : Math.max(0, Math.round(timer.remainingMs))
     )
     : 0;
-  const displayMs = timer?.status === 'running' ? remainingMs : Math.max(0, Math.round(timer?.remainingMs ?? 0));
   const totalMs = Math.max(1, (timer?.durationSeconds ?? 0) * 1000);
+  const displayMs = timer?.status === 'running'
+    ? Math.min(remainingMs, totalMs)
+    : Math.max(0, Math.round(timer?.remainingMs ?? 0));
   const isFinished = timer?.status === 'finished';
   const isRunning = timer?.status === 'running';
   const totalSeconds = Math.max(0, Math.ceil(displayMs / 1000));
@@ -83,7 +93,9 @@ export function RestTimer({ onFinish, onClose }: RestTimerProps) {
         finishNotifiedTimerId.current = timer.id;
         onFinish?.();
       }
-      void finishRestTimer();
+      void finishRestTimer({
+        notify: Date.now() - timer.targetAt.getTime() <= FOREGROUND_FINISH_NOTIFICATION_GRACE_MS,
+      });
       return;
     }
 
@@ -91,7 +103,7 @@ export function RestTimer({ onFinish, onClose }: RestTimerProps) {
       const progress = Math.max(0, Math.min(1, displayMs / totalMs));
       circleRef.current.style.strokeDashoffset = String(CIRCUMFERENCE * (1 - progress));
     }
-  }, [displayMs, finishRestTimer, isRunning, onFinish, remainingMs, timer, totalMs, frame]);
+  }, [displayMs, finishRestTimer, isRunning, onFinish, remainingMs, timer, totalMs]);
 
   if (!timer) {
     return null;

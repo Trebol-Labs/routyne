@@ -10,6 +10,7 @@ const SERVICE_WORKER_READY_TIMEOUT_MS = 2500;
 const NOTIFICATION_PERMISSION_TIMEOUT_MS = 15000;
 const SERVICE_WORKER_URL = '/sw.js';
 const SERVICE_WORKER_SCOPE = '/';
+const scheduledWindowNotifications = new Map<string, ReturnType<typeof setTimeout>>();
 
 export type PushSetupFailureReason =
   | 'unsupported'
@@ -98,6 +99,18 @@ async function getReadyServiceWorkerRegistration(): Promise<ServiceWorkerRegistr
     }
 
     return registered ? await waitForReadyServiceWorker(SERVICE_WORKER_READY_TIMEOUT_MS) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function getActiveServiceWorkerRegistration(): Promise<ServiceWorkerRegistration | null> {
+  if (!isWebPushSupported()) return null;
+
+  try {
+    const registration = await navigator.serviceWorker.getRegistration();
+    if (registration?.active) return registration;
+    return registration ? await waitForReadyServiceWorker(SERVICE_WORKER_READY_TIMEOUT_MS) : null;
   } catch {
     return null;
   }
@@ -247,22 +260,70 @@ interface LocalNotificationPayload {
   };
 }
 
-async function postToServiceWorker(message: Record<string, unknown>): Promise<void> {
-  if (!isWebPushSupported()) return;
+async function postToServiceWorker(message: Record<string, unknown>): Promise<boolean> {
+  if (!isWebPushSupported()) return false;
 
-  const registration = await getReadyServiceWorkerRegistration();
-  if (!registration) return;
+  const registration = await getActiveServiceWorkerRegistration();
+  if (!registration) return false;
 
   if (registration.active) {
     registration.active.postMessage(message);
+    return true;
+  }
+
+  return false;
+}
+
+function showWindowNotification(opts: LocalNotificationPayload): void {
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') {
+    return;
+  }
+
+  try {
+    const notification = new Notification(opts.title, {
+      body: opts.body,
+      tag: opts.tag,
+      data: opts.data,
+    });
+
+    notification.onclick = () => {
+      notification.close();
+      const url = opts.data?.url;
+      if (typeof window !== 'undefined') {
+        window.focus();
+        if (typeof url === 'string') {
+          window.location.assign(url);
+        }
+      }
+    };
+  } catch (error) {
+    console.error('[Push] local notification failed', error);
   }
 }
 
+function scheduleWindowLocalNotification(opts: LocalNotificationPayload): void {
+  const existing = scheduledWindowNotifications.get(opts.id);
+  if (existing) {
+    clearTimeout(existing);
+  }
+
+  const timer = setTimeout(() => {
+    scheduledWindowNotifications.delete(opts.id);
+    showWindowNotification(opts);
+  }, Math.max(0, opts.delayMs));
+
+  scheduledWindowNotifications.set(opts.id, timer);
+}
+
 export async function scheduleLocalNotification(opts: LocalNotificationPayload): Promise<void> {
-  await postToServiceWorker({
+  const posted = await postToServiceWorker({
     type: 'SCHEDULE_NOTIFICATION',
     ...opts,
   });
+
+  if (!posted) {
+    scheduleWindowLocalNotification(opts);
+  }
 }
 
 export async function cancelLocalNotification(id: string): Promise<void> {
@@ -270,4 +331,10 @@ export async function cancelLocalNotification(id: string): Promise<void> {
     type: 'CANCEL_SCHEDULED_NOTIFICATION',
     id,
   });
+
+  const timer = scheduledWindowNotifications.get(id);
+  if (timer) {
+    clearTimeout(timer);
+    scheduledWindowNotifications.delete(id);
+  }
 }

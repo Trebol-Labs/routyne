@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useState, useSyncExternalStore } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Dumbbell } from 'lucide-react';
 import { RoutineUploader } from '@/components/workout/RoutineUploader';
@@ -19,6 +19,7 @@ import { AccountSheet, type AccountSheetSection } from '@/components/workout/ove
 import { CoachSheet } from '@/components/workout/overlays/CoachSheet';
 import { TopHeader } from '@/components/workout/TopHeader';
 import { BottomNav } from '@/components/workout/BottomNav';
+import { RestTimer } from '@/components/workout/RestTimer';
 import { useHydration } from '@/hooks/useHydration';
 import { useStoragePersist } from '@/hooks/useStoragePersist';
 import { useSync } from '@/hooks/useSync';
@@ -42,6 +43,31 @@ const ACCENT_TOKENS: Record<UserProfile['preferences']['accentColor'], { primary
   mono: { primary: '255 255 255', secondary: '160 160 160' },
 };
 
+function subscribeLocalDataMarker(callback: () => void): () => void {
+  if (typeof window === 'undefined') {
+    return () => {};
+  }
+
+  window.addEventListener('storage', callback);
+  return () => window.removeEventListener('storage', callback);
+}
+
+function getLocalDataMarkerSnapshot(): boolean {
+  return hasLocalDataMarker();
+}
+
+function getServerLocalDataMarkerSnapshot(): boolean {
+  return false;
+}
+
+function useLocalDataMarkerSnapshot(): boolean {
+  return useSyncExternalStore(
+    subscribeLocalDataMarker,
+    getLocalDataMarkerSnapshot,
+    getServerLocalDataMarkerSnapshot
+  );
+}
+
 function applyAppearancePreferences(profile: UserProfile['preferences']): void {
   const root = document.documentElement;
   const accent = ACCENT_TOKENS[profile.accentColor];
@@ -52,7 +78,7 @@ function applyAppearancePreferences(profile: UserProfile['preferences']): void {
 }
 
 export default function Home() {
-  const hasLocalData = hasLocalDataMarker();
+  const hasLocalData = useLocalDataMarkerSnapshot();
 
   return (
     <Suspense fallback={hasLocalData ? <ShellSkeleton /> : <LoadingScreen />}>
@@ -160,6 +186,12 @@ function HomeContent({ hasLocalData }: { hasLocalData: boolean }) {
       return;
     }
     setCurrentView(view);
+  };
+
+  const handleRestTimerFinish = () => {
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate([100, 50, 100]);
+    }
   };
 
   return (
@@ -283,6 +315,8 @@ function HomeContent({ hasLocalData }: { hasLocalData: boolean }) {
       </div>
 
       {/* Overlay sheets */}
+      <RestTimer onFinish={handleRestTimerFinish} />
+
       <AnimatePresence>
         {accountSection && (
           <AccountSheet

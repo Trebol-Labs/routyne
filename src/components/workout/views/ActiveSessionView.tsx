@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { SetRow, type AutoSuggestion, type SetRowState } from '@/components/workout/SetRow';
-import { RestTimer } from '@/components/workout/RestTimer';
 import { SetInputSheet } from '@/components/workout/overlays/SetInputSheet';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
@@ -477,12 +476,6 @@ export function ActiveSessionView() {
   return (
     <>
       {mainContent}
-
-      <RestTimer
-        onFinish={() => {
-          if ('vibrate' in navigator) navigator.vibrate([100, 50, 100]);
-        }}
-      />
 
       <AnimatePresence>
         {pendingSet && (

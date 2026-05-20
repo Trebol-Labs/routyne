@@ -47,6 +47,7 @@ export interface LocalNotificationRequest {
   title: string;
   body: string;
   tag?: string;
+  allowWhileIdle?: boolean;
   data?: {
     kind?: string;
     url?: string;
@@ -378,6 +379,7 @@ async function scheduleNativeLocalNotificationSafe(input: LocalNotificationReque
     delayMs: input.delayMs,
     tag: input.tag,
     channelId: input.channelId,
+    allowWhileIdle: input.allowWhileIdle,
     data: input.data,
   };
   await scheduleNativeLocalNotification(payload);

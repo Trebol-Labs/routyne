@@ -123,6 +123,7 @@ async function persistRestTimerState(
   language: UserProfile['preferences']['language'],
   notificationsEnabled: boolean,
   clearTimer: () => Promise<void>,
+  options: { notifyFinished?: boolean } = {},
 ): Promise<void> {
   clearRestTimerAutoClearTimeout();
 
@@ -135,6 +136,28 @@ async function persistRestTimerState(
     previousTimerId,
     language,
     enabled: notificationsEnabled,
+    notifyFinished: options.notifyFinished,
+  });
+}
+
+function cancelRestTimerNotificationSilently(
+  previousTimerId: string | null,
+  language: UserProfile['preferences']['language'],
+  notificationsEnabled: boolean,
+  source: string,
+): void {
+  if (!previousTimerId) {
+    return;
+  }
+
+  persistRestTimerState(
+    null,
+    previousTimerId,
+    language,
+    notificationsEnabled,
+    async () => {}
+  ).catch((err) => {
+    console.error(`[useWorkoutStore] ${source} rest timer notification cancel failed`, err);
   });
 }
 
@@ -333,6 +356,8 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
 
   // ── importRoutine ──────────────────────────────────────────────────────────
   importRoutine: async (routine: RoutineData, sourceMarkdown: string) => {
+    const previousTimerId = get().restTimer?.id ?? null;
+    const previousProfile = get().profile;
     const summary: RoutineSummary = {
       id: routine.id,
       title: routine.title,
@@ -358,6 +383,12 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
       ],
     }));
     syncLocalDataMarkerFromState(get());
+    cancelRestTimerNotificationSilently(
+      previousTimerId,
+      previousProfile.preferences.language,
+      previousProfile.preferences.timerNotificationsEnabled,
+      'importRoutine'
+    );
 
     // Ensure IDB write completes before import is considered done
     try {
@@ -386,6 +417,8 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
   loadRoutineFromLibrary: async (routineId: string) => {
     const routine = await loadRoutine(routineId);
     if (!routine) return;
+    const previousTimerId = get().restTimer?.id ?? null;
+    const previousProfile = get().profile;
     clearRestTimerAutoClearTimeout();
     set({
       currentRoutine: routine,
@@ -395,9 +428,17 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
       restTimer: null,
     });
     syncLocalDataMarkerFromState(get());
+    cancelRestTimerNotificationSilently(
+      previousTimerId,
+      previousProfile.preferences.language,
+      previousProfile.preferences.timerNotificationsEnabled,
+      'loadRoutineFromLibrary'
+    );
   },
 
   deleteRoutineFromLibrary: async (routineId: string) => {
+    const previousTimerId = get().currentRoutine?.id === routineId ? get().restTimer?.id ?? null : null;
+    const previousProfile = get().profile;
     if (get().currentRoutine?.id === routineId) {
       clearRestTimerAutoClearTimeout();
     }
@@ -415,6 +456,12 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
         : {}),
     }));
     syncLocalDataMarkerFromState(get());
+    cancelRestTimerNotificationSilently(
+      previousTimerId,
+      previousProfile.preferences.language,
+      previousProfile.preferences.timerNotificationsEnabled,
+      'deleteRoutineFromLibrary'
+    );
 
     if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
       import('@/lib/sync/queue')
@@ -431,8 +478,9 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
 
   // ── Session lifecycle ──────────────────────────────────────────────────────
   startSession: async (sessionIdx: number) => {
-    const { currentRoutine } = get();
+    const { currentRoutine, restTimer, profile } = get();
     const now = new Date();
+    const previousTimerId = restTimer?.id ?? null;
     clearRestTimerAutoClearTimeout();
     set({
       currentView: 'active-session',
@@ -441,6 +489,12 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
       restTimer: null,
     });
     syncLocalDataMarkerFromState(get());
+    cancelRestTimerNotificationSilently(
+      previousTimerId,
+      profile.preferences.language,
+      profile.preferences.timerNotificationsEnabled,
+      'startSession'
+    );
 
     if (currentRoutine) {
       const session = currentRoutine.sessions[sessionIdx];
@@ -652,7 +706,7 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
     );
   },
 
-  finishRestTimer: async () => {
+  finishRestTimer: async (options: { notify?: boolean } = {}) => {
     const state = get();
     const timer = state.restTimer;
     const { currentRoutine, activeSessionIdx } = state;
@@ -693,7 +747,8 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
       timer.id,
       state.profile.preferences.language,
       state.profile.preferences.timerNotificationsEnabled,
-      () => get().clearRestTimer()
+      () => get().clearRestTimer(),
+      { notifyFinished: options.notify === true }
     );
   },
 
@@ -1052,6 +1107,7 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
 
   refreshFromPersistence: async () => {
     try {
+      const previousTimerId = get().restTimer?.id ?? null;
       const [profile, library, historyResult, activeSession] = await Promise.all([
         loadProfile(),
         listRoutines(),
@@ -1148,6 +1204,12 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
 
       set(nextState);
       syncLocalDataMarkerFromState(get());
+      cancelRestTimerNotificationSilently(
+        previousTimerId,
+        profile.preferences.language,
+        profile.preferences.timerNotificationsEnabled,
+        'refreshFromPersistence'
+      );
     } catch (err) {
       console.error('[useWorkoutStore] refreshFromPersistence failed', err);
     }
@@ -1155,6 +1217,8 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
 
   // ── resetAll ───────────────────────────────────────────────────────────────
   resetAll: async () => {
+    const { restTimer, profile } = get();
+    const previousTimerId = restTimer?.id ?? null;
     clearRestTimerAutoClearTimeout();
     set({
       currentRoutine: null,
@@ -1169,6 +1233,12 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
       pendingAchievements: [],
     });
     clearLocalDataMarker();
+    cancelRestTimerNotificationSilently(
+      previousTimerId,
+      profile.preferences.language,
+      profile.preferences.timerNotificationsEnabled,
+      'resetAll'
+    );
     // Clear workout data in background, preserving profile
     waitForActiveSessionWrites()
       .then(() => clearWorkoutData())

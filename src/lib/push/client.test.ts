@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  cancelLocalNotification,
   registerSubscription,
+  scheduleLocalNotification,
   subscribeToPush,
 } from './client';
 
@@ -185,5 +187,84 @@ describe('push client', () => {
       reason: 'server-rejected',
       message: expect.stringContaining('503'),
     });
+  });
+
+  it('uses an in-page notification timer when no active service worker exists', async () => {
+    vi.useFakeTimers();
+    const notificationSpy = vi.fn();
+
+    class NotificationStub {
+      static permission: NotificationPermission = 'granted';
+      static requestPermission = vi.fn<() => Promise<NotificationPermission>>().mockResolvedValue('granted');
+      onclick: (() => void) | null = null;
+
+      constructor(title: string, options?: NotificationOptions) {
+        notificationSpy(title, options);
+      }
+
+      close = vi.fn();
+    }
+
+    vi.stubGlobal('PushManager', class PushManagerStub {});
+    vi.stubGlobal('Notification', NotificationStub as unknown as typeof Notification);
+    stubServiceWorker({
+      getRegistration: vi.fn<() => Promise<ServiceWorkerRegistration | undefined>>().mockResolvedValue(undefined),
+      register: vi.fn<() => Promise<ServiceWorkerRegistration>>(),
+      ready: new Promise<ServiceWorkerRegistration>(() => {}),
+    });
+
+    await scheduleLocalNotification({
+      id: 'rest-1',
+      delayMs: 1000,
+      title: 'Rest',
+      body: 'Done',
+      tag: 'rest-1',
+      data: { kind: 'rest-timer', url: '/' },
+    });
+
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(notificationSpy).toHaveBeenCalledWith('Rest', expect.objectContaining({
+      body: 'Done',
+      tag: 'rest-1',
+      data: { kind: 'rest-timer', url: '/' },
+    }));
+    expect(navigator.serviceWorker.register).not.toHaveBeenCalled();
+  });
+
+  it('cancels an in-page local notification timer', async () => {
+    vi.useFakeTimers();
+    const notificationSpy = vi.fn();
+
+    class NotificationStub {
+      static permission: NotificationPermission = 'granted';
+      static requestPermission = vi.fn<() => Promise<NotificationPermission>>().mockResolvedValue('granted');
+      onclick: (() => void) | null = null;
+
+      constructor(title: string, options?: NotificationOptions) {
+        notificationSpy(title, options);
+      }
+
+      close = vi.fn();
+    }
+
+    vi.stubGlobal('PushManager', class PushManagerStub {});
+    vi.stubGlobal('Notification', NotificationStub as unknown as typeof Notification);
+    stubServiceWorker({
+      getRegistration: vi.fn<() => Promise<ServiceWorkerRegistration | undefined>>().mockResolvedValue(undefined),
+      ready: new Promise<ServiceWorkerRegistration>(() => {}),
+    });
+
+    await scheduleLocalNotification({
+      id: 'rest-1',
+      delayMs: 1000,
+      title: 'Rest',
+      body: 'Done',
+    });
+    await cancelLocalNotification('rest-1');
+
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(notificationSpy).not.toHaveBeenCalled();
   });
 });

@@ -265,6 +265,67 @@ describe('rest timer store actions', () => {
     const activeSession = await loadActiveSession();
     expect(activeSession?.restTimer?.remainingMs).toBeGreaterThan(44_000);
   });
+
+  it('can deliver an immediate notification when a visible timer finishes naturally', async () => {
+    const store = await loadStore();
+    const profile = makeProfile();
+    const routine = makeRoutine();
+    const now = Date.now();
+
+    store.setState({
+      currentRoutine: routine,
+      currentView: 'active-session',
+      activeSessionIdx: 0,
+      setCompletion: {},
+      sessionStartTime: BASE_TIME,
+      restTimer: makeTimer({
+        targetAt: new Date(now),
+        remainingMs: 0,
+        status: 'running',
+      }, now),
+      profile,
+    });
+
+    await store.getState().finishRestTimer({ notify: true });
+
+    const timer = store.getState().restTimer;
+    expect(timer?.status).toBe('finished');
+    expect(mocks.cancelLocalNotification).toHaveBeenCalledWith('timer-1');
+    expect(mocks.scheduleLocalNotification).toHaveBeenCalledWith(expect.objectContaining({
+      id: 'timer-1',
+      delayMs: 0,
+      channelId: 'rest-timers',
+      allowWhileIdle: true,
+      title: 'Rest finished',
+      body: 'You can log the next set now.',
+    }));
+  });
+
+  it('cancels a scheduled rest notification when a new session replaces the timer', async () => {
+    const store = await loadStore();
+    const profile = makeProfile();
+    const routine = makeRoutine();
+    const now = Date.now();
+
+    store.setState({
+      currentRoutine: routine,
+      currentView: 'active-session',
+      activeSessionIdx: 0,
+      setCompletion: {},
+      sessionStartTime: BASE_TIME,
+      restTimer: makeTimer({
+        targetAt: new Date(now + 30_000),
+        remainingMs: 30_000,
+        status: 'running',
+      }, now),
+      profile,
+    });
+
+    await store.getState().startSession(0);
+
+    expect(store.getState().restTimer).toBeNull();
+    expect(mocks.cancelLocalNotification).toHaveBeenCalledWith('timer-1');
+  });
 });
 
 describe('rest timer hydration', () => {

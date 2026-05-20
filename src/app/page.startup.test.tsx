@@ -72,6 +72,14 @@ vi.mock('@/components/workout/BottomNav', () => ({
   BottomNav: () => <div data-testid="bottom-nav" />,
 }));
 
+vi.mock('@/components/workout/RestTimer', () => ({
+  RestTimer: () => mockStoreState.restTimer ? <div data-testid="rest-timer" /> : null,
+}));
+
+vi.mock('@/components/workout/views/HistoryView', () => ({
+  HistoryView: () => <div data-testid="history-view" />,
+}));
+
 vi.mock('@/components/workout/overlays/AccountSheet', () => ({
   AccountSheet: () => <div data-testid="account-sheet" />,
 }));
@@ -134,6 +142,7 @@ describe('startup shell', () => {
       clearPendingAchievements: vi.fn(),
       profile: makeProfile(),
       history: [],
+      restTimer: null,
     };
     mocks.useHydration.mockReturnValue(true);
     mocks.useAuth.mockReturnValue({ user: null, isLoading: false });
@@ -156,7 +165,7 @@ describe('startup shell', () => {
     const { default: Home } = await import('./page');
     render(<Home />);
 
-    expect(screen.getByTestId('shell-skeleton')).toBeInTheDocument();
+    expect(await screen.findByTestId('shell-skeleton')).toBeInTheDocument();
     expect(screen.queryByTestId('routine-uploader')).toBeNull();
   });
 
@@ -169,5 +178,26 @@ describe('startup shell', () => {
 
     expect(screen.getByTestId('routine-uploader')).toBeInTheDocument();
     expect(screen.queryByTestId('shell-skeleton')).toBeNull();
+  });
+
+  it('keeps the rest timer mounted outside the active session view', async () => {
+    localStorage.removeItem('routyne-has-local-data');
+    mockStoreState = {
+      ...mockStoreState,
+      currentView: 'history',
+      restTimer: {
+        id: 'timer-1',
+        durationSeconds: 90,
+        targetAt: new Date(Date.now() + 30_000),
+        remainingMs: 30_000,
+        status: 'running',
+      },
+    };
+
+    const { default: Home } = await import('./page');
+    render(<Home />);
+
+    expect(screen.getByTestId('history-view')).toBeInTheDocument();
+    expect(screen.getByTestId('rest-timer')).toBeInTheDocument();
   });
 });

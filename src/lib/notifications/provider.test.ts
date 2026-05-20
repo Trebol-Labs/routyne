@@ -130,6 +130,7 @@ describe('notification provider selection', () => {
       at: undefined,
       tag: undefined,
       channelId: undefined,
+      allowWhileIdle: undefined,
       data: { kind: 'rest-timer' },
     });
     expect(webSchedule).not.toHaveBeenCalled();
