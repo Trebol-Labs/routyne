@@ -1,6 +1,6 @@
 # Native Mobile Shell
 
-Updated: 2026-05-11
+Updated: 2026-05-20
 
 Routyne ships a Capacitor shell for Android and iOS. The shell loads the hosted Next app by default, then adds native deep links, native local notifications, and native push registration on top.
 
@@ -14,10 +14,11 @@ Routyne ships a Capacitor shell for Android and iOS. The shell loads the hosted 
 ## What The Shell Does
 
 - Loads the hosted Vercel app instead of a static export.
+- Receives ordinary web app fixes after the `main` branch deploys to Vercel; force-close and reopen the installed app if it is holding an old JavaScript bundle.
 - Routes auth callbacks back into the hosted `/auth/callback` handler so Supabase PKCE cookies can finish the session exchange.
 - Enables native local notifications without requiring Firebase.
 - Registers a native push token and stores it through `/api/push/devices` only when `NEXT_PUBLIC_NATIVE_PUSH_ENABLED=true` and the user is signed in.
-- Schedules rest timers and streak reminders locally on the device.
+- Schedules rest timers and streak reminders locally on the device. Rest timers are driven by wall-clock target times and remain mounted while moving between app views.
 - Keeps Web Push as the fallback for browser installs and the installed PWA.
 
 ## Required Accounts And Assets
@@ -60,12 +61,21 @@ The repo also includes helper scripts:
 
 If you are testing the production site instead of local changes, leave `CAPACITOR_SERVER_URL` unset. The shell then loads `NEXT_PUBLIC_SITE_URL`.
 
+## Web-Only Mobile Deploys
+
+The checked-in native shell loads the hosted Next app, so web code changes such as workout UI, Zustand store behavior, sync logic, and notification scheduling helpers reach installed apps through the next Vercel deployment from `main`.
+
+You do not need `pnpm cap:sync`, Android Studio, or a new APK for these hosted web changes. Use the native build loop only when changing `android/`, `ios/`, `capacitor.config.ts`, native plugin configuration, app icons/splash assets, or when intentionally testing a bundled local build.
+
+After the Vercel deployment is live, force-close and reopen the installed app during QA so the WebView fetches the latest bundle.
+
 ## What To Test On The Phone
 
 - App launch loads the hosted Routyne shell.
 - Google sign-in and magic-link sign-in return to the app through the custom scheme.
 - Notification permission prompts appear once, then diagnostics show the OS state.
 - A rest timer scheduled in the app fires as a native notification when the timer ends.
+- A rest timer keeps counting down when navigating from the active session to History, Nutrition, Stats, or Routines.
 - A streak reminder schedules at the configured reminder time and uses the current timezone.
 - Completing a workout on the same day cancels the reminder for that day.
 - Denying notification permission still leaves the app usable, with clear settings guidance in Account.

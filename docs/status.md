@@ -1,6 +1,6 @@
 # Routyne Status
 
-Updated: 2026-05-13
+Updated: 2026-05-20
 
 This file is the current source of truth for shipped state, roadmap health, and near-term implementation moves.
 
@@ -12,7 +12,7 @@ This file is the current source of truth for shipped state, roadmap health, and 
 - First authenticated sync on a device now performs a full remote pull before queue drain and local seeding, so a fresh device is not blocked by an already-advanced shared cursor.
 - Supabase OAuth/magic-link auth uses a cookie-backed browser client so the server `/auth/callback` route can complete PKCE exchange.
 - The Capacitor native shell is checked in for Android/iOS under the `com.trebollabs.routyne` app id. Installed apps now load the hosted Vercel app, route auth through the custom scheme, and use native local notifications first.
-- Rest timers now persist through active-session IDB state, reschedule/cancel native local notifications on pause/resume/adjust/hydration, and auto-clear after completion.
+- Rest timers now persist through active-session IDB state, run from the global shell across app views, reschedule/cancel native local notifications on pause/resume/adjust/hydration, deliver a foreground completion alert, and auto-clear after completion.
 - Returning users now see a shell-matched startup skeleton while IDB hydrates; new users keep the lighter uploader-first startup.
 - The app supports manual `es`/`en` language selection, localized standalone pages, and a persisted language cookie.
 - Nutrition onboarding, profile calculations, plan card, adaptive kcal adjustment banner, and block planner are in `main`.
@@ -29,6 +29,7 @@ This file is the current source of truth for shipped state, roadmap health, and 
 - `aebaf91` / PR #9: added nutrition onboarding, rich nutrition profile persistence, Supabase `nutrition_profiles` sync, nutrition plan card, adaptive adjustment logic/banner, and onboarding gate.
 - Current worktree: exercise search now uses a mobile list-first picker with a compact selected bar, optional preview expansion, desktop viewport/nav-capped embedded picker, and a lifted active-session edit sheet.
 - Current worktree: added Hevy archive migration, digest generation, Supabase archive storage, and coach context wiring.
+- Current worktree: rest timers now stay mounted across shell navigation, tick from wall-clock time instead of stale render state, use immediate completion notifications in foreground, and fall back to in-page browser notifications when a dev or browser context has no active service worker.
 - `3a5b00a` / PR #8: added structured sync traces in `src/lib/sync/debug.ts`, exposed through `window.__routyneSync`.
 - Current worktree: rest timer persistence + notification reconciliation, startup shell skeleton, streak timezone alignment, and mobile helper scripts.
 - `4d96352` / PR #7: forced a full pull during first-device sync so a new local IDB can hydrate from existing remote data.

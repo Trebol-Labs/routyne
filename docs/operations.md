@@ -62,7 +62,8 @@ Run the current schema SQL in the Supabase SQL Editor after schema changes. The 
 - Checked-in native projects live in [`android/`](/Users/sierra/Code/routyne/android) and [`ios/`](/Users/sierra/Code/routyne/ios).
 - Native app id and bundle id are `com.trebollabs.routyne`.
 - The native shell loads the hosted Vercel app by default; use `CAPACITOR_SERVER_URL` when you want a device to load a local dev server.
-- Run `pnpm cap:sync` after changing web assets, Capacitor config, or notification behavior.
+- Hosted web changes deploy to installed apps through the next Vercel deployment from `main`. Force-close and reopen the app during QA if the device keeps an old bundle.
+- Run `pnpm cap:sync` after changing checked-in native assets, Capacitor config, plugin configuration, or when testing a bundled local build.
 - Open the Android project with `pnpm exec cap open android`, then install it from Android Studio to a connected device.
 - Native push registration uses Firebase on Android and APNs through Firebase on iOS. Add `android/app/google-services.json` before Android push tests.
 - iOS release testing requires a paid Apple Developer account, the Push Notifications capability, an APNs key uploaded to Firebase, and a physical device.
@@ -87,6 +88,7 @@ Use traces to inspect auth mismatch, bootstrap, push, pull, merge counts, cursor
 Push setup:
 
 - Native app installs use local notifications by default. Set `NEXT_PUBLIC_NATIVE_PUSH_ENABLED=true` only when Firebase/APNs assets are installed and native remote push device-token registration should run.
+- Rest timer notifications are scheduled from the client with a wall-clock target time. Native installs use Capacitor local notifications; browser/PWA installs use the service worker when active and an in-page `Notification` fallback when no active service worker is available.
 - Generate keys with `node scripts/generate-vapid-keys.mjs`.
 - Set `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, and `VAPID_SUBJECT`.
 - Set `SUPABASE_SERVICE_ROLE_KEY` for production subscription storage.
