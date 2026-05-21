@@ -15,6 +15,7 @@ Routyne ships a Capacitor shell for Android and iOS. The shell loads the hosted 
 
 - Loads the hosted Vercel app instead of a static export.
 - Receives ordinary web app fixes after the `main` branch deploys to Vercel; force-close and reopen the installed app if it is holding an old JavaScript bundle.
+- Workout overlays such as the active-session edit sheet keep their sticky action footer above the floating bottom nav on mobile screens.
 - Routes auth callbacks back into the hosted `/auth/callback` handler so Supabase PKCE cookies can finish the session exchange.
 - Enables native local notifications without requiring Firebase.
 - Registers a native push token and stores it through `/api/push/devices` only when `NEXT_PUBLIC_NATIVE_PUSH_ENABLED=true` and the user is signed in.

@@ -49,7 +49,9 @@ function exactExerciseRow(page: Page, name: string) {
 }
 
 function exactExerciseCard(page: Page, name: string) {
-  return page.locator('section:visible').filter({ hasText: exactExerciseName(name) }).first();
+  return page.locator('section:visible').filter({
+    has: page.getByText(exactExerciseName(name), { exact: true }),
+  }).first();
 }
 
 async function chooseExercise(page: Page, name: string) {

@@ -103,9 +103,11 @@ export function EditSessionSheet({
     <Sheet
       onClose={onClose}
       title={t.editSession.title}
-      height="calc(85vh - var(--space-nav-clear) - 1rem)"
+      // Lift the whole edit sheet a bit higher than the shared nav clearance so
+      // the sticky save footer stays above the floating bottom nav on mobile.
+      height="calc(85vh - var(--space-nav-clear) - 16rem)"
       surfaceVariant="deep"
-      bottomOffset="calc(var(--space-nav-clear) + 1rem + env(safe-area-inset-bottom))"
+      bottomOffset="calc(max(26rem, var(--space-nav-clear) + 1rem) + env(safe-area-inset-bottom))"
     >
       <div
         data-testid="edit-session-sheet"

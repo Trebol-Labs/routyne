@@ -28,6 +28,7 @@ This file is the current source of truth for shipped state, roadmap health, and 
 - `6f44544` / PR #10: added the nutrition block planner in `src/lib/nutrition/planner.ts`, planner tests, the live planner UI in `NutritionView`, and prompt tests for saved nutrition targets.
 - `aebaf91` / PR #9: added nutrition onboarding, rich nutrition profile persistence, Supabase `nutrition_profiles` sync, nutrition plan card, adaptive adjustment logic/banner, and onboarding gate.
 - Current worktree: exercise search now uses a mobile list-first picker with a compact selected bar, optional preview expansion, desktop viewport/nav-capped embedded picker, and a lifted active-session edit sheet.
+- Current worktree: the active-session edit sheet now clears the floating bottom nav on mobile so the sticky save footer remains visible during replace/edit flows.
 - Current worktree: added Hevy archive migration, digest generation, Supabase archive storage, and coach context wiring.
 - Current worktree: rest timers now stay mounted across shell navigation, tick from wall-clock time instead of stale render state, use immediate completion notifications in foreground, and fall back to in-page browser notifications when a dev or browser context has no active service worker.
 - `3a5b00a` / PR #8: added structured sync traces in `src/lib/sync/debug.ts`, exposed through `window.__routyneSync`.
