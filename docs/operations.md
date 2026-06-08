@@ -11,11 +11,11 @@
 - Required production environment: `RAPIDAPI_KEY`.
 - Hevy archive migration requires `HEVY_API_KEY` on the server.
 
-Vercel config lives in [`vercel.json`](/Users/sierra/Code/routyne/vercel.json).
+Vercel config lives in [`vercel.json`](vercel.json).
 
 ## CI
 
-CI workflow: [`.github/workflows/ci.yml`](/Users/sierra/Code/routyne/.github/workflows/ci.yml).
+CI workflow: [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
 Order:
 
@@ -30,7 +30,7 @@ The build step mirrors the production env surface with optional values empty for
 
 ## Supabase
 
-Schema source: [`src/lib/supabase/schema.sql`](/Users/sierra/Code/routyne/src/lib/supabase/schema.sql).
+Schema source: [`src/lib/supabase/schema.sql`](src/lib/supabase/schema.sql).
 
 Client:
 
@@ -59,7 +59,7 @@ Run the current schema SQL in the Supabase SQL Editor after schema changes. The 
 
 ## Native Mobile Release
 
-- Checked-in native projects live in [`android/`](/Users/sierra/Code/routyne/android) and [`ios/`](/Users/sierra/Code/routyne/ios).
+- Checked-in native projects live in [`android/`](android) and [`ios/`](ios).
 - Native app id and bundle id are `com.trebollabs.routyne`.
 - The native shell loads the hosted Vercel app by default; use `CAPACITOR_SERVER_URL` when you want a device to load a local dev server.
 - Hosted web changes deploy to installed apps through the next Vercel deployment from `main`. Force-close and reopen the app during QA if the device keeps an old bundle.
@@ -71,7 +71,7 @@ Run the current schema SQL in the Supabase SQL Editor after schema changes. The 
 
 ## Sync Debugging
 
-Every `syncCloudData(userId)` call creates a structured trace through [`src/lib/sync/debug.ts`](/Users/sierra/Code/routyne/src/lib/sync/debug.ts).
+Every `syncCloudData(userId)` call creates a structured trace through [`src/lib/sync/debug.ts`](src/lib/sync/debug.ts).
 
 In DevTools:
 

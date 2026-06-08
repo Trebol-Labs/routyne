@@ -3,7 +3,7 @@
 This is the shared context file for Codex, Claude, and other repo agents.
 `CLAUDE.md` is a symlink to this file; keep the content here only.
 
-Start with the documentation index in [`docs/README.md`](/Users/sierra/Code/routyne/docs/README.md). Current shipped status and roadmap health live in [`docs/status.md`](/Users/sierra/Code/routyne/docs/status.md).
+Start with the documentation index in [`README.md`](README.md). Current shipped status and roadmap health live in [`status.md`](status.md).
 
 ## Project Basics
 
@@ -32,7 +32,7 @@ pnpm import:exercises
 
 ## Environment Variables
 
-See [`.env.example`](/Users/sierra/Code/routyne/.env.example) and [`docs/development.md`](/Users/sierra/Code/routyne/docs/development.md) for the complete table.
+See [`../.env.example`](../.env.example) and [`development.md`](development.md) for the complete table.
 
 High-impact variables:
 
@@ -109,7 +109,7 @@ Important files:
 - `src/lib/nutrition/adaptive.ts` and `src/hooks/useAdaptiveCheck.ts` compute pending kcal adjustments from bodyweight trends.
 - `src/components/nutrition/AdjustmentBanner.tsx` applies or rejects pending adjustments.
 
-See [`docs/nutrition.md`](/Users/sierra/Code/routyne/docs/nutrition.md) before changing this area.
+See [`nutrition.md`](nutrition.md) before changing this area.
 
 ## AI Coach
 
