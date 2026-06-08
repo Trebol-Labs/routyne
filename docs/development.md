@@ -2,8 +2,8 @@
 
 ## Requirements
 
-- Node `20` from [`.nvmrc`](.nvmrc).
-- pnpm from `packageManager` in [`package.json`](package.json).
+- Node `20` from [`.nvmrc`](../.nvmrc).
+- pnpm from `packageManager` in [`package.json`](../package.json).
 - `RAPIDAPI_KEY` for ExerciseDB-backed media/search supplements and production builds. When it is unset, exercise browsing still falls back to bundled local fixtures.
 - Android Studio + a Java 21 JDK for the native shell. Android Studio's bundled JBR 21 also works.
 

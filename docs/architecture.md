@@ -2,7 +2,7 @@
 
 ## App Shell
 
-Routyne is a Next.js App Router PWA with one main client shell in [`src/app/page.tsx`](src/app/page.tsx). The shell hydrates local state, applies appearance/language preferences, starts auth/sync hooks, and renders the current workout view.
+Routyne is a Next.js App Router PWA with one main client shell in [`src/app/page.tsx`](../src/app/page.tsx). The shell hydrates local state, applies appearance/language preferences, starts auth/sync hooks, and renders the current workout view.
 
 Main views:
 
@@ -20,31 +20,31 @@ Standalone pages include `/landing`, `/privacy`, `/terms`, `/support`, `/onboard
 
 ## Routine Builder
 
-The visual routine builder in [`src/components/workout/views/RoutineBuilderView.tsx`](src/components/workout/views/RoutineBuilderView.tsx) is optimized around a selected-day workflow:
+The visual routine builder in [`src/components/workout/views/RoutineBuilderView.tsx`](../src/components/workout/views/RoutineBuilderView.tsx) is optimized around a selected-day workflow:
 
 - Routine title and the currently selected day stay visible at the top of the builder.
 - A horizontal day rail lets users switch or add days without flattening every session into one long column.
 - Exercise rows stay compact by default and expand only when the user edits sets, reps, or rest.
-- Exercise search is handled by a shared liquid-glass picker in [`src/components/workout/overlays/SearchSheet.tsx`](src/components/workout/overlays/SearchSheet.tsx). Desktop uses an inline two-column panel whose preview content scrolls independently so the commit button stays reachable. Mobile opens a bottom sheet with a compact selected-exercise bar, optional preview expansion, and a list-first result layout that keeps the results visible while you browse.
+- Exercise search is handled by a shared liquid-glass picker in [`src/components/workout/overlays/SearchSheet.tsx`](../src/components/workout/overlays/SearchSheet.tsx). Desktop uses an inline two-column panel whose preview content scrolls independently so the commit button stays reachable. Mobile opens a bottom sheet with a compact selected-exercise bar, optional preview expansion, and a list-first result layout that keeps the results visible while you browse.
 - The picker supports add and replace intents. With no targeted row, add commits to the currently selected day; when opened from a row, commit replaces that row. The same picker is reused by active-session editing, and the edit-session sheet now uses a deeper lifted surface so the save footer stays readable above the bottom nav.
-- The search results come from [`src/app/api/exercises/browse/route.ts`](src/app/api/exercises/browse/route.ts), which returns local fixture results first, merges remote ExerciseDB supplements when available, and keeps filters deterministic.
-- Markdown import remains in [`src/components/workout/RoutineUploader.tsx`](src/components/workout/RoutineUploader.tsx) behind an advanced disclosure so the primary create path stays visually focused.
+- The search results come from [`src/app/api/exercises/browse/route.ts`](../src/app/api/exercises/browse/route.ts), which returns local fixture results first, merges remote ExerciseDB supplements when available, and keeps filters deterministic.
+- Markdown import remains in [`src/components/workout/RoutineUploader.tsx`](../src/components/workout/RoutineUploader.tsx) behind an advanced disclosure so the primary create path stays visually focused.
 
 ## Native Shell
 
 Routyne also ships checked-in Capacitor projects in [`/android`](android) and [`/ios`](ios). The native shell loads the hosted Vercel app instead of a static export, which keeps cookies, route handlers, API routes, and Supabase auth callbacks working inside the app container.
 
-- [`src/lib/site.ts`](src/lib/site.ts) picks `com.trebollabs.routyne://auth/callback` for native auth redirects and maps the custom scheme back to the hosted callback URL.
-- [`src/hooks/useNativeDeepLinks.ts`](src/hooks/useNativeDeepLinks.ts) handles launch URLs, app URL opens, and notification tap routing.
-- [`src/hooks/useStreakReminderSync.ts`](src/hooks/useStreakReminderSync.ts) reschedules native streak reminders when profile or history changes.
-- [`CAPACITOR_SERVER_URL`](.env.example) can override the hosted URL during device testing; otherwise the shell loads `NEXT_PUBLIC_SITE_URL`.
+- [`src/lib/site.ts`](../src/lib/site.ts) picks `com.trebollabs.routyne://auth/callback` for native auth redirects and maps the custom scheme back to the hosted callback URL.
+- [`src/hooks/useNativeDeepLinks.ts`](../src/hooks/useNativeDeepLinks.ts) handles launch URLs, app URL opens, and notification tap routing.
+- [`src/hooks/useStreakReminderSync.ts`](../src/hooks/useStreakReminderSync.ts) reschedules native streak reminders when profile or history changes.
+- [`CAPACITOR_SERVER_URL`](../.env.example) can override the hosted URL during device testing; otherwise the shell loads `NEXT_PUBLIC_SITE_URL`.
 
 ## State And Persistence
 
-- [`src/store/useWorkoutStore.ts`](src/store/useWorkoutStore.ts) is the canonical app state.
-- IndexedDB is the durable local layer through modules in [`src/lib/db/`](src/lib/db).
+- [`src/store/useWorkoutStore.ts`](../src/store/useWorkoutStore.ts) is the canonical app state.
+- IndexedDB is the durable local layer through modules in [`src/lib/db/`](../src/lib/db).
 - Zustand is a reactive cache over IDB; there is no Zustand persistence middleware.
-- Hydration is gated by [`src/hooks/useHydration.ts`](src/hooks/useHydration.ts).
+- Hydration is gated by [`src/hooks/useHydration.ts`](../src/hooks/useHydration.ts).
 - Store actions persist deliberately and enqueue sync mutations only where the app needs cloud propagation.
 
 Important IDB modules:
@@ -66,12 +66,12 @@ Supabase sync is optional and starts when `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_P
 
 Core files:
 
-- [`src/lib/supabase/client.ts`](src/lib/supabase/client.ts): typed client singleton.
-- [`src/lib/supabase/schema.sql`](src/lib/supabase/schema.sql): Supabase DDL.
-- [`src/lib/sync/queue.ts`](src/lib/sync/queue.ts): local mutation queue.
-- [`src/lib/sync/merge.ts`](src/lib/sync/merge.ts): last-write-wins merge helpers.
-- [`src/lib/sync/syncEngine.ts`](src/lib/sync/syncEngine.ts): push/pull orchestration.
-- [`src/lib/sync/debug.ts`](src/lib/sync/debug.ts): structured sync traces.
+- [`src/lib/supabase/client.ts`](../src/lib/supabase/client.ts): typed client singleton.
+- [`src/lib/supabase/schema.sql`](../src/lib/supabase/schema.sql): Supabase DDL.
+- [`src/lib/sync/queue.ts`](../src/lib/sync/queue.ts): local mutation queue.
+- [`src/lib/sync/merge.ts`](../src/lib/sync/merge.ts): last-write-wins merge helpers.
+- [`src/lib/sync/syncEngine.ts`](../src/lib/sync/syncEngine.ts): push/pull orchestration.
+- [`src/lib/sync/debug.ts`](../src/lib/sync/debug.ts): structured sync traces.
 
 `syncCloudData(userId)` dedupes concurrent runs per user. First-device sync ignores the remote cursor, pulls all remote rows, drains queued mutations, seeds the local snapshot to cloud, advances the cursor, and marks `cloud-sync-initialized:{userId}` in IDB meta. Incremental sync pushes the queue, then pulls records newer than the cursor.
 
@@ -86,16 +86,16 @@ Synced tables:
 - `push_subscriptions` through server-side push helpers
 - `sync_cursors`
 
-Hevy import is handled by [`src/app/api/hevy/import/route.ts`](src/app/api/hevy/import/route.ts) plus the client-side migration and digest modules in [`src/lib/hevy/`](src/lib/hevy). The server uses `HEVY_API_KEY` only for the import step; the coach consumes the stored Supabase-backed digest locally after sync.
+Hevy import is handled by [`src/app/api/hevy/import/route.ts`](../src/app/api/hevy/import/route.ts) plus the client-side migration and digest modules in [`src/lib/hevy/`](../src/lib/hevy). The server uses `HEVY_API_KEY` only for the import step; the coach consumes the stored Supabase-backed digest locally after sync.
 
 The daily nutrition entries/goals from `src/lib/db/nutrition.ts` are local-only today.
 
 ## Auth
 
-- [`src/hooks/useAuth.ts`](src/hooks/useAuth.ts) tracks Supabase session state.
-- [`src/app/auth/callback/route.ts`](src/app/auth/callback/route.ts) handles OAuth/magic-link callbacks.
+- [`src/hooks/useAuth.ts`](../src/hooks/useAuth.ts) tracks Supabase session state.
+- [`src/app/auth/callback/route.ts`](../src/app/auth/callback/route.ts) handles OAuth/magic-link callbacks.
 - Browser Supabase auth uses `createBrowserClient` from `@supabase/ssr` so PKCE state is cookie-backed and the server callback can finish `exchangeCodeForSession`.
-- [`src/lib/site.ts`](src/lib/site.ts) builds canonical URLs and auth redirect targets.
+- [`src/lib/site.ts`](../src/lib/site.ts) builds canonical URLs and auth redirect targets.
 
 ## Nutrition
 
@@ -104,61 +104,61 @@ Routyne currently has two nutrition layers:
 - Legacy daily logging and macro goals in `nutritionEntries` and `nutritionGoals`.
 - Rich onboarding profile, calculations, planner, and adaptive kcal adjustment stored through `meta` and synced through `nutrition_profiles`.
 
-See [`nutrition.md`](docs/nutrition.md) for details.
+See [`nutrition.md`](nutrition.md) for details.
 
 ## AI Coach
 
-- [`src/lib/coach/context-builder.ts`](src/lib/coach/context-builder.ts) builds local context from store state.
-- [`src/lib/coach/prompts.ts`](src/lib/coach/prompts.ts) builds the system prompt.
-- [`src/app/api/coach/route.ts`](src/app/api/coach/route.ts) calls Vercel AI Gateway and applies an in-memory daily limit.
-- [`src/components/workout/overlays/CoachSheet.tsx`](src/components/workout/overlays/CoachSheet.tsx) provides the UI.
+- [`src/lib/coach/context-builder.ts`](../src/lib/coach/context-builder.ts) builds local context from store state.
+- [`src/lib/coach/prompts.ts`](../src/lib/coach/prompts.ts) builds the system prompt.
+- [`src/app/api/coach/route.ts`](../src/app/api/coach/route.ts) calls Vercel AI Gateway and applies an in-memory daily limit.
+- [`src/components/workout/overlays/CoachSheet.tsx`](../src/components/workout/overlays/CoachSheet.tsx) provides the UI.
 
 The coach never queries Supabase directly. Current context includes workout history, profile, PRs, weekly muscle volume, streak, total workouts, and the saved legacy nutrition goal.
 It also includes an imported Hevy archive digest when present, loaded from local IDB that was synced from Supabase.
 
 ## Push Notifications
 
-- [`src/lib/notifications/provider.ts`](src/lib/notifications/provider.ts): platform selection plus the shared notification API used by the UI.
-- [`src/lib/notifications/native.ts`](src/lib/notifications/native.ts): Capacitor local notifications, channels, permissions, and native push registration.
-- [`src/app/api/push/devices/route.ts`](src/app/api/push/devices/route.ts): authenticated native device register/unregister API.
-- [`worker/push.ts`](worker/push.ts): service worker push/rest timer behavior for the Web Push fallback.
-- [`src/lib/push/client.ts`](src/lib/push/client.ts): browser subscription logic.
-- [`src/lib/push/subscriptions.ts`](src/lib/push/subscriptions.ts): in-memory local fallback.
-- [`src/lib/push/server.ts`](src/lib/push/server.ts): Supabase service-role storage helpers.
-- [`src/app/api/push/subscribe/route.ts`](src/app/api/push/subscribe/route.ts): subscribe/unsubscribe API.
-- [`src/app/api/push/notify/route.ts`](src/app/api/push/notify/route.ts): guarded immediate push API used by the web fallback.
-- [`src/app/api/cron/streak-reminders/route.ts`](src/app/api/cron/streak-reminders/route.ts): protected daily reminder cron.
+- [`src/lib/notifications/provider.ts`](../src/lib/notifications/provider.ts): platform selection plus the shared notification API used by the UI.
+- [`src/lib/notifications/native.ts`](../src/lib/notifications/native.ts): Capacitor local notifications, channels, permissions, and native push registration.
+- [`src/app/api/push/devices/route.ts`](../src/app/api/push/devices/route.ts): authenticated native device register/unregister API.
+- [`worker/push.ts`](../worker/push.ts): service worker push/rest timer behavior for the Web Push fallback.
+- [`src/lib/push/client.ts`](../src/lib/push/client.ts): browser subscription logic.
+- [`src/lib/push/subscriptions.ts`](../src/lib/push/subscriptions.ts): in-memory local fallback.
+- [`src/lib/push/server.ts`](../src/lib/push/server.ts): Supabase service-role storage helpers.
+- [`src/app/api/push/subscribe/route.ts`](../src/app/api/push/subscribe/route.ts): subscribe/unsubscribe API.
+- [`src/app/api/push/notify/route.ts`](../src/app/api/push/notify/route.ts): guarded immediate push API used by the web fallback.
+- [`src/app/api/cron/streak-reminders/route.ts`](../src/app/api/cron/streak-reminders/route.ts): protected daily reminder cron.
 
 Native installs use local notification permissions for rest timers and reminders. When `NEXT_PUBLIC_NATIVE_PUSH_ENABLED=true`, native installs also use `notification_devices` for FCM/APNs token storage. Browser and PWA installs continue to use `push_subscriptions` for Web Push.
 
 ## Workers
 
-- [`src/workers/search.worker.ts`](src/workers/search.worker.ts): history search.
-- [`src/workers/analytics.worker.ts`](src/workers/analytics.worker.ts): PR and weekly volume computation.
-- [`src/hooks/useSearchWorker.ts`](src/hooks/useSearchWorker.ts) and [`src/hooks/useAnalyticsWorker.ts`](src/hooks/useAnalyticsWorker.ts): worker hooks.
+- [`src/workers/search.worker.ts`](../src/workers/search.worker.ts): history search.
+- [`src/workers/analytics.worker.ts`](../src/workers/analytics.worker.ts): PR and weekly volume computation.
+- [`src/hooks/useSearchWorker.ts`](../src/hooks/useSearchWorker.ts) and [`src/hooks/useAnalyticsWorker.ts`](../src/hooks/useAnalyticsWorker.ts): worker hooks.
 
 ## Markdown Parser
 
-The parser in [`src/lib/markdown/parser.ts`](src/lib/markdown/parser.ts) supports:
+The parser in [`src/lib/markdown/parser.ts`](../src/lib/markdown/parser.ts) supports:
 
 - Standard format: `* **Exercise Name**: 3x8-10 90s`.
 - Flipped format: `3x10 Bicep Curls`.
 - Supersets with `[Superset]` and `[/Superset]`.
 - Invalid-line skipping instead of crashing import.
 
-Generated markdown comes from [`src/lib/markdown/generator.ts`](src/lib/markdown/generator.ts).
+Generated markdown comes from [`src/lib/markdown/generator.ts`](../src/lib/markdown/generator.ts).
 
 ## Media
 
-- [`src/lib/media/resolver.ts`](src/lib/media/resolver.ts) maps exercise names to `/api/media/{slug}`.
-- [`src/app/api/media/[slug]/route.ts`](src/app/api/media/[slug]/route.ts) resolves/fetches media from provider data.
-- [`src/app/api/exercises/browse/route.ts`](src/app/api/exercises/browse/route.ts) powers builder/search browsing with local ExerciseDB fixtures, deterministic body-part/equipment filters, remote supplement dedupe, and metadata enrichment.
-- [`src/lib/media/providers/exercisedb.ts`](src/lib/media/providers/exercisedb.ts) uses RapidAPI ExerciseDB.
+- [`src/lib/media/resolver.ts`](../src/lib/media/resolver.ts) maps exercise names to `/api/media/{slug}`.
+- [`src/app/api/media/[slug]/route.ts`](../src/app/api/media/[slug]/route.ts) resolves/fetches media from provider data.
+- [`src/app/api/exercises/browse/route.ts`](../src/app/api/exercises/browse/route.ts) powers builder/search browsing with local ExerciseDB fixtures, deterministic body-part/equipment filters, remote supplement dedupe, and metadata enrichment.
+- [`src/lib/media/providers/exercisedb.ts`](../src/lib/media/providers/exercisedb.ts) uses RapidAPI ExerciseDB.
 - Exercise card fallback order is video, GIF, image, dumbbell icon.
 
 ## I18n And Design
 
-- Translations live in [`src/lib/i18n/translations.ts`](src/lib/i18n/translations.ts).
+- Translations live in [`src/lib/i18n/translations.ts`](../src/lib/i18n/translations.ts).
 - Language preference is stored in the user profile and mirrored to a cookie for standalone pages.
 - Core visual utilities are `glass-panel`, `sunken-glass`, `active-glass-btn`, and `liquid-bg-dark`.
 - Scrollable app shells and sheets use the shared `no-scrollbar` utility so scrolling stays available without showing the browser chrome unless it is actually needed.

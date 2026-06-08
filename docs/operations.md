@@ -30,7 +30,7 @@ The build step mirrors the production env surface with optional values empty for
 
 ## Supabase
 
-Schema source: [`src/lib/supabase/schema.sql`](src/lib/supabase/schema.sql).
+Schema source: [`src/lib/supabase/schema.sql`](../src/lib/supabase/schema.sql).
 
 Client:
 
@@ -71,7 +71,7 @@ Run the current schema SQL in the Supabase SQL Editor after schema changes. The 
 
 ## Sync Debugging
 
-Every `syncCloudData(userId)` call creates a structured trace through [`src/lib/sync/debug.ts`](src/lib/sync/debug.ts).
+Every `syncCloudData(userId)` call creates a structured trace through [`src/lib/sync/debug.ts`](../src/lib/sync/debug.ts).
 
 In DevTools:
 
