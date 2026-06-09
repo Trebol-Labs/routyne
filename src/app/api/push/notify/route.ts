@@ -99,32 +99,34 @@ export async function POST(req: NextRequest) {
   let failed = 0;
   let removed = 0;
 
-  for (const target of targets) {
-    try {
-      await webpush.sendNotification(
-        { endpoint: target.endpoint, keys: target.keys },
-        payload
-      );
-      sent++;
-      if (target.userId) {
-        await markPushSubscriptionSent(target.userId, target.endpoint);
-      }
-    } catch (err) {
-      const status = (err as { statusCode?: number }).statusCode;
-      if ((status === 404 || status === 410) && target.userId) {
-        removed++;
-        try {
-          const { deletePushSubscriptionRow } = await import('@/lib/push/server');
-          await deletePushSubscriptionRow(target.userId, target.endpoint);
-        } catch (deleteErr) {
-          console.error('[/api/push/notify] stale subscription cleanup failed', deleteErr);
+  await Promise.allSettled(
+    targets.map(async (target) => {
+      try {
+        await webpush.sendNotification(
+          { endpoint: target.endpoint, keys: target.keys },
+          payload
+        );
+        sent++;
+        if (target.userId) {
+          await markPushSubscriptionSent(target.userId, target.endpoint);
         }
-      } else {
-        console.error('[/api/push/notify] send error', status, target.endpoint);
-        failed++;
+      } catch (err) {
+        const status = (err as { statusCode?: number }).statusCode;
+        if ((status === 404 || status === 410) && target.userId) {
+          removed++;
+          try {
+            const { deletePushSubscriptionRow } = await import('@/lib/push/server');
+            await deletePushSubscriptionRow(target.userId, target.endpoint);
+          } catch (deleteErr) {
+            console.error('[/api/push/notify] stale subscription cleanup failed', deleteErr);
+          }
+        } else {
+          console.error('[/api/push/notify] send error', status, target.endpoint);
+          failed++;
+        }
       }
-    }
-  }
+    })
+  );
 
   return NextResponse.json({ sent, failed, removed });
 }
