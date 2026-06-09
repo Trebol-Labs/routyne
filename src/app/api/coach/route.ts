@@ -11,11 +11,7 @@ interface RateBucket { count: number; resetAt: number; }
 const buckets = new Map<string, RateBucket>();
 
 function getRateLimitKey(req: NextRequest): string {
-  return (
-    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-    req.headers.get('x-real-ip') ??
-    'unknown'
-  );
+  return req.ip ?? 'unknown';
 }
 
 function checkRateLimit(key: string): { allowed: boolean; remaining: number } {
