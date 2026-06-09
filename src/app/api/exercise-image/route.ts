@@ -3,7 +3,31 @@ import { NextRequest, NextResponse } from 'next/server';
 // In-process GIF cache — survives across requests, cleared on server restart
 const cache = new Map<string, Buffer>();
 
+// Rate limiting state
+interface RateLimit {
+  count: number;
+  resetAt: number;
+}
+const rateLimits = new Map<string, RateLimit>();
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const MAX_REQUESTS_PER_WINDOW = 60;
+
 export async function GET(request: NextRequest) {
+  const ip = request.headers.get('x-forwarded-for') || request.ip || 'unknown';
+  const now = Date.now();
+  let rateLimit = rateLimits.get(ip);
+
+  if (!rateLimit || rateLimit.resetAt < now) {
+    rateLimit = { count: 0, resetAt: now + RATE_LIMIT_WINDOW_MS };
+  }
+
+  rateLimit.count += 1;
+  rateLimits.set(ip, rateLimit);
+
+  if (rateLimit.count > MAX_REQUESTS_PER_WINDOW) {
+    return NextResponse.json({ error: 'Too Many Requests' }, { status: 429 });
+  }
+
   const id = request.nextUrl.searchParams.get('id');
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
 
