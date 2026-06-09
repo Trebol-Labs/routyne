@@ -45,11 +45,7 @@ export function ExerciseCard({ exercise, index }: ExerciseCardProps) {
       });
   }, [exercise.mediaUrl, exercise.cleanName]);
 
-  React.useEffect(() => {
-    if (DEV && fetchDone) {
-      console.log(`[EC:${exercise.cleanName.slice(0,10)}] FD=${fetchDone} M=${JSON.stringify(media)} ML=${mediaLoaded} ME=${mediaError}`);
-    }
-  }, [fetchDone, media, mediaLoaded, mediaError, exercise.cleanName]);
+
 
   // fetchDone + no media = API returned null/404 → show fallback
   const showFallback = mediaError || !exercise.mediaUrl || (fetchDone && !media);

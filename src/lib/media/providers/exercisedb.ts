@@ -92,9 +92,7 @@ export class ExerciseDBProvider implements MediaProvider {
       best.gifUrl ||
       best.image ||
       (best.id ? `/api/exercise-image?id=${best.id}` : undefined);
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`[ExerciseDB] bestMatch "${name}": item="${best.name}" id="${best.id}" url="${url}"`);
-    }
+
     if (!url) return null;
     return { url, type: 'gif' };
   }
