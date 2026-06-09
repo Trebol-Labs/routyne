@@ -13,7 +13,10 @@ const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const MAX_REQUESTS_PER_WINDOW = 60;
 
 export async function GET(request: NextRequest) {
-  const ip = request.headers.get('x-forwarded-for') || 'unknown';
+  const ip = request.headers.get('x-real-ip') ||
+             request.ip ||
+             request.headers.get('x-forwarded-for')?.split(',').map(p => p.trim()).filter(Boolean).pop() ||
+             'unknown';
   const now = Date.now();
 
   // Prevent memory exhaustion from IP spoofing

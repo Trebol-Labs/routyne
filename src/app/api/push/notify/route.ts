@@ -33,12 +33,16 @@ function vapidConfigured(): boolean {
   return !!(VAPID_PUBLIC && VAPID_PRIVATE);
 }
 
+import { timingSafeCompare } from '@/lib/auth';
+
 function isAuthorized(request: NextRequest): boolean {
   if (!process.env.CRON_SECRET) {
     return process.env.NODE_ENV !== 'production';
   }
 
-  return request.headers.get('authorization') === `Bearer ${process.env.CRON_SECRET}`;
+  const authHeader = request.headers.get('authorization');
+  if (!authHeader) return false;
+  return timingSafeCompare(authHeader, `Bearer ${process.env.CRON_SECRET}`);
 }
 
 async function getTargets(): Promise<Array<{ userId?: string; endpoint: string; keys: { p256dh: string; auth: string } }>> {

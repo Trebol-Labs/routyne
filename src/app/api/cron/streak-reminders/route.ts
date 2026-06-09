@@ -11,13 +11,16 @@ import {
 import type { Database } from '@/lib/supabase/client';
 import type { AppLanguage } from '@/types/workout';
 
+import { timingSafeCompare } from '@/lib/auth';
+
 const VAPID_PUBLIC = process.env.VAPID_PUBLIC_KEY ?? '';
 const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY ?? '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT ?? 'mailto:admin@example.com';
 
 function assertCronAuth(request: NextRequest): boolean {
   const authHeader = request.headers.get('authorization');
-  return authHeader === `Bearer ${process.env.CRON_SECRET}`;
+  if (!authHeader) return false;
+  return timingSafeCompare(authHeader, `Bearer ${process.env.CRON_SECRET}`);
 }
 
 function createServiceClient() {
@@ -87,7 +90,18 @@ export async function GET(request: NextRequest) {
   let skipped = 0;
   let failed = 0;
 
-  const sendPromises: Promise<void>[] = [];
+  interface NotificationTarget {
+    profile: {
+      user_id: string;
+      display_name: string | null;
+      rest_days: number[] | null;
+      preferences: Record<string, unknown> | null;
+    };
+    subscription: (typeof subscriptionsResult)[number];
+    reminderCopy: ReturnType<typeof buildStreakReminderCopy>;
+  }
+
+  const targets: NotificationTarget[] = [];
 
   for (const profileRow of profilesResult.data ?? []) {
     const profile = profileRow as {
@@ -136,36 +150,41 @@ export async function GET(request: NextRequest) {
         skipped++;
         continue;
       }
-
-      sendPromises.push((async () => {
-        try {
-          await webpush.sendNotification(
-            { endpoint: subscription.endpoint, keys: subscription.keys },
-            JSON.stringify({
-              title: reminderCopy.title,
-              body: reminderCopy.body,
-              tag: 'routyne-streak',
-              url: '/',
-              data: {
-                kind: 'streak-reminder',
-                url: '/',
-              },
-            })
-          );
-          await markPushSubscriptionSent(profile.user_id, subscription.endpoint);
-          sent++;
-        } catch (err) {
-          const status = (err as { statusCode?: number }).statusCode;
-          if (status === 404 || status === 410) {
-            await deletePushSubscriptionRow(profile.user_id, subscription.endpoint).catch(() => {});
-          } else {
-            failed++;
-            console.error('[/api/cron/streak-reminders] send failed', err);
-          }
-        }
-      })());
+      targets.push({
+        profile,
+        subscription,
+        reminderCopy,
+      });
     }
   }
+
+  const sendPromises = targets.map(async ({ profile, subscription, reminderCopy }) => {
+    try {
+      await webpush.sendNotification(
+        { endpoint: subscription.endpoint, keys: subscription.keys },
+        JSON.stringify({
+          title: reminderCopy.title,
+          body: reminderCopy.body,
+          tag: 'routyne-streak',
+          url: '/',
+          data: {
+            kind: 'streak-reminder',
+            url: '/',
+          },
+        })
+      );
+      await markPushSubscriptionSent(profile.user_id, subscription.endpoint);
+      sent++;
+    } catch (err) {
+      const status = (err as { statusCode?: number }).statusCode;
+      if (status === 404 || status === 410) {
+        await deletePushSubscriptionRow(profile.user_id, subscription.endpoint).catch(() => {});
+      } else {
+        failed++;
+        console.error('[/api/cron/streak-reminders] send failed', err);
+      }
+    }
+  });
 
   await Promise.allSettled(sendPromises);
 
