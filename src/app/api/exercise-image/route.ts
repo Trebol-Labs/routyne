@@ -30,18 +30,11 @@ export async function GET(request: NextRequest) {
   );
 
   if (!res.ok) {
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`[exercise-image] id="${id}" → ${res.status}`);
-    }
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
   const buffer = Buffer.from(await res.arrayBuffer());
   cache.set(id, buffer);
-
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`[exercise-image] id="${id}" → ${buffer.length} bytes`);
-  }
 
   return new NextResponse(new Uint8Array(buffer), {
     headers: {
