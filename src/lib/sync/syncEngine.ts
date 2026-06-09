@@ -84,6 +84,18 @@ function chunk<T>(items: T[], size: number): T[][] {
   return chunks;
 }
 
+function getEntityKey(mutation: SyncMutationRecord): string {
+  if (mutation.table === 'profile' || mutation.table === 'nutritionProfile') {
+    return mutation.table;
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const payload = mutation.payload as any;
+  if (mutation.table === 'bodyweight') {
+    return `bodyweight:${payload.date}`;
+  }
+  return `${mutation.table}:${payload.id}`;
+}
+
 function isBodyweightMetadataSchemaError(error: SyncError | null | undefined): boolean {
   if (!error) return false;
 
@@ -379,23 +391,38 @@ export async function pushToCloud(
   let pushed = 0;
   let failed = 0;
 
-  for (const mutation of pending) {
-    try {
-      await applyMutation(sb, mutation, userId);
-      await dequeue(mutation.id);
-      pushed++;
-    } catch (err) {
-      if (options.trace) {
-        logEvent(options.trace, 'push:mutation-failed', {
-          id: mutation.id,
-          table: mutation.table,
-          op: mutation.operation,
-        }, err);
-      }
-      console.error('[Sync] push failed for mutation', mutation.id, err);
-      await incrementRetry(mutation.id);
-      failed++;
-    }
+  const groups = new Map<string, SyncMutationRecord[]>();
+  for (const m of pending) {
+    const key = getEntityKey(m);
+    const group = groups.get(key) ?? [];
+    group.push(m);
+    groups.set(key, group);
+  }
+
+  const chains = Array.from(groups.values());
+  for (const batch of chunk(chains, 10)) {
+    await Promise.all(
+      batch.map(async (chain) => {
+        for (const mutation of chain) {
+          try {
+            await applyMutation(sb, mutation, userId);
+            await dequeue(mutation.id);
+            pushed++;
+          } catch (err) {
+            if (options.trace) {
+              logEvent(options.trace, 'push:mutation-failed', {
+                id: mutation.id,
+                table: mutation.table,
+                op: mutation.operation,
+              }, err);
+            }
+            console.error('[Sync] push failed for mutation', mutation.id, err);
+            await incrementRetry(mutation.id);
+            failed++;
+          }
+        }
+      })
+    );
   }
 
   if (options.trace) {
