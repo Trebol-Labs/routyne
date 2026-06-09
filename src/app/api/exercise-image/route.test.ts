@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { GET } from './route';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 describe('Exercise Image API Rate Limiting', () => {
   beforeEach(() => {
@@ -37,7 +38,11 @@ describe('Exercise Image API Rate Limiting', () => {
       expect(res.status).toBe(500);
     }
 
-    process.env.RAPIDAPI_KEY = originalEnv;
+    if (originalEnv === undefined) {
+      delete process.env.RAPIDAPI_KEY;
+    } else {
+      process.env.RAPIDAPI_KEY = originalEnv;
+    }
   });
 
   it('blocks requests exceeding the rate limit', async () => {
@@ -69,7 +74,11 @@ describe('Exercise Image API Rate Limiting', () => {
     const res62 = await GET(req62);
     expect(res62.status).toBe(500); // Passes rate limiting
 
-    process.env.RAPIDAPI_KEY = originalEnv;
+    if (originalEnv === undefined) {
+      delete process.env.RAPIDAPI_KEY;
+    } else {
+      process.env.RAPIDAPI_KEY = originalEnv;
+    }
   });
 
   it('tracks rate limits per IP independently', async () => {
@@ -96,6 +105,10 @@ describe('Exercise Image API Rate Limiting', () => {
     const allowedRes = await GET(allowedReq);
     expect(allowedRes.status).toBe(500); // Passes rate limiting
 
-    process.env.RAPIDAPI_KEY = originalEnv;
+    if (originalEnv === undefined) {
+      delete process.env.RAPIDAPI_KEY;
+    } else {
+      process.env.RAPIDAPI_KEY = originalEnv;
+    }
   });
 });

@@ -13,8 +13,14 @@ const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const MAX_REQUESTS_PER_WINDOW = 60;
 
 export async function GET(request: NextRequest) {
-  const ip = request.headers.get('x-forwarded-for') || request.ip || 'unknown';
+  const ip = request.headers.get('x-forwarded-for') || 'unknown';
   const now = Date.now();
+
+  // Prevent memory exhaustion from IP spoofing
+  if (rateLimits.size > 10000) {
+    rateLimits.clear();
+  }
+
   let rateLimit = rateLimits.get(ip);
 
   if (!rateLimit || rateLimit.resetAt < now) {
