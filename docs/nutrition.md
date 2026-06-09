@@ -14,9 +14,9 @@ The daily nutrition tab remains part of the app shell; the flag controls the ric
 
 Files:
 
-- [`src/lib/db/nutrition.ts`](/Users/sierra/Code/routyne/src/lib/db/nutrition.ts)
-- [`src/store/useWorkoutStore.ts`](/Users/sierra/Code/routyne/src/store/useWorkoutStore.ts)
-- [`src/components/workout/views/NutritionView.tsx`](/Users/sierra/Code/routyne/src/components/workout/views/NutritionView.tsx)
+- [`src/lib/db/nutrition.ts`](../src/lib/db/nutrition.ts)
+- [`src/store/useWorkoutStore.ts`](../src/store/useWorkoutStore.ts)
+- [`src/components/workout/views/NutritionView.tsx`](../src/components/workout/views/NutritionView.tsx)
 
 Stores:
 
@@ -34,10 +34,10 @@ Behavior:
 
 Files:
 
-- [`src/app/onboarding/page.tsx`](/Users/sierra/Code/routyne/src/app/onboarding/page.tsx)
-- [`src/components/nutrition/onboarding/`](/Users/sierra/Code/routyne/src/components/nutrition/onboarding)
-- [`src/lib/db/nutritionProfile.ts`](/Users/sierra/Code/routyne/src/lib/db/nutritionProfile.ts)
-- [`src/types/nutrition.ts`](/Users/sierra/Code/routyne/src/types/nutrition.ts)
+- [`src/app/onboarding/page.tsx`](../src/app/onboarding/page.tsx)
+- [`src/components/nutrition/onboarding/`](../src/components/nutrition/onboarding)
+- [`src/lib/db/nutritionProfile.ts`](../src/lib/db/nutritionProfile.ts)
+- [`src/types/nutrition.ts`](../src/types/nutrition.ts)
 
 Data:
 
@@ -54,7 +54,7 @@ Persistence:
 
 ## Onboarding Gate
 
-[`src/hooks/useOnboardingGate.ts`](/Users/sierra/Code/routyne/src/hooks/useOnboardingGate.ts) redirects authenticated users to `/onboarding` when:
+[`src/hooks/useOnboardingGate.ts`](../src/hooks/useOnboardingGate.ts) redirects authenticated users to `/onboarding` when:
 
 - Nutrition is enabled.
 - Auth and IDB hydration are ready.
@@ -65,7 +65,7 @@ Anonymous users are not redirected.
 
 ## Calculation Engine
 
-[`src/lib/nutrition/calculations.ts`](/Users/sierra/Code/routyne/src/lib/nutrition/calculations.ts) is a pure engine with no DB, network, or React dependencies.
+[`src/lib/nutrition/calculations.ts`](../src/lib/nutrition/calculations.ts) is a pure engine with no DB, network, or React dependencies.
 
 Exports:
 
@@ -80,7 +80,7 @@ Warnings include high BMI estimation error, out-of-range body fat, aggressive de
 
 ## Block Planner
 
-[`src/lib/nutrition/planner.ts`](/Users/sierra/Code/routyne/src/lib/nutrition/planner.ts) powers the "Objetivo por bloques" planner in `NutritionView`.
+[`src/lib/nutrition/planner.ts`](../src/lib/nutrition/planner.ts) powers the "Objetivo por bloques" planner in `NutritionView`.
 
 Inputs:
 
@@ -103,10 +103,10 @@ Applying a planner recommendation updates the legacy daily `nutritionGoal`, not 
 
 Files:
 
-- [`src/lib/nutrition/adaptive.ts`](/Users/sierra/Code/routyne/src/lib/nutrition/adaptive.ts)
-- [`src/lib/db/nutritionAdjustment.ts`](/Users/sierra/Code/routyne/src/lib/db/nutritionAdjustment.ts)
-- [`src/hooks/useAdaptiveCheck.ts`](/Users/sierra/Code/routyne/src/hooks/useAdaptiveCheck.ts)
-- [`src/components/nutrition/AdjustmentBanner.tsx`](/Users/sierra/Code/routyne/src/components/nutrition/AdjustmentBanner.tsx)
+- [`src/lib/nutrition/adaptive.ts`](../src/lib/nutrition/adaptive.ts)
+- [`src/lib/db/nutritionAdjustment.ts`](../src/lib/db/nutritionAdjustment.ts)
+- [`src/hooks/useAdaptiveCheck.ts`](../src/hooks/useAdaptiveCheck.ts)
+- [`src/components/nutrition/AdjustmentBanner.tsx`](../src/components/nutrition/AdjustmentBanner.tsx)
 
 Behavior:
 
@@ -122,9 +122,9 @@ Behavior:
 
 Rich nutrition profile sync is handled by:
 
-- `nutritionProfileToRemote` and `mergeRemoteNutritionProfile` in [`src/lib/sync/merge.ts`](/Users/sierra/Code/routyne/src/lib/sync/merge.ts).
-- Push/pull/bootstrap handling in [`src/lib/sync/syncEngine.ts`](/Users/sierra/Code/routyne/src/lib/sync/syncEngine.ts).
-- DDL in [`src/lib/supabase/schema.sql`](/Users/sierra/Code/routyne/src/lib/supabase/schema.sql).
+- `nutritionProfileToRemote` and `mergeRemoteNutritionProfile` in [`src/lib/sync/merge.ts`](../src/lib/sync/merge.ts).
+- Push/pull/bootstrap handling in [`src/lib/sync/syncEngine.ts`](../src/lib/sync/syncEngine.ts).
+- DDL in [`src/lib/supabase/schema.sql`](../src/lib/supabase/schema.sql).
 
 The sync engine tolerates a missing `nutrition_profiles` table by skipping nutrition-profile push/pull instead of failing the whole sync.
 

@@ -65,10 +65,21 @@ This file is the current source of truth for shipped state, roadmap health, and 
 - For web-only changes, the default Android loop is deploy to Vercel, then force-close and reopen the installed app. Use `pnpm mobile:android:install` only when native shell files change.
 - `android/app/google-services.json` and `ios/App/App/GoogleService-Info.plist` are required for native push testing.
 
-## Next Steps
+## Pragmatic Next Implementation Phases
 
-1. Verify the latest `main` deployment on Vercel after merging documentation changes.
-2. Finish Firebase/APNs asset setup and do a real-device Android notification matrix before releasing the native shell.
-3. Decide whether to wire the rich nutrition profile and pending adaptive adjustment into `UserCoachContext`.
-4. Monitor `window.__routyneSync.dump()` output while validating first-device sync and nutrition profile sync on real accounts.
-5. Start Phase D with Share Cards v2 if product work resumes.
+Based on the Phase Evaluation, the following actionable roadmap outlines the next pragmatic steps for development:
+
+**1. Finish Phase C (Differentiation)**
+- **AI Coach Nutrition Integration**: Wire the rich nutrition profile and any pending adaptive adjustments into `UserCoachContext` to enhance the AI Coach's capabilities.
+- **Mobile Release Prep**: Complete store packaging, including final assets and App Store / Play Store configuration.
+- **Push Notification Polish**: Finish Firebase/APNs asset setup and execute a real-device Android notification matrix before the final native shell release.
+
+**2. Kickoff Phase D (Growth)**
+- **Share Cards v2**: Implement the next iteration of share cards with richer visual data and better social platform compatibility.
+- **Social & Gamification**: Introduce initial challenges and referral mechanisms to drive organic user growth.
+
+**3. Prepare Phase E (Monetization)**
+- **Foundation**: Assess requirements for Stripe integration and begin designing the premium subscription gate and tiered features.
+
+**4. Ongoing Maintenance**
+- Monitor `window.__routyneSync.dump()` output in production to validate first-device sync and nutrition profile sync across diverse real-world accounts.
