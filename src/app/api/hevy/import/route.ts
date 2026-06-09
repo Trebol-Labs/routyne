@@ -7,6 +7,36 @@ export const dynamic = 'force-dynamic';
 
 const ALLOWED_EMAIL = 'npadilla133@gmail.com';
 
+// ── In-memory rate limiter ────────────────────────────────────────────────────
+
+const LIMIT = parseInt(process.env.HEVY_IMPORT_RATE_LIMIT ?? '60', 10);
+const WINDOW_MS = 60_000; // 1 minute window
+
+interface RateBucket { count: number; resetAt: number; }
+const buckets = new Map<string, RateBucket>();
+
+function getRateLimitKey(req: Request): string {
+  const forwarded = req.headers.get('x-forwarded-for');
+  if (forwarded) return forwarded.split(',')[0].trim();
+  const realIp = req.headers.get('x-real-ip');
+  if (realIp) return realIp;
+  return 'unknown';
+}
+
+function checkRateLimit(key: string): { allowed: boolean; remaining: number } {
+  const now = Date.now();
+  const bucket = buckets.get(key);
+  if (!bucket || now > bucket.resetAt) {
+    buckets.set(key, { count: 1, resetAt: now + WINDOW_MS });
+    return { allowed: true, remaining: LIMIT - 1 };
+  }
+  if (bucket.count >= LIMIT) return { allowed: false, remaining: 0 };
+  bucket.count++;
+  return { allowed: true, remaining: LIMIT - bucket.count };
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+
 async function getAuthorizedUser(authorization: string | null) {
   if (!authorization?.startsWith('Bearer ')) return null;
   const token = authorization.slice('Bearer '.length).trim();
@@ -25,6 +55,15 @@ async function getAuthorizedUser(authorization: string | null) {
 }
 
 export async function GET(req: Request) {
+  const key = getRateLimitKey(req);
+  const { allowed, remaining } = checkRateLimit(key);
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests' },
+      { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+    );
+  }
+
   const user = await getAuthorizedUser(req.headers.get('authorization'));
   if (!user) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
@@ -42,11 +81,14 @@ export async function GET(req: Request) {
 
   try {
     const pageData = await fetchWorkoutsPage(page, pageSize);
-    return NextResponse.json({
-      page: pageData.page,
-      pageCount: pageData.page_count,
-      workouts: pageData.workouts,
-    });
+    return NextResponse.json(
+      {
+        page: pageData.page,
+        pageCount: pageData.page_count,
+        workouts: pageData.workouts,
+      },
+      { headers: { 'X-RateLimit-Remaining': String(remaining) } }
+    );
   } catch (err) {
     if (err instanceof HevyApiError) {
       return NextResponse.json(
