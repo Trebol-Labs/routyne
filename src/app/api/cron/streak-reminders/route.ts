@@ -87,6 +87,8 @@ export async function GET(request: NextRequest) {
   let skipped = 0;
   let failed = 0;
 
+  const sendPromises: Promise<void>[] = [];
+
   for (const profileRow of profilesResult.data ?? []) {
     const profile = profileRow as {
       user_id: string;
@@ -135,33 +137,37 @@ export async function GET(request: NextRequest) {
         continue;
       }
 
-      try {
-        await webpush.sendNotification(
-          { endpoint: subscription.endpoint, keys: subscription.keys },
-          JSON.stringify({
-            title: reminderCopy.title,
-            body: reminderCopy.body,
-            tag: 'routyne-streak',
-            url: '/',
-            data: {
-              kind: 'streak-reminder',
+      sendPromises.push((async () => {
+        try {
+          await webpush.sendNotification(
+            { endpoint: subscription.endpoint, keys: subscription.keys },
+            JSON.stringify({
+              title: reminderCopy.title,
+              body: reminderCopy.body,
+              tag: 'routyne-streak',
               url: '/',
-            },
-          })
-        );
-        await markPushSubscriptionSent(profile.user_id, subscription.endpoint);
-        sent++;
-      } catch (err) {
-        const status = (err as { statusCode?: number }).statusCode;
-        if (status === 404 || status === 410) {
-          await deletePushSubscriptionRow(profile.user_id, subscription.endpoint).catch(() => {});
-        } else {
-          failed++;
-          console.error('[/api/cron/streak-reminders] send failed', err);
+              data: {
+                kind: 'streak-reminder',
+                url: '/',
+              },
+            })
+          );
+          await markPushSubscriptionSent(profile.user_id, subscription.endpoint);
+          sent++;
+        } catch (err) {
+          const status = (err as { statusCode?: number }).statusCode;
+          if (status === 404 || status === 410) {
+            await deletePushSubscriptionRow(profile.user_id, subscription.endpoint).catch(() => {});
+          } else {
+            failed++;
+            console.error('[/api/cron/streak-reminders] send failed', err);
+          }
         }
-      }
+      })());
     }
   }
+
+  await Promise.allSettled(sendPromises);
 
   return NextResponse.json({ ok: true, sent, skipped, failed });
 }
