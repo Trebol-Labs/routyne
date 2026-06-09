@@ -5,7 +5,13 @@ import { saveHistoryEntry, loadHistory } from './history';
 import { saveActiveSession, loadActiveSession, clearActiveSession } from './activeSession';
 import { loadProfile, saveProfile } from './profile';
 import {
+  isMacrosConfigured,
+  markMacrosConfigured,
+  resetOnboarding,
+} from './nutritionProfile';
+import {
   deleteNutritionEntry,
+  loadNutritionCaloriesByDateRange,
   loadNutritionEntriesByDate,
   loadNutritionGoal,
   saveNutritionEntry,
@@ -205,6 +211,10 @@ describe('profile', () => {
         language: 'es',
         streakReminderEnabled: false,
         streakReminderTime: '20:00',
+        weightReminderEnabled: true,
+        weightReminderTime: '08:00',
+        mealRemindersEnabled: false,
+        mealReminderTimes: ['08:00', '13:00', '20:00'],
         timerNotificationsEnabled: false,
         timezone: 'UTC',
       },
@@ -233,11 +243,13 @@ describe('nutrition', () => {
       proteinGrams: 180,
       carbsGrams: 280,
       fatGrams: 80,
+      phase: 'volume',
       updatedAt: new Date('2026-04-01T10:00:00Z').toISOString(),
     });
     const goal = await loadNutritionGoal();
     expect(goal.calories).toBe(2500);
     expect(goal.carbsGrams).toBe(280);
+    expect(goal.phase).toBe('volume');
   });
 
   it('loads nutrition entries by date in created order and hides deleted entries', async () => {
@@ -275,5 +287,67 @@ describe('nutrition', () => {
     const entries = await loadNutritionEntriesByDate('2026-05-07');
     expect(entries).toHaveLength(1);
     expect(entries[0].id).toBe('n-2');
+  });
+
+  it('loads calorie totals by date range and skips deleted entries', async () => {
+    await saveNutritionEntry({
+      id: 'n-1',
+      date: '2026-05-07',
+      mealType: 'breakfast',
+      foodName: 'Greek yogurt',
+      servingLabel: '200g',
+      calories: 160,
+      proteinGrams: 20,
+      carbsGrams: 8,
+      fatGrams: 4,
+      createdAt: '2026-05-07T08:00:00.000Z',
+      updatedAt: '2026-05-07T08:00:00.000Z',
+      deletedAt: null,
+    });
+    await saveNutritionEntry({
+      id: 'n-2',
+      date: '2026-05-08',
+      mealType: 'lunch',
+      foodName: 'Rice bowl',
+      servingLabel: '1 bowl',
+      calories: 620,
+      proteinGrams: 42,
+      carbsGrams: 72,
+      fatGrams: 18,
+      createdAt: '2026-05-08T13:00:00.000Z',
+      updatedAt: '2026-05-08T13:00:00.000Z',
+      deletedAt: null,
+    });
+    await saveNutritionEntry({
+      id: 'n-3',
+      date: '2026-05-09',
+      mealType: 'dinner',
+      foodName: 'Deleted meal',
+      servingLabel: '1 plate',
+      calories: 500,
+      proteinGrams: 30,
+      carbsGrams: 50,
+      fatGrams: 15,
+      createdAt: '2026-05-09T13:00:00.000Z',
+      updatedAt: '2026-05-09T13:00:00.000Z',
+      deletedAt: '2026-05-09T14:00:00.000Z',
+    });
+
+    const totals = await loadNutritionCaloriesByDateRange('2026-05-07', '2026-05-09');
+    expect(totals['2026-05-07']).toBe(160);
+    expect(totals['2026-05-08']).toBe(620);
+    expect(totals['2026-05-09']).toBeUndefined();
+  });
+});
+
+describe('nutritionProfile flags', () => {
+  it('persists and clears the macros configured marker', async () => {
+    expect(await isMacrosConfigured()).toBe(false);
+
+    await markMacrosConfigured();
+    expect(await isMacrosConfigured()).toBe(true);
+
+    await resetOnboarding();
+    expect(await isMacrosConfigured()).toBe(false);
   });
 });

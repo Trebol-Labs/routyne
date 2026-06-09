@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildStreakReminderCopy,
   buildUpcomingStreakReminderSchedule,
+  buildUpcomingDailyReminderSchedule,
   getLocalDayOfWeek,
   getCurrentStreak,
   getLongestFulfilledStreak,
@@ -15,6 +16,58 @@ describe('reminder time helpers', () => {
     expect(normalizeReminderTime('99:99')).toBe('20:00');
     expect(normalizeReminderTime('7:3')).toBe('20:00');
     expect(normalizeReminderTime('07:30')).toBe('07:30');
+  });
+});
+
+describe('daily reminder scheduling', () => {
+  it('schedules one item per future day and time, discarding past times', () => {
+    const now = new Date('2026-04-01T12:00:00Z');
+    const schedule = buildUpcomingDailyReminderSchedule({
+      idPrefix: 'routyne-meal',
+      times: ['08:00', '20:00'],
+      timezone: 'UTC',
+      now,
+      horizonDays: 2,
+    });
+
+    // Day 1 (today): 08:00 is past, 20:00 future → 1; Day 2: both future → 2.
+    expect(schedule).toHaveLength(3);
+    expect(schedule[0].id).toBe('routyne-meal-2026-04-01-2000');
+    expect(schedule[0].scheduledFor.toISOString()).toBe('2026-04-01T20:00:00.000Z');
+    expect(schedule.map((item) => item.id)).toEqual([
+      'routyne-meal-2026-04-01-2000',
+      'routyne-meal-2026-04-02-0800',
+      'routyne-meal-2026-04-02-2000',
+    ]);
+  });
+
+  it('skips dates listed in skipDateKeys (already-logged days)', () => {
+    const now = new Date('2026-04-01T06:00:00Z');
+    const schedule = buildUpcomingDailyReminderSchedule({
+      idPrefix: 'routyne-weight',
+      times: ['08:00'],
+      timezone: 'UTC',
+      now,
+      horizonDays: 2,
+      skipDateKeys: new Set(['2026-04-01']),
+    });
+
+    expect(schedule).toHaveLength(1);
+    expect(schedule[0].dateKey).toBe('2026-04-02');
+  });
+
+  it('deduplicates colliding time labels into a single daily item', () => {
+    const now = new Date('2026-04-01T00:00:00Z');
+    const schedule = buildUpcomingDailyReminderSchedule({
+      idPrefix: 'routyne-meal',
+      times: ['08:00', '08:00'],
+      timezone: 'UTC',
+      now,
+      horizonDays: 1,
+    });
+
+    expect(schedule).toHaveLength(1);
+    expect(schedule[0].id).toBe('routyne-meal-2026-04-01-0800');
   });
 });
 

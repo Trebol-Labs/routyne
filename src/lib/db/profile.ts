@@ -12,7 +12,7 @@ import type {
   UserProfile,
   UserProfilePreferences,
 } from '@/types/workout';
-import { normalizeReminderTime } from '@/lib/notifications/reminders';
+import { normalizeReminderTime, parseReminderTime } from '@/lib/notifications/reminders';
 
 const PROFILE_KEY = 'profile' as const;
 const EPOCH = new Date(0).toISOString();
@@ -45,9 +45,31 @@ export const DEFAULT_PROFILE_PREFERENCES: UserProfilePreferences = {
   language: 'es',
   streakReminderEnabled: true,
   streakReminderTime: '20:00',
+  weightReminderEnabled: true,
+  weightReminderTime: '08:00',
+  mealRemindersEnabled: false,
+  mealReminderTimes: ['08:00', '13:00', '20:00'],
   timerNotificationsEnabled: true,
   timezone: DEFAULT_TIMEZONE,
 };
+
+const MAX_MEAL_REMINDER_TIMES = 8;
+
+function normalizeMealReminderTimes(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [...DEFAULT_PROFILE_PREFERENCES.mealReminderTimes];
+  }
+
+  const seen = new Set<string>();
+  for (const item of value) {
+    if (typeof item !== 'string') continue;
+    const parsed = parseReminderTime(item);
+    if (!parsed) continue;
+    seen.add(`${String(parsed.hour).padStart(2, '0')}:${String(parsed.minute).padStart(2, '0')}`);
+  }
+
+  return [...seen].sort().slice(0, MAX_MEAL_REMINDER_TIMES);
+}
 
 export const DEFAULT_PROFILE: UserProfile = {
   displayName: 'Atleta',
@@ -84,6 +106,14 @@ function normalizePreferences(
     ? raw.streakReminderEnabled
     : DEFAULT_PROFILE_PREFERENCES.streakReminderEnabled;
   const streakReminderTime = normalizeReminderTime(typeof raw.streakReminderTime === 'string' ? raw.streakReminderTime : null);
+  const weightReminderEnabled = typeof raw.weightReminderEnabled === 'boolean'
+    ? raw.weightReminderEnabled
+    : DEFAULT_PROFILE_PREFERENCES.weightReminderEnabled;
+  const weightReminderTime = normalizeReminderTime(typeof raw.weightReminderTime === 'string' ? raw.weightReminderTime : DEFAULT_PROFILE_PREFERENCES.weightReminderTime);
+  const mealRemindersEnabled = typeof raw.mealRemindersEnabled === 'boolean'
+    ? raw.mealRemindersEnabled
+    : DEFAULT_PROFILE_PREFERENCES.mealRemindersEnabled;
+  const mealReminderTimes = normalizeMealReminderTimes(raw.mealReminderTimes);
   const timerNotificationsEnabled = typeof raw.timerNotificationsEnabled === 'boolean'
     ? raw.timerNotificationsEnabled
     : DEFAULT_PROFILE_PREFERENCES.timerNotificationsEnabled;
@@ -104,6 +134,10 @@ function normalizePreferences(
     language,
     streakReminderEnabled,
     streakReminderTime,
+    weightReminderEnabled,
+    weightReminderTime,
+    mealRemindersEnabled,
+    mealReminderTimes,
     timerNotificationsEnabled,
     timezone,
   };

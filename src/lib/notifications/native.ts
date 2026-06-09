@@ -8,6 +8,8 @@ import { DEFAULT_NATIVE_APP_ID } from '@/lib/site';
 export const NATIVE_NOTIFICATION_CHANNELS = {
   restTimers: 'rest-timers',
   streakReminders: 'streak-reminders',
+  weightReminders: 'weight-reminders',
+  mealReminders: 'meal-reminders',
 } as const;
 
 export type NativeNotificationChannelId = (typeof NATIVE_NOTIFICATION_CHANNELS)[keyof typeof NATIVE_NOTIFICATION_CHANNELS];
@@ -157,6 +159,22 @@ export async function ensureNativeNotificationChannels(): Promise<void> {
       id: NATIVE_NOTIFICATION_CHANNELS.streakReminders,
       name: 'Streak reminders',
       description: 'Daily reminders to keep your streak alive.',
+      importance: 4,
+      vibration: true,
+      sound: 'default',
+    }),
+    LocalNotifications.createChannel({
+      id: NATIVE_NOTIFICATION_CHANNELS.weightReminders,
+      name: 'Weight reminders',
+      description: 'Daily reminders to log your bodyweight.',
+      importance: 4,
+      vibration: true,
+      sound: 'default',
+    }),
+    LocalNotifications.createChannel({
+      id: NATIVE_NOTIFICATION_CHANNELS.mealReminders,
+      name: 'Meal reminders',
+      description: 'Reminders to log your meals.',
       importance: 4,
       vibration: true,
       sound: 'default',

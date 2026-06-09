@@ -49,6 +49,7 @@ If you are testing the Capacitor shell on a real Android phone, keep `pnpm dev` 
 | `VERCEL_OIDC_TOKEN` | Optional | Required by `/api/coach` for Vercel AI Gateway. |
 | `COACH_DAILY_LIMIT_FREE` | Optional | In-memory daily coach request limit. Defaults to `5`. |
 | `NEXT_PUBLIC_NUTRITION_ENABLED` | Optional | Rich nutrition onboarding/profile flag. Defaults on; set `false` to disable. |
+| `NEXT_PUBLIC_NUTRITION_COACH_ENABLED` | Optional | Shows the nutrition coach/planner block when `true`. Defaults off. |
 | `NEXT_PUBLIC_LOCAL_BACKUP_TOOLS` | Optional | Shows local backup import/export in production when `true`. |
 | `NEXT_PUBLIC_LOCAL_ONLY` | Optional | Forces local-only account UI mode when `true`. |
 | `NEXT_PUBLIC_NATIVE_PUSH_ENABLED` | Optional | Attempts native FCM/APNs device-token registration when `true`. Defaults off; native local notifications do not require it. |

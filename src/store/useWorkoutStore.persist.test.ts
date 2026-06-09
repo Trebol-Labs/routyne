@@ -53,6 +53,7 @@ describe('IDB persistence', () => {
       proteinGrams: 190,
       carbsGrams: 280,
       fatGrams: 85,
+      phase: 'definition',
     });
     await store1.getState().saveNutritionEntry({
       date: new Date().toISOString().slice(0, 10),
@@ -73,6 +74,7 @@ describe('IDB persistence', () => {
     await store2.getState().hydrate();
 
     expect(store2.getState().nutritionGoal.calories).toBe(2600);
+    expect(store2.getState().nutritionGoal.phase).toBe('definition');
     expect(store2.getState().nutritionEntries).toHaveLength(1);
     expect(store2.getState().nutritionEntries[0].foodName).toBe('Chicken rice bowl');
   });

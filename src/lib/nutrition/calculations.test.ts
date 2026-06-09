@@ -6,6 +6,7 @@ import {
   calcMacros,
   calcTargetKcal,
   calcTdee,
+  kcalFromMacros,
   computeAll,
 } from './calculations';
 import type { ActivityLevel, NutritionGoal } from '@/types/nutrition';
@@ -87,6 +88,12 @@ describe('calcMacros', () => {
   it('clamps carbs at 0 when target is too low', () => {
     const m = calcMacros({ weightKg: 80, targetKcal: 800, goal: 'cut' });
     expect(m.carbsG).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe('kcalFromMacros', () => {
+  it('adds protein, carbs and fats calories with the standard factors', () => {
+    expect(kcalFromMacros(146, 365, 56)).toBe(146 * 4 + 365 * 4 + 56 * 9);
   });
 });
 

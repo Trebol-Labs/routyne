@@ -1434,6 +1434,108 @@ export function AccountSheet({ onClose, initialSection = 'profile' }: AccountShe
                 </button>
               </div>
 
+              <button
+                type="button"
+                onClick={() => updatePreferences({
+                  weightReminderEnabled: !profile.preferences.weightReminderEnabled,
+                })}
+                aria-pressed={profile.preferences.weightReminderEnabled}
+                className={cn(
+                  'flex min-h-12 w-full items-center justify-between rounded-2xl border px-3 py-2 text-left transition-all',
+                  profile.preferences.weightReminderEnabled
+                    ? 'active-glass-btn text-white'
+                    : 'sunken-glass text-white/45 hover:text-white/70',
+                )}
+              >
+                <span className="text-[11px] font-black uppercase tracking-widest">
+                  {t.account.weightReminder}
+                </span>
+                <span className="text-[9px] font-black uppercase tracking-[0.18em] text-white/35">
+                  {profile.preferences.weightReminderEnabled ? t.account.remindersOn : t.account.remindersOff}
+                </span>
+              </button>
+
+              {profile.preferences.weightReminderEnabled && (
+                <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                  <input
+                    type="time"
+                    aria-label={t.account.weightReminderTime}
+                    value={profile.preferences.weightReminderTime}
+                    onChange={(e) => updatePreferences({ weightReminderTime: e.target.value })}
+                    className="sunken-glass min-h-11 rounded-2xl border-none bg-transparent px-3 py-2 text-sm font-semibold text-white outline-none placeholder:text-white/20"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => updatePreferences({ weightReminderTime: '08:00' })}
+                    className="min-h-11 rounded-2xl border border-white/10 bg-white/[0.04] px-3 text-[11px] font-black uppercase tracking-widest text-white/65 transition-colors hover:text-white"
+                  >
+                    {language === 'en' ? 'Reset 08:00' : 'Volver a 08:00'}
+                  </button>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => updatePreferences({
+                  mealRemindersEnabled: !profile.preferences.mealRemindersEnabled,
+                })}
+                aria-pressed={profile.preferences.mealRemindersEnabled}
+                className={cn(
+                  'flex min-h-12 w-full items-center justify-between rounded-2xl border px-3 py-2 text-left transition-all',
+                  profile.preferences.mealRemindersEnabled
+                    ? 'active-glass-btn text-white'
+                    : 'sunken-glass text-white/45 hover:text-white/70',
+                )}
+              >
+                <span className="text-[11px] font-black uppercase tracking-widest">
+                  {t.account.mealReminders}
+                </span>
+                <span className="text-[9px] font-black uppercase tracking-[0.18em] text-white/35">
+                  {profile.preferences.mealRemindersEnabled ? t.account.remindersOn : t.account.remindersOff}
+                </span>
+              </button>
+
+              {profile.preferences.mealRemindersEnabled && (
+                <div className="space-y-2">
+                  {profile.preferences.mealReminderTimes.map((mealTime, index) => (
+                    <div key={index} className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                      <input
+                        type="time"
+                        aria-label={`${t.account.mealReminderTimes} ${index + 1}`}
+                        value={mealTime}
+                        onChange={(e) => {
+                          const next = [...profile.preferences.mealReminderTimes];
+                          next[index] = e.target.value;
+                          updatePreferences({ mealReminderTimes: next });
+                        }}
+                        className="sunken-glass min-h-11 rounded-2xl border-none bg-transparent px-3 py-2 text-sm font-semibold text-white outline-none placeholder:text-white/20"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => updatePreferences({
+                          mealReminderTimes: profile.preferences.mealReminderTimes.filter((_, i) => i !== index),
+                        })}
+                        aria-label={t.account.removeTime}
+                        className="min-h-11 rounded-2xl border border-white/10 bg-white/[0.04] px-3 text-[11px] font-black uppercase tracking-widest text-white/65 transition-colors hover:text-white"
+                      >
+                        {t.account.removeTime}
+                      </button>
+                    </div>
+                  ))}
+                  {profile.preferences.mealReminderTimes.length < 8 && (
+                    <button
+                      type="button"
+                      onClick={() => updatePreferences({
+                        mealReminderTimes: [...profile.preferences.mealReminderTimes, '12:00'],
+                      })}
+                      className="min-h-11 w-full rounded-2xl border border-dashed border-white/15 bg-white/[0.02] px-3 text-[11px] font-black uppercase tracking-widest text-white/55 transition-colors hover:text-white"
+                    >
+                      + {t.account.addMealTime}
+                    </button>
+                  )}
+                </div>
+              )}
+
               <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
                 <input
                   type="text"

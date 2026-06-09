@@ -78,6 +78,10 @@ export interface Macros {
   carbsKcal: number;
 }
 
+export function kcalFromMacros(proteinG: number, carbsG: number, fatsG: number): number {
+  return proteinG * 4 + carbsG * 4 + fatsG * 9;
+}
+
 const PROTEIN_RATIO_BY_GOAL: Record<NutritionGoal, number> = {
   recomp: 2.0,
   bulk: 2.0,

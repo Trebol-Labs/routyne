@@ -1,6 +1,6 @@
 # Routyne Status
 
-Updated: 2026-06-08
+Updated: 2026-06-09
 
 This file is the current source of truth for shipped state, roadmap health, and near-term implementation moves.
 
@@ -15,7 +15,7 @@ This file is the current source of truth for shipped state, roadmap health, and 
 - Rest timers now persist through active-session IDB state, run from the global shell across app views, reschedule/cancel native local notifications on pause/resume/adjust/hydration, deliver a foreground completion alert, and auto-clear after completion.
 - Returning users now see a shell-matched startup skeleton while IDB hydrates; new users keep the lighter uploader-first startup.
 - The app supports manual `es`/`en` language selection, localized standalone pages, and a persisted language cookie.
-- Nutrition onboarding, profile calculations, plan card, adaptive kcal adjustment banner, and block planner are in `main`.
+- Nutrition now uses an on-demand setup flow inside the nutrition tab: the old `/onboarding` wizard still exists, but it is no longer auto-triggered from the shell. The tab shows the setup intro when no macros have been configured, then transitions into the legacy daily tracker. Profile calculations, plan card, adaptive kcal adjustment banner, and block planner remain in `main`.
 - Daily nutrition logging still uses the legacy local `nutritionEntries` and `nutritionGoals` stores.
 - The AI Coach is optional. Its prompt is nutrition-aware around saved daily macro targets; the full rich nutrition profile and pending adaptive adjustment are not yet structured into `UserCoachContext`, while the imported Hevy archive digest is now available through Supabase-backed local sync.
 - The AI Coach can also ingest an imported Hevy archive digest. The archive is pulled once with `HEVY_API_KEY`, stored in Supabase `hevy_archives`, synced locally, and then passed to the coach without needing the Hevy key at runtime.
@@ -33,6 +33,8 @@ This file is the current source of truth for shipped state, roadmap health, and 
   - Protected API rate-limiters in `exercise-image/route.ts` and `hevy/import/route.ts` from IP spoofing bypasses by prioritizing secure headers (`x-real-ip` and `request.ip`).
 - `6f44544` / PR #10: added the nutrition block planner in `src/lib/nutrition/planner.ts`, planner tests, the live planner UI in `NutritionView`, and prompt tests for saved nutrition targets.
 - `aebaf91` / PR #9: added nutrition onboarding, rich nutrition profile persistence, Supabase `nutrition_profiles` sync, nutrition plan card, adaptive adjustment logic/banner, and onboarding gate.
+- Current worktree: moved nutrition setup to an on-demand tab flow with persisted macros configuration, disabled the shell auto-redirect to `/onboarding`, and kept the legacy wizard route available for existing users.
+- Current worktree: expanded the nutrition tab with a diet calendar view, a weekly macro-suggestion banner backed by `weeklyAdjustment` logic and persisted macro suggestions, and a daily reminders sync hook that schedules weight and meal reminders through the notification provider.
 - Current worktree: exercise search now uses a mobile list-first picker with a compact selected bar, optional preview expansion, desktop viewport/nav-capped embedded picker, and a lifted active-session edit sheet.
 - Current worktree: the active-session edit sheet now clears the floating bottom nav on mobile so the sticky save footer remains visible during replace/edit flows.
 - Current worktree: added Hevy archive migration, digest generation, Supabase archive storage, and coach context wiring.
