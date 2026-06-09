@@ -1,6 +1,6 @@
 # Routyne Status
 
-Updated: 2026-05-20
+Updated: 2026-06-08
 
 This file is the current source of truth for shipped state, roadmap health, and near-term implementation moves.
 
@@ -25,6 +25,12 @@ This file is the current source of truth for shipped state, roadmap health, and 
 
 ## Recent Changes From Last Commits
 
+- **Performance & Security Hardening**:
+  - Removed leftover debug `console.log` statements in `ExerciseCard.tsx` and `exercisedb.ts`.
+  - Optimized database operations by loading routines concurrently and batch-upserting them to Supabase in `syncEngine.ts`, and removing blocking sequential awaiting in `export.ts` IndexedDB `put` loops.
+  - Secured API authentication endpoints (streak-reminders and push/notify) against timing side-channel attacks by introducing `timingSafeCompare` using `crypto.timingSafeEqual`.
+  - Refactored streak reminder push notifications out of nested loops to avoid synchronous awaiting of push requests.
+  - Protected API rate-limiters in `exercise-image/route.ts` and `hevy/import/route.ts` from IP spoofing bypasses by prioritizing secure headers (`x-real-ip` and `request.ip`).
 - `6f44544` / PR #10: added the nutrition block planner in `src/lib/nutrition/planner.ts`, planner tests, the live planner UI in `NutritionView`, and prompt tests for saved nutrition targets.
 - `aebaf91` / PR #9: added nutrition onboarding, rich nutrition profile persistence, Supabase `nutrition_profiles` sync, nutrition plan card, adaptive adjustment logic/banner, and onboarding gate.
 - Current worktree: exercise search now uses a mobile list-first picker with a compact selected bar, optional preview expansion, desktop viewport/nav-capped embedded picker, and a lifted active-session edit sheet.
