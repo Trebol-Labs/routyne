@@ -88,6 +88,10 @@ export interface UserProfilePreferences {
   language: AppLanguage;
   streakReminderEnabled: boolean;
   streakReminderTime: string;
+  weightReminderEnabled: boolean;
+  weightReminderTime: string;        // 'HH:mm'
+  mealRemindersEnabled: boolean;
+  mealReminderTimes: string[];       // ['HH:mm', ...]
   timerNotificationsEnabled: boolean;
   timezone: string;
 }
@@ -235,6 +239,8 @@ export interface Bodyweight {
 
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 
+export type NutritionPhase = 'volume' | 'definition';
+
 export interface NutritionEntry {
   id: string;
   date: string;     // YYYY-MM-DD
@@ -257,6 +263,7 @@ export interface NutritionGoal {
   proteinGrams: number;
   carbsGrams: number;
   fatGrams: number;
+  phase?: NutritionPhase;
   updatedAt: string;   // ISO 8601
 }
 

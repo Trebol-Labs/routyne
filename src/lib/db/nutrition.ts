@@ -33,6 +33,21 @@ export async function loadNutritionEntriesByDate(date: string): Promise<Nutritio
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
+export async function loadNutritionCaloriesByDateRange(
+  startDate: string,
+  endDate: string,
+): Promise<Record<string, number>> {
+  const db = await getDB();
+  const range = IDBKeyRange.bound(startDate, endDate);
+  const entries = await db.getAllFromIndex('nutritionEntries', 'by-date', range);
+
+  return entries.reduce<Record<string, number>>((acc, entry) => {
+    if (entry.deletedAt !== null) return acc;
+    acc[entry.date] = (acc[entry.date] ?? 0) + entry.calories;
+    return acc;
+  }, {});
+}
+
 export async function loadNutritionEntry(id: string): Promise<NutritionEntryRecord | null> {
   const db = await getDB();
   return (await db.get('nutritionEntries', id)) ?? null;

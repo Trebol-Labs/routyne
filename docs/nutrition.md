@@ -52,16 +52,16 @@ Persistence:
 - This avoids an IDB schema version bump.
 - The rich profile syncs to Supabase `nutrition_profiles`.
 
-## Onboarding Gate
+## On-Demand Setup
 
-[`src/hooks/useOnboardingGate.ts`](../src/hooks/useOnboardingGate.ts) redirects authenticated users to `/onboarding` when:
+[`src/components/workout/views/NutritionView.tsx`](../src/components/workout/views/NutritionView.tsx) now owns the nutrition setup entrypoint.
 
-- Nutrition is enabled.
-- Auth and IDB hydration are ready.
-- The user has not completed or deferred onboarding.
-- The user is not already on `/onboarding`.
+- New users see a setup intro inside the nutrition tab instead of being auto-redirected at login.
+- The setup stores a lightweight `nutrition.macrosConfigured` flag in IDB `meta` through [`src/lib/db/nutritionProfile.ts`](../src/lib/db/nutritionProfile.ts).
+- The legacy `/onboarding` wizard still exists for the richer profile flow, but the shell no longer forces users into it.
+- Existing users who already completed the old wizard keep seeing the dashboard directly because their rich profile is still loaded.
 
-Anonymous users are not redirected.
+[`src/hooks/useOnboardingGate.ts`](../src/hooks/useOnboardingGate.ts) is preserved for reference, but it is no longer wired into the main shell.
 
 ## Calculation Engine
 

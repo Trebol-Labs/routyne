@@ -4,6 +4,7 @@
 import { loadMetaValue, saveMetaValue, deleteMetaValue } from './meta';
 import { enqueue } from '@/lib/sync/queue';
 import { clearPendingAdjustment } from './nutritionAdjustment';
+import { clearSuggestionDismissedAt } from './macroSuggestion';
 import { FITNESS_PROFILE_META_KEY } from './fitnessProfile';
 import type { NutritionProfile } from '@/types/nutrition';
 
@@ -11,6 +12,7 @@ export const NUTRITION_PROFILE_META_KEY = 'nutrition.profile';
 export const ONBOARDING_COMPLETED_KEY = 'onboardingCompleted';
 export const ONBOARDING_DEFERRED_KEY = 'onboardingDeferred';
 export const NUTRITION_DISABLED_KEY = 'nutritionDisabled';
+export const MACROS_CONFIGURED_KEY = 'nutrition.macrosConfigured';
 
 export async function loadNutritionProfile(): Promise<NutritionProfile | null> {
   const raw = await loadMetaValue(NUTRITION_PROFILE_META_KEY);
@@ -55,12 +57,20 @@ export async function markNutritionDisabled(): Promise<void> {
   await saveMetaValue(NUTRITION_DISABLED_KEY, 'true');
 }
 
+export async function markMacrosConfigured(): Promise<void> {
+  await saveMetaValue(MACROS_CONFIGURED_KEY, new Date().toISOString());
+}
+
 export async function isOnboardingCompleted(): Promise<boolean> {
   return (await loadMetaValue(ONBOARDING_COMPLETED_KEY)) !== null;
 }
 
 export async function isOnboardingDeferred(): Promise<boolean> {
   return (await loadMetaValue(ONBOARDING_DEFERRED_KEY)) !== null;
+}
+
+export async function isMacrosConfigured(): Promise<boolean> {
+  return (await loadMetaValue(MACROS_CONFIGURED_KEY)) !== null;
 }
 
 /**
@@ -77,7 +87,9 @@ export async function resetOnboarding(): Promise<void> {
     deleteMetaValue(ONBOARDING_COMPLETED_KEY),
     deleteMetaValue(ONBOARDING_DEFERRED_KEY),
     deleteMetaValue(NUTRITION_DISABLED_KEY),
+    deleteMetaValue(MACROS_CONFIGURED_KEY),
     deleteMetaValue(FITNESS_PROFILE_META_KEY),
   ]);
+  await clearSuggestionDismissedAt();
   await clearPendingAdjustment();
 }

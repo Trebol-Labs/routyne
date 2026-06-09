@@ -410,6 +410,61 @@ export function buildUpcomingStreakReminderSchedule(params: {
   return schedule;
 }
 
+export function buildUpcomingDailyReminderSchedule(params: {
+  idPrefix: string;
+  times: string[];
+  timezone: string;
+  now?: Date;
+  horizonDays?: number;
+  skipDateKeys?: Set<string>;
+}): StreakReminderScheduleItem[] {
+  const now = params.now ?? new Date();
+  const safeTimeZone = isValidTimeZone(params.timezone) ? params.timezone : 'UTC';
+  const todayKey = getLocalDateKey(now, safeTimeZone);
+  const horizonDays = Math.max(1, Math.min(90, Math.floor(params.horizonDays ?? 30)));
+  const skipDateKeys = params.skipDateKeys ?? new Set<string>();
+
+  const parsedTimes: Array<{ label: string; hour: number; minute: number }> = [];
+  const seenLabels = new Set<string>();
+  for (const value of params.times) {
+    const normalized = normalizeReminderTime(value);
+    const parts = parseReminderTime(normalized);
+    if (!parts) continue;
+    const label = normalized.replace(':', '');
+    if (seenLabels.has(label)) continue;
+    seenLabels.add(label);
+    parsedTimes.push({ label, ...parts });
+  }
+
+  if (parsedTimes.length === 0) {
+    return [];
+  }
+
+  const schedule: StreakReminderScheduleItem[] = [];
+
+  for (let offset = 0; offset < horizonDays; offset += 1) {
+    const dateKey = getDateKeyAtOffset(todayKey, safeTimeZone, offset);
+    if (skipDateKeys.has(dateKey)) {
+      continue;
+    }
+
+    for (const time of parsedTimes) {
+      const scheduledFor = createZonedDate(dateKey, safeTimeZone, time.hour, time.minute);
+      if (Number.isNaN(scheduledFor.getTime()) || scheduledFor.getTime() <= now.getTime()) {
+        continue;
+      }
+
+      schedule.push({
+        id: `${params.idPrefix}-${dateKey}-${time.label}`,
+        dateKey,
+        scheduledFor,
+      });
+    }
+  }
+
+  return schedule;
+}
+
 function normalizeDisplayName(displayName: string | null | undefined): string {
   const value = typeof displayName === 'string' ? displayName.trim() : '';
   return value || 'Routyne';
@@ -436,5 +491,43 @@ export function buildStreakReminderCopy(params: {
     body: params.currentStreak > 0
       ? `Llevas una racha de ${params.currentStreak} días. Entrena hoy para mantenerla viva.`
       : 'Empieza una nueva racha hoy.',
+  };
+}
+
+export function buildWeightReminderCopy(params: {
+  displayName: string | null | undefined;
+  language: AppLanguage;
+}): StreakReminderCopy {
+  const displayName = normalizeDisplayName(params.displayName);
+
+  if (params.language === 'en') {
+    return {
+      title: `${displayName}, time to weigh in`,
+      body: 'Log your weight today to keep tracking your progress.',
+    };
+  }
+
+  return {
+    title: `${displayName}, hora de pesarte`,
+    body: 'Registra tu peso de hoy para seguir tu progreso.',
+  };
+}
+
+export function buildMealReminderCopy(params: {
+  displayName: string | null | undefined;
+  language: AppLanguage;
+}): StreakReminderCopy {
+  const displayName = normalizeDisplayName(params.displayName);
+
+  if (params.language === 'en') {
+    return {
+      title: `${displayName}, log your meal`,
+      body: 'Note what you ate to keep your macros on track.',
+    };
+  }
+
+  return {
+    title: `${displayName}, registra tu comida`,
+    body: 'Anota lo que comiste para mantener tus macros al día.',
   };
 }

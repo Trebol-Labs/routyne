@@ -12,7 +12,7 @@ import {
   unsubscribeFromPush,
   PushSetupError,
 } from '@/lib/push/client';
-import { buildUpcomingStreakReminderSchedule, buildStreakReminderCopy, getCurrentStreak, normalizeReminderTime, getLocalDateKey } from '@/lib/notifications/reminders';
+import { buildUpcomingStreakReminderSchedule, buildUpcomingDailyReminderSchedule, buildStreakReminderCopy, buildWeightReminderCopy, buildMealReminderCopy, getCurrentStreak, normalizeReminderTime, getLocalDateKey } from '@/lib/notifications/reminders';
 import {
   cancelNativeLocalNotification,
   ensureNativeNotificationChannels,
@@ -63,6 +63,20 @@ export interface StreakReminderSyncInput {
   horizonDays?: number;
 }
 
+export interface WeightReminderSyncInput {
+  profile: Pick<UserProfile, 'displayName' | 'preferences'>;
+  /** Local date key (YYYY-MM-DD) if the user already logged weight today, to skip today's reminder. */
+  weighedTodayDateKey?: string | null;
+  now?: Date;
+  horizonDays?: number;
+}
+
+export interface MealReminderSyncInput {
+  profile: Pick<UserProfile, 'displayName' | 'preferences'>;
+  now?: Date;
+  horizonDays?: number;
+}
+
 interface NativeDevicePayload {
   deviceId: string;
   token: string;
@@ -80,7 +94,14 @@ const NATIVE_NOTIFICATIONS_ENABLED_KEY = 'routyne-native-notifications-enabled';
 const STREAK_TIMEZONE_KEY = 'routyne-native-streak-timezone';
 const STREAK_REMINDER_TIME_KEY = 'routyne-native-streak-reminder-time';
 const STREAK_HORIZON_KEY = 'routyne-native-streak-horizon-days';
+const WEIGHT_TIMEZONE_KEY = 'routyne-native-weight-timezone';
+const WEIGHT_TIMES_KEY = 'routyne-native-weight-times';
+const WEIGHT_HORIZON_KEY = 'routyne-native-weight-horizon-days';
+const MEAL_TIMEZONE_KEY = 'routyne-native-meal-timezone';
+const MEAL_TIMES_KEY = 'routyne-native-meal-times';
+const MEAL_HORIZON_KEY = 'routyne-native-meal-horizon-days';
 const DEFAULT_REMINDER_HORIZON_DAYS = 30;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 function getStorage(): Storage | null {
   if (typeof window === 'undefined') {
@@ -487,6 +508,205 @@ async function syncNativeStreakReminders(input: StreakReminderSyncInput): Promis
   await schedulePendingStreakReminders(input);
 }
 
+function parseStoredTimes(value: string | null): string[] {
+  if (!value) return [];
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+}
+
+async function cancelPendingDailyReminders(
+  idPrefix: string,
+  timezone: string,
+  times: string[],
+  now: Date,
+  horizonDays: number
+): Promise<void> {
+  if (times.length === 0) {
+    return;
+  }
+
+  const removals: Promise<void>[] = [];
+  for (let offset = 0; offset < horizonDays; offset += 1) {
+    const candidate = new Date(now.getTime() + offset * DAY_MS);
+    const dateKey = getLocalDateKey(candidate, timezone);
+    for (const time of times) {
+      const label = normalizeReminderTime(time).replace(':', '');
+      removals.push(cancelNativeLocalNotification(`${idPrefix}-${dateKey}-${label}`));
+    }
+  }
+  await Promise.all(removals);
+}
+
+function storeDailyReminderConfig(
+  timezoneKey: string,
+  timesKey: string,
+  horizonKey: string,
+  timezone: string,
+  times: string[],
+  horizonDays: number
+): void {
+  writeStoredValue(timezoneKey, timezone);
+  writeStoredValue(timesKey, times.join(','));
+  writeStoredValue(horizonKey, String(horizonDays));
+}
+
+function readDailyReminderConfig(
+  timezoneKey: string,
+  timesKey: string,
+  horizonKey: string
+): { timezone: string; times: string[]; horizonDays: number } | null {
+  const timezone = readStoredValue(timezoneKey);
+  if (!timezone) {
+    return null;
+  }
+
+  const horizon = Number.parseInt(readStoredValue(horizonKey) ?? '', 10);
+  return {
+    timezone,
+    times: parseStoredTimes(readStoredValue(timesKey)),
+    horizonDays: Number.isFinite(horizon) && horizon > 0 ? horizon : DEFAULT_REMINDER_HORIZON_DAYS,
+  };
+}
+
+function clearDailyReminderConfig(timezoneKey: string, timesKey: string, horizonKey: string): void {
+  removeStoredValue(timezoneKey);
+  removeStoredValue(timesKey);
+  removeStoredValue(horizonKey);
+}
+
+async function clearPendingWeightReminders(): Promise<void> {
+  const stored = readDailyReminderConfig(WEIGHT_TIMEZONE_KEY, WEIGHT_TIMES_KEY, WEIGHT_HORIZON_KEY);
+  if (stored) {
+    await cancelPendingDailyReminders('routyne-weight', stored.timezone, stored.times, new Date(), stored.horizonDays);
+  }
+  clearDailyReminderConfig(WEIGHT_TIMEZONE_KEY, WEIGHT_TIMES_KEY, WEIGHT_HORIZON_KEY);
+}
+
+async function clearPendingMealReminders(): Promise<void> {
+  const stored = readDailyReminderConfig(MEAL_TIMEZONE_KEY, MEAL_TIMES_KEY, MEAL_HORIZON_KEY);
+  if (stored) {
+    await cancelPendingDailyReminders('routyne-meal', stored.timezone, stored.times, new Date(), stored.horizonDays);
+  }
+  clearDailyReminderConfig(MEAL_TIMEZONE_KEY, MEAL_TIMES_KEY, MEAL_HORIZON_KEY);
+}
+
+async function syncNativeWeightReminders(input: WeightReminderSyncInput): Promise<void> {
+  if (!isNativeNotificationRuntime()) {
+    return;
+  }
+
+  const permission = await getNativePermissionState();
+  if (
+    permission !== 'granted' ||
+    !input.profile.preferences.weightReminderEnabled ||
+    !isNativeNotificationsEnabled()
+  ) {
+    await clearPendingWeightReminders();
+    return;
+  }
+
+  const now = input.now ?? new Date();
+  const timezone = input.profile.preferences.timezone;
+  const horizonDays = Math.max(1, Math.min(90, Math.floor(input.horizonDays ?? DEFAULT_REMINDER_HORIZON_DAYS)));
+  const reminderTime = normalizeReminderTime(input.profile.preferences.weightReminderTime);
+  const times = [reminderTime];
+
+  const stored = readDailyReminderConfig(WEIGHT_TIMEZONE_KEY, WEIGHT_TIMES_KEY, WEIGHT_HORIZON_KEY);
+  if (stored) {
+    await cancelPendingDailyReminders('routyne-weight', stored.timezone, stored.times, now, stored.horizonDays);
+  }
+  storeDailyReminderConfig(WEIGHT_TIMEZONE_KEY, WEIGHT_TIMES_KEY, WEIGHT_HORIZON_KEY, timezone, times, horizonDays);
+
+  const skipDateKeys = new Set<string>();
+  const todayKey = getLocalDateKey(now, timezone);
+  if (input.weighedTodayDateKey === todayKey) {
+    skipDateKeys.add(todayKey);
+  }
+
+  const reminderCopy = buildWeightReminderCopy({
+    displayName: input.profile.displayName,
+    language: input.profile.preferences.language as AppLanguage,
+  });
+
+  const schedule = buildUpcomingDailyReminderSchedule({
+    idPrefix: 'routyne-weight',
+    times,
+    timezone,
+    now,
+    horizonDays,
+    skipDateKeys,
+  });
+
+  await Promise.all(schedule.map((item) => scheduleNativeLocalNotificationSafe({
+    id: item.id,
+    title: reminderCopy.title,
+    body: reminderCopy.body,
+    at: item.scheduledFor,
+    channelId: 'weight-reminders',
+    data: {
+      kind: 'weight-reminder',
+      url: '/',
+      dateKey: item.dateKey,
+    },
+  })));
+}
+
+async function syncNativeMealReminders(input: MealReminderSyncInput): Promise<void> {
+  if (!isNativeNotificationRuntime()) {
+    return;
+  }
+
+  const permission = await getNativePermissionState();
+  const times = input.profile.preferences.mealReminderTimes.map((time) => normalizeReminderTime(time));
+  if (
+    permission !== 'granted' ||
+    !input.profile.preferences.mealRemindersEnabled ||
+    !isNativeNotificationsEnabled() ||
+    times.length === 0
+  ) {
+    await clearPendingMealReminders();
+    return;
+  }
+
+  const now = input.now ?? new Date();
+  const timezone = input.profile.preferences.timezone;
+  const horizonDays = Math.max(1, Math.min(90, Math.floor(input.horizonDays ?? DEFAULT_REMINDER_HORIZON_DAYS)));
+
+  const stored = readDailyReminderConfig(MEAL_TIMEZONE_KEY, MEAL_TIMES_KEY, MEAL_HORIZON_KEY);
+  if (stored) {
+    await cancelPendingDailyReminders('routyne-meal', stored.timezone, stored.times, now, stored.horizonDays);
+  }
+  storeDailyReminderConfig(MEAL_TIMEZONE_KEY, MEAL_TIMES_KEY, MEAL_HORIZON_KEY, timezone, times, horizonDays);
+
+  const reminderCopy = buildMealReminderCopy({
+    displayName: input.profile.displayName,
+    language: input.profile.preferences.language as AppLanguage,
+  });
+
+  const schedule = buildUpcomingDailyReminderSchedule({
+    idPrefix: 'routyne-meal',
+    times,
+    timezone,
+    now,
+    horizonDays,
+  });
+
+  await Promise.all(schedule.map((item) => scheduleNativeLocalNotificationSafe({
+    id: item.id,
+    title: reminderCopy.title,
+    body: reminderCopy.body,
+    at: item.scheduledFor,
+    channelId: 'meal-reminders',
+    data: {
+      kind: 'meal-reminder',
+      url: '/',
+      dateKey: item.dateKey,
+    },
+  })));
+}
+
 export function getNotificationMode(): NotificationMode {
   return getPlatformMode();
 }
@@ -584,7 +804,11 @@ export async function disableNotifications(accessToken?: string): Promise<void> 
     } finally {
       clearNativeNotificationsEnabled();
       clearStoredNativeToken();
-      await clearPendingStreakReminders();
+      await Promise.all([
+        clearPendingStreakReminders(),
+        clearPendingWeightReminders(),
+        clearPendingMealReminders(),
+      ]);
     }
     return;
   }
@@ -641,4 +865,12 @@ export async function testNotification(options: {
 
 export async function syncStreakReminderNotifications(input: StreakReminderSyncInput): Promise<void> {
   await syncNativeStreakReminders(input);
+}
+
+export async function syncWeightReminderNotifications(input: WeightReminderSyncInput): Promise<void> {
+  await syncNativeWeightReminders(input);
+}
+
+export async function syncMealReminderNotifications(input: MealReminderSyncInput): Promise<void> {
+  await syncNativeMealReminders(input);
 }

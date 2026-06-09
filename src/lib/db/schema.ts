@@ -1,5 +1,5 @@
 import type { DBSchema } from 'idb';
-import type { MealType, RestTimerStatus, SetType } from '@/types/workout';
+import type { MealType, NutritionPhase, RestTimerStatus, SetType } from '@/types/workout';
 
 // ── Record types stored in IndexedDB ────────────────────────────────────────
 
@@ -159,6 +159,7 @@ export interface NutritionGoalRecord {
   proteinGrams: number;
   carbsGrams: number;
   fatGrams: number;
+  phase?: NutritionPhase;
   updatedAt: string;
 }
 

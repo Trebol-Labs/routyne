@@ -6,11 +6,11 @@ import {
   Apple,
   Activity,
   Beef,
-  CalendarDays,
   Flame,
   Pencil,
   Plus,
   Save,
+  Scale,
   Target,
   Trash2,
   TrendingDown,
@@ -21,15 +21,27 @@ import type { LucideIcon } from 'lucide-react';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
 import { cn } from '@/lib/utils';
 import { buildNutritionPlanRecommendation, type NutritionPlanGoal } from '@/lib/nutrition/planner';
-import { getLatestBodyweight } from '@/lib/db/bodyweight';
-import type { MealType, NutritionEntry, NutritionTotals } from '@/types/workout';
+import { getLatestBodyweight, loadBodyweightByDate, saveBodyweight } from '@/lib/db/bodyweight';
+import type { Bodyweight, MealType, NutritionEntry, NutritionTotals, NutritionPhase } from '@/types/workout';
 import type { NutritionProfile } from '@/types/nutrition';
-import { loadNutritionProfile } from '@/lib/db/nutritionProfile';
-import { NUTRITION_ENABLED } from '@/lib/feature-flags';
+import {
+  isMacrosConfigured,
+  loadNutritionProfile,
+  markMacrosConfigured,
+} from '@/lib/db/nutritionProfile';
+import { NUTRITION_ENABLED, NUTRITION_COACH_ENABLED } from '@/lib/feature-flags';
 import { NutritionPlanCard } from '@/components/nutrition/NutritionPlanCard';
-import { NutritionEmptyState } from '@/components/nutrition/NutritionEmptyState';
+import { NutritionSetupFlow, type NutritionMacroGoal } from '@/components/nutrition/setup/NutritionSetupFlow';
 import { AdjustmentBanner } from '@/components/nutrition/AdjustmentBanner';
 import { useAdaptiveCheck } from '@/hooks/useAdaptiveCheck';
+import { useWeeklyMacroSuggestion } from '@/hooks/useWeeklyMacroSuggestion';
+import { MacroSuggestionBanner } from '@/components/nutrition/MacroSuggestionBanner';
+import { DietCalendar } from '@/components/nutrition/DietCalendar';
+import { useI18n } from '@/components/i18n/LanguageProvider';
+import { useAuth } from '@/hooks/useAuth';
+import { enqueue } from '@/lib/sync/queue';
+import { KG_PER_LB } from '@/lib/nutrition/weeklyAdjustment';
+import { v4 as uuidv4 } from 'uuid';
 
 const MEAL_LABELS: Record<MealType, string> = {
   breakfast: 'Desayuno',
@@ -62,6 +74,7 @@ type GoalForm = {
   proteinGrams: string;
   carbsGrams: string;
   fatGrams: string;
+  phase: NutritionPhase;
 };
 
 type PlannerForm = {
@@ -141,6 +154,22 @@ function createInitialPlannerForm(): PlannerForm {
   };
 }
 
+function createGoalForm(goal: {
+  calories: number;
+  proteinGrams: number;
+  carbsGrams: number;
+  fatGrams: number;
+  phase?: NutritionPhase;
+}): GoalForm {
+  return {
+    calories: String(goal.calories),
+    proteinGrams: String(goal.proteinGrams),
+    carbsGrams: String(goal.carbsGrams),
+    fatGrams: String(goal.fatGrams),
+    phase: goal.phase ?? 'volume',
+  };
+}
+
 function ProgressBar({ value, total, className }: { value: number; total: number; className: string }) {
   const pct = total > 0 ? Math.min(100, (value / total) * 100) : 0;
   return (
@@ -179,6 +208,8 @@ function MacroCard({
 }
 
 export function NutritionView() {
+  const { t } = useI18n();
+  const { user } = useAuth();
   const {
     profile,
     nutritionEntries,
@@ -190,17 +221,18 @@ export function NutritionView() {
   } = useWorkoutStore();
   const [selectedDate, setSelectedDate] = useState(todayKey());
   const [entryForm, setEntryForm] = useState<EntryForm>(() => createEmptyForm());
-  const [goalForm, setGoalForm] = useState<GoalForm>({
-    calories: String(nutritionGoal.calories),
-    proteinGrams: String(nutritionGoal.proteinGrams),
-    carbsGrams: String(nutritionGoal.carbsGrams),
-    fatGrams: String(nutritionGoal.fatGrams),
-  });
+  const [goalForm, setGoalForm] = useState<GoalForm>(() => createGoalForm(nutritionGoal));
   const [isGoalOpen, setIsGoalOpen] = useState(false);
   const [coachProfile, setCoachProfile] = useState<NutritionProfile | null>(null);
-  const [coachLoaded, setCoachLoaded] = useState(() => !NUTRITION_ENABLED);
+  const [nutritionLoaded, setNutritionLoaded] = useState(() => !NUTRITION_ENABLED);
+  const [setupComplete, setSetupComplete] = useState(() => !NUTRITION_ENABLED);
+  const [weightInput, setWeightInput] = useState('');
+  const [weightSaving, setWeightSaving] = useState(false);
+  const [weightRefreshKey, setWeightRefreshKey] = useState(0);
   const adaptive = useAdaptiveCheck();
+  const macroSuggestion = useWeeklyMacroSuggestion(nutritionGoal, weightRefreshKey);
   const [plannerForm, setPlannerForm] = useState<PlannerForm>(() => createInitialPlannerForm());
+  const supabaseEnabled = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
   useEffect(() => {
     loadNutritionDay(selectedDate).catch(console.error);
@@ -209,20 +241,35 @@ export function NutritionView() {
   useEffect(() => {
     if (!NUTRITION_ENABLED) return;
     let cancelled = false;
-    loadNutritionProfile()
-      .then((p) => {
-        if (!cancelled) {
-          setCoachProfile(p);
-          setCoachLoaded(true);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setCoachLoaded(true);
-      });
+
+    (async () => {
+      const [profileResult, macrosResult] = await Promise.allSettled([
+        loadNutritionProfile(),
+        isMacrosConfigured(),
+      ]);
+      if (cancelled) return;
+
+      const error =
+        profileResult.status === 'rejected'
+          ? profileResult.reason
+          : macrosResult.status === 'rejected'
+            ? macrosResult.reason
+            : null;
+      if (error) {
+        console.error('[NutritionView] failed to load nutrition setup state', error);
+      }
+
+      const profile = profileResult.status === 'fulfilled' ? profileResult.value : null;
+      const macrosConfigured = macrosResult.status === 'fulfilled' ? macrosResult.value : false;
+      setCoachProfile(profile);
+      setSetupComplete(macrosConfigured || profile != null);
+      setNutritionLoaded(true);
+    })();
+
     return () => {
       cancelled = true;
     };
-  }, [selectedDate]);
+  }, []);
 
   useEffect(() => {
     getLatestBodyweight()
@@ -239,6 +286,16 @@ export function NutritionView() {
         });
       })
       .catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    loadBodyweightByDate(todayKey())
+      .then((entry) => {
+        setWeightInput(entry ? String(entry.weight) : '');
+      })
+      .catch((error) => {
+        console.error('[NutritionView] failed to load todays weight', error);
+      });
   }, []);
 
   const totals = useMemo(
@@ -282,6 +339,18 @@ export function NutritionView() {
     profile.weightUnit,
   ]);
 
+  const calendarRefreshKey = `${selectedDate}:${totals.calories}`;
+  const weightUnitLabel = profile.weightUnit === 'kg'
+    ? t.nutritionView.weightLog.unitKg
+    : t.nutritionView.weightLog.unitLbs;
+  const formatWeight = (kgValue: number): string => {
+    const displayValue = profile.weightUnit === 'lbs' ? kgValue / KG_PER_LB : kgValue;
+    return `${displayValue.toFixed(1)} ${weightUnitLabel}`;
+  };
+  const weightTrendLabel = macroSuggestion.weeklyAverages.length > 0
+    ? macroSuggestion.weeklyAverages.slice(-3).map((week) => formatWeight(week.avgKg)).join(' → ')
+    : null;
+
   const submitEntry = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!entryForm.foodName.trim()) return;
@@ -308,18 +377,14 @@ export function NutritionView() {
       proteinGrams: toNumber(goalForm.proteinGrams),
       carbsGrams: toNumber(goalForm.carbsGrams),
       fatGrams: toNumber(goalForm.fatGrams),
+      phase: goalForm.phase,
     });
     setIsGoalOpen(false);
   };
 
   const toggleGoalForm = () => {
     if (!isGoalOpen) {
-      setGoalForm({
-        calories: String(nutritionGoal.calories),
-        proteinGrams: String(nutritionGoal.proteinGrams),
-        carbsGrams: String(nutritionGoal.carbsGrams),
-        fatGrams: String(nutritionGoal.fatGrams),
-      });
+      setGoalForm(createGoalForm(nutritionGoal));
     }
     setIsGoalOpen((value) => !value);
   };
@@ -340,13 +405,86 @@ export function NutritionView() {
       carbsGrams: planRecommendation.carbsGrams,
       fatGrams: planRecommendation.fatGrams,
     });
-    setGoalForm({
+    setGoalForm((form) => ({
+      ...form,
       calories: String(planRecommendation.calories),
       proteinGrams: String(planRecommendation.proteinGrams),
       carbsGrams: String(planRecommendation.carbsGrams),
       fatGrams: String(planRecommendation.fatGrams),
-    });
+    }));
   };
+
+  const handleSetupComplete = async (goal: NutritionMacroGoal) => {
+    await updateNutritionGoal(goal);
+    await markMacrosConfigured();
+    setSetupComplete(true);
+  };
+
+  const saveTodayWeight = async () => {
+    const parsed = Number(weightInput.replace(',', '.'));
+    if (!Number.isFinite(parsed) || parsed <= 0) return;
+
+    setWeightSaving(true);
+    try {
+      const entry: Bodyweight = {
+        id: uuidv4(),
+        date: todayKey(),
+        weight: parsed,
+        unit: profile.weightUnit,
+        updatedAt: new Date().toISOString(),
+        deletedAt: null,
+      };
+
+      await saveBodyweight(entry);
+      if (supabaseEnabled && user) {
+        enqueue({
+          table: 'bodyweight',
+          operation: 'upsert',
+          payload: entry,
+        }).catch(console.error);
+      }
+
+      setWeightInput(String(parsed));
+      setWeightRefreshKey((key) => key + 1);
+    } finally {
+      setWeightSaving(false);
+    }
+  };
+
+  if (NUTRITION_ENABLED && !nutritionLoaded) {
+    return (
+      <motion.div
+        key="nutrition-loading"
+        initial={{ opacity: 0, x: 30 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -30 }}
+        transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
+        className="space-y-4 px-4 pb-48 overflow-y-auto no-scrollbar"
+        id="main-content"
+      >
+        <div className="glass-panel rounded-[var(--radius-xl)] border-white/5 p-6 space-y-4 animate-pulse">
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 rounded-2xl border border-white/10 bg-white/[0.04] flex items-center justify-center">
+              <Apple className="h-5 w-5 text-white/35" />
+            </div>
+            <div className="space-y-2">
+              <div className="h-3 w-28 rounded-full bg-white/10" />
+              <div className="h-4 w-44 rounded-full bg-white/10" />
+            </div>
+          </div>
+          <div className="h-28 rounded-[1.5rem] bg-white/[0.04]" />
+          <div className="grid grid-cols-3 gap-2">
+            <div className="h-20 rounded-2xl bg-white/[0.04]" />
+            <div className="h-20 rounded-2xl bg-white/[0.04]" />
+            <div className="h-20 rounded-2xl bg-white/[0.04]" />
+          </div>
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/35">
+            {t.loading.app}
+          </p>
+        </div>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div
@@ -358,54 +496,74 @@ export function NutritionView() {
       className="space-y-4 px-4 pb-48 overflow-y-auto no-scrollbar"
       id="main-content"
     >
-      {NUTRITION_ENABLED && coachLoaded && (
-        coachProfile
-          ? <NutritionPlanCard profile={coachProfile} consumedKcal={totals.calories} />
-          : <NutritionEmptyState />
-      )}
+      {NUTRITION_ENABLED && !setupComplete ? (
+        <NutritionSetupFlow onComplete={handleSetupComplete} />
+      ) : (
+        <>
+          {NUTRITION_ENABLED && setupComplete && coachProfile && (
+            <NutritionPlanCard profile={coachProfile} consumedKcal={totals.calories} />
+          )}
 
-      {NUTRITION_ENABLED && adaptive.pending && coachProfile && (
-        <AdjustmentBanner
-          pending={adaptive.pending}
-          onApply={async () => {
-            await adaptive.apply();
-            // Refresh local view of profile so the plan card updates.
-            const updated = await loadNutritionProfile();
-            setCoachProfile(updated);
-          }}
-          onReject={adaptive.reject}
-        />
-      )}
+          {NUTRITION_ENABLED && setupComplete && adaptive.pending && coachProfile && (
+            <AdjustmentBanner
+              pending={adaptive.pending}
+              onApply={async () => {
+                await adaptive.apply();
+                // Refresh local view of profile so the plan card updates.
+                const updated = await loadNutritionProfile();
+                setCoachProfile(updated);
+              }}
+              onReject={adaptive.reject}
+            />
+          )}
 
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-2 h-10 bg-emerald-400 rounded-full shadow-[0_0_20px_rgba(52,211,153,0.6)]" />
-          <div>
-            <h3 className="text-white font-black text-2xl sm:text-3xl tracking-tighter uppercase font-display leading-none">
-              Nutrición
-            </h3>
-            <p className="text-[9px] font-black text-white/35 uppercase tracking-[0.3em] mt-0.5">
-              Macros diarios
-            </p>
-          </div>
+          {NUTRITION_ENABLED && setupComplete && macroSuggestion.suggestion && nutritionGoal.phase && (
+            <MacroSuggestionBanner
+              suggestion={macroSuggestion.suggestion}
+              phase={nutritionGoal.phase}
+              currentCalories={nutritionGoal.calories}
+              onApply={() => macroSuggestion.apply()}
+              onDismiss={() => macroSuggestion.dismiss()}
+            />
+          )}
+
+      <div className="flex items-center gap-3">
+        <div className="w-2 h-10 bg-emerald-400 rounded-full shadow-[0_0_20px_rgba(52,211,153,0.6)]" />
+        <div>
+          <h3 className="text-white font-black text-2xl sm:text-3xl tracking-tighter uppercase font-display leading-none">
+            Nutrición
+          </h3>
+          <p className="text-[9px] font-black text-white/35 uppercase tracking-[0.3em] mt-0.5">
+            Macros diarios
+          </p>
         </div>
-
-        <label className="h-11 px-3 rounded-lg bg-white/[0.06] border border-white/10 flex items-center gap-2 text-white/70">
-          <CalendarDays className="w-4 h-4" />
-          <input
-            aria-label="Fecha de nutrición"
-            type="date"
-            value={selectedDate}
-            onChange={(event) => setSelectedDate(event.target.value)}
-            className="bg-transparent text-[12px] font-black outline-none text-white color-scheme-dark"
-          />
-        </label>
       </div>
 
       <section className="glass-panel rounded-[var(--radius-xl)] border-white/5 p-4 space-y-4">
         <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.34em]">Hoy</p>
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.34em]">Hoy</p>
+              {nutritionGoal.phase && (
+                <span
+                  className={cn(
+                    'inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.18em]',
+                    nutritionGoal.phase === 'volume'
+                      ? 'border-emerald-300/20 bg-emerald-400/10 text-emerald-100'
+                      : 'border-sky-300/20 bg-sky-400/10 text-sky-100',
+                  )}
+                >
+                  {nutritionGoal.phase === 'volume' ? (
+                    <TrendingUp className="h-3.5 w-3.5" />
+                  ) : (
+                    <TrendingDown className="h-3.5 w-3.5" />
+                  )}
+                  {nutritionGoal.phase === 'volume'
+                    ? t.nutritionView.phaseBadge.volume
+                    : t.nutritionView.phaseBadge.definition}
+                </span>
+              )}
+            </div>
             <p className="text-4xl font-black font-display tracking-tighter text-white leading-none mt-1">
               {Math.round(totals.calories)}
               <span className="text-sm text-white/35 ml-1">kcal</span>
@@ -448,6 +606,44 @@ export function NutritionView() {
                 />
               </label>
             ))}
+            <div className="col-span-2 grid grid-cols-2 gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setGoalForm((form) => ({ ...form, phase: 'volume' }))}
+                aria-pressed={goalForm.phase === 'volume'}
+                className={cn(
+                  'min-h-14 rounded-lg border px-3 py-2 text-left transition-colors',
+                  goalForm.phase === 'volume'
+                    ? 'border-emerald-300/30 bg-emerald-400/10 text-white'
+                    : 'border-white/10 bg-white/[0.04] text-white/55 hover:text-white/80',
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4" />
+                  <span className="text-[11px] font-black uppercase tracking-tight">
+                    {t.nutritionView.phaseBadge.volume}
+                  </span>
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setGoalForm((form) => ({ ...form, phase: 'definition' }))}
+                aria-pressed={goalForm.phase === 'definition'}
+                className={cn(
+                  'min-h-14 rounded-lg border px-3 py-2 text-left transition-colors',
+                  goalForm.phase === 'definition'
+                    ? 'border-sky-300/30 bg-sky-400/10 text-white'
+                    : 'border-white/10 bg-white/[0.04] text-white/55 hover:text-white/80',
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <TrendingDown className="w-4 h-4" />
+                  <span className="text-[11px] font-black uppercase tracking-tight">
+                    {t.nutritionView.phaseBadge.definition}
+                  </span>
+                </div>
+              </button>
+            </div>
             <button
               type="submit"
               className="col-span-2 h-11 rounded-lg active-glass-btn flex items-center justify-center gap-2 text-sm font-black"
@@ -459,164 +655,211 @@ export function NutritionView() {
         )}
       </section>
 
-      <section className="glass-panel rounded-[var(--radius-xl)] border-white/5 p-4 space-y-4">
+      <section className="glass-panel rounded-[var(--radius-xl)] border-white/5 p-4 space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.34em]">Coach nutricional</p>
-            <h4 className="text-white font-black text-xl tracking-tighter font-display leading-none mt-1">
-              Objetivo por bloques
-            </h4>
+            <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.34em]">
+              {t.nutritionView.weightLog.title}
+            </p>
+            <p className="text-[11px] font-bold text-white/45 mt-1 leading-relaxed">
+              {weightTrendLabel
+                ? `${t.nutritionView.weightLog.trendLabel}: ${weightTrendLabel}`
+                : t.nutritionView.weightLog.trendLabel}
+            </p>
           </div>
-          <div className={cn(
-            'px-3 py-1.5 rounded-lg border text-[10px] font-black uppercase tracking-[0.18em]',
-            planRecommendation?.isWithinRecommendedRange
-              ? 'bg-emerald-400/10 border-emerald-300/20 text-emerald-200'
-              : 'bg-orange-400/10 border-orange-300/20 text-orange-200',
-          )}>
-            {planRecommendation?.paceLabel ?? 'Configura'}
+          <div className="w-11 h-11 rounded-lg bg-white/[0.06] border border-white/10 flex items-center justify-center text-white/70">
+            <Scale className="w-4 h-4" />
           </div>
         </div>
 
-        <div className="grid gap-2 sm:grid-cols-3">
-          {PLAN_GOALS.map(({ value, label, caption, icon: Icon }) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => updatePlannerGoal(value)}
-              aria-pressed={plannerForm.goal === value}
-              className={cn(
-                'min-h-[76px] rounded-lg border p-3 text-left transition-colors',
-                plannerForm.goal === value
-                  ? 'bg-emerald-400/15 border-emerald-300/30 text-white'
-                  : 'bg-white/[0.04] border-white/10 text-white/50 hover:text-white/80',
-              )}
-            >
-              <div className="flex items-center gap-2">
-                <Icon className="w-4 h-4" />
-                <span className="text-[11px] font-black uppercase tracking-tight">{label}</span>
-              </div>
-              <p className="mt-1.5 text-[10px] font-bold text-white/35 leading-snug">{caption}</p>
-            </button>
-          ))}
+        <div className="flex gap-2">
+          <input
+            type="number"
+            inputMode="decimal"
+            step="0.1"
+            min="0"
+            value={weightInput}
+            onChange={(event) => setWeightInput(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                saveTodayWeight().catch(console.error);
+              }
+            }}
+            placeholder={`${t.nutritionView.weightLog.placeholder} (${weightUnitLabel})`}
+            className="sunken-glass flex-1 rounded-xl px-4 py-3 text-lg font-black text-white bg-transparent border-none outline-none placeholder:text-white/20"
+          />
+          <button
+            type="button"
+            onClick={() => saveTodayWeight().catch(console.error)}
+            disabled={weightSaving || !weightInput.trim()}
+            className="active-glass-btn px-5 rounded-xl text-sm font-black uppercase tracking-widest disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {weightSaving ? '…' : t.nutritionView.weightLog.save}
+          </button>
         </div>
+      </section>
 
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <label className="space-y-1">
-            <span className="text-[9px] font-black uppercase tracking-[0.24em] text-white/35">Peso actual</span>
-            <input
-              inputMode="decimal"
-              value={plannerForm.currentWeight}
-              onChange={(event) => setPlannerForm((form) => ({
-                ...form,
-                currentWeight: event.target.value,
-                targetWeight: form.goal === 'recomp' ? event.target.value : form.targetWeight,
-              }))}
-              placeholder={profile.weightUnit}
-              className="w-full rounded-lg bg-black/30 border border-white/10 px-3 py-2 text-sm font-bold text-white outline-none focus:border-emerald-300/50"
-            />
-          </label>
-
-          <label className={cn('space-y-1', plannerForm.goal === 'recomp' && 'opacity-50')}>
-            <span className="text-[9px] font-black uppercase tracking-[0.24em] text-white/35">Peso meta</span>
-            <input
-              inputMode="decimal"
-              disabled={plannerForm.goal === 'recomp'}
-              value={plannerForm.goal === 'recomp' ? plannerForm.currentWeight : plannerForm.targetWeight}
-              onChange={(event) => setPlannerForm((form) => ({ ...form, targetWeight: event.target.value }))}
-              placeholder={profile.weightUnit}
-              className="w-full rounded-lg bg-black/30 border border-white/10 px-3 py-2 text-sm font-bold text-white outline-none focus:border-emerald-300/50 disabled:cursor-not-allowed"
-            />
-          </label>
-
-          <label className="space-y-1 col-span-2 sm:col-span-1">
-            <span className="text-[9px] font-black uppercase tracking-[0.24em] text-white/35">Tiempo</span>
-            <div className="flex items-center gap-2">
-              <input
-                type="range"
-                min="4"
-                max="52"
-                step="1"
-                value={Math.max(4, Math.min(52, toNumber(plannerForm.weeks) || 4))}
-                onChange={(event) => setPlannerForm((form) => ({ ...form, weeks: event.target.value }))}
-                className="min-w-0 flex-1 accent-emerald-300"
-              />
-              <input
-                inputMode="numeric"
-                value={plannerForm.weeks}
-                onChange={(event) => setPlannerForm((form) => ({ ...form, weeks: event.target.value }))}
-                className="w-16 rounded-lg bg-black/30 border border-white/10 px-2 py-2 text-sm font-black text-white outline-none focus:border-emerald-300/50"
-              />
+      {NUTRITION_COACH_ENABLED && (
+        <section className="glass-panel rounded-[var(--radius-xl)] border-white/5 p-4 space-y-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.34em]">Coach nutricional</p>
+              <h4 className="text-white font-black text-xl tracking-tighter font-display leading-none mt-1">
+                Objetivo por bloques
+              </h4>
             </div>
-          </label>
-
-          <div className="rounded-lg bg-white/[0.04] border border-white/10 px-3 py-2">
-            <p className="text-[9px] font-black uppercase tracking-[0.22em] text-white/30">Rango recomendado</p>
-            <p className="text-sm font-black text-white mt-1">
-              {planRecommendation
-                ? `${planRecommendation.recommendedWeeksMin}-${planRecommendation.recommendedWeeksMax} sem`
-                : 'Completa datos'}
-            </p>
-            <p className="text-[10px] font-bold text-white/35 mt-0.5">
-              {profile.preferences.experienceLevel}
-            </p>
+            <div className={cn(
+              'px-3 py-1.5 rounded-lg border text-[10px] font-black uppercase tracking-[0.18em]',
+              planRecommendation?.isWithinRecommendedRange
+                ? 'bg-emerald-400/10 border-emerald-300/20 text-emerald-200'
+                : 'bg-orange-400/10 border-orange-300/20 text-orange-200',
+            )}>
+              {planRecommendation?.paceLabel ?? 'Configura'}
+            </div>
           </div>
-        </div>
 
-        {planRecommendation ? (
-          <div className="rounded-lg bg-black/25 border border-white/10 p-3 space-y-3">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.28em] text-white/35">Preview en vivo</p>
-                <p className="text-3xl font-black font-display tracking-tighter text-white leading-none mt-1">
-                  {planRecommendation.calories}
-                  <span className="text-sm text-white/35 ml-1">kcal</span>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {PLAN_GOALS.map(({ value, label, caption, icon: Icon }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => updatePlannerGoal(value)}
+                aria-pressed={plannerForm.goal === value}
+                className={cn(
+                  'min-h-[76px] rounded-lg border p-3 text-left transition-colors',
+                  plannerForm.goal === value
+                    ? 'bg-emerald-400/15 border-emerald-300/30 text-white'
+                    : 'bg-white/[0.04] border-white/10 text-white/50 hover:text-white/80',
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <Icon className="w-4 h-4" />
+                  <span className="text-[11px] font-black uppercase tracking-tight">{label}</span>
+                </div>
+                <p className="mt-1.5 text-[10px] font-bold text-white/35 leading-snug">{caption}</p>
+              </button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <label className="space-y-1">
+              <span className="text-[9px] font-black uppercase tracking-[0.24em] text-white/35">Peso actual</span>
+              <input
+                inputMode="decimal"
+                value={plannerForm.currentWeight}
+                onChange={(event) => setPlannerForm((form) => ({
+                  ...form,
+                  currentWeight: event.target.value,
+                  targetWeight: form.goal === 'recomp' ? event.target.value : form.targetWeight,
+                }))}
+                placeholder={profile.weightUnit}
+                className="w-full rounded-lg bg-black/30 border border-white/10 px-3 py-2 text-sm font-bold text-white outline-none focus:border-emerald-300/50"
+              />
+            </label>
+
+            <label className={cn('space-y-1', plannerForm.goal === 'recomp' && 'opacity-50')}>
+              <span className="text-[9px] font-black uppercase tracking-[0.24em] text-white/35">Peso meta</span>
+              <input
+                inputMode="decimal"
+                disabled={plannerForm.goal === 'recomp'}
+                value={plannerForm.goal === 'recomp' ? plannerForm.currentWeight : plannerForm.targetWeight}
+                onChange={(event) => setPlannerForm((form) => ({ ...form, targetWeight: event.target.value }))}
+                placeholder={profile.weightUnit}
+                className="w-full rounded-lg bg-black/30 border border-white/10 px-3 py-2 text-sm font-bold text-white outline-none focus:border-emerald-300/50 disabled:cursor-not-allowed"
+              />
+            </label>
+
+            <label className="space-y-1 col-span-2 sm:col-span-1">
+              <span className="text-[9px] font-black uppercase tracking-[0.24em] text-white/35">Tiempo</span>
+              <div className="flex items-center gap-2">
+                <input
+                  type="range"
+                  min="4"
+                  max="52"
+                  step="1"
+                  value={Math.max(4, Math.min(52, toNumber(plannerForm.weeks) || 4))}
+                  onChange={(event) => setPlannerForm((form) => ({ ...form, weeks: event.target.value }))}
+                  className="min-w-0 flex-1 accent-emerald-300"
+                />
+                <input
+                  inputMode="numeric"
+                  value={plannerForm.weeks}
+                  onChange={(event) => setPlannerForm((form) => ({ ...form, weeks: event.target.value }))}
+                  className="w-16 rounded-lg bg-black/30 border border-white/10 px-2 py-2 text-sm font-black text-white outline-none focus:border-emerald-300/50"
+                />
+              </div>
+            </label>
+
+            <div className="rounded-lg bg-white/[0.04] border border-white/10 px-3 py-2">
+              <p className="text-[9px] font-black uppercase tracking-[0.22em] text-white/30">Rango recomendado</p>
+              <p className="text-sm font-black text-white mt-1">
+                {planRecommendation
+                  ? `${planRecommendation.recommendedWeeksMin}-${planRecommendation.recommendedWeeksMax} sem`
+                  : 'Completa datos'}
+              </p>
+              <p className="text-[10px] font-bold text-white/35 mt-0.5">
+                {profile.preferences.experienceLevel}
+              </p>
+            </div>
+          </div>
+
+          {planRecommendation ? (
+            <div className="rounded-lg bg-black/25 border border-white/10 p-3 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.28em] text-white/35">Preview en vivo</p>
+                  <p className="text-3xl font-black font-display tracking-tighter text-white leading-none mt-1">
+                    {planRecommendation.calories}
+                    <span className="text-sm text-white/35 ml-1">kcal</span>
+                  </p>
+                </div>
+                <Target className="w-5 h-5 text-emerald-300/70" />
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div className="rounded-lg bg-white/[0.04] px-3 py-2">
+                  <p className="text-blue-300 text-lg font-black">{planRecommendation.proteinGrams}g</p>
+                  <p className="text-[9px] font-black uppercase tracking-[0.18em] text-white/30">Proteína</p>
+                </div>
+                <div className="rounded-lg bg-white/[0.04] px-3 py-2">
+                  <p className="text-amber-300 text-lg font-black">{planRecommendation.carbsGrams}g</p>
+                  <p className="text-[9px] font-black uppercase tracking-[0.18em] text-white/30">Carbos</p>
+                </div>
+                <div className="rounded-lg bg-white/[0.04] px-3 py-2">
+                  <p className="text-rose-300 text-lg font-black">{planRecommendation.fatGrams}g</p>
+                  <p className="text-[9px] font-black uppercase tracking-[0.18em] text-white/30">Grasa</p>
+                </div>
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-2">
+                <p className="text-[11px] font-bold text-white/45 leading-relaxed">
+                  {planRecommendation.summary}
+                </p>
+                <p className="text-[11px] font-bold text-white/45 leading-relaxed">
+                  Mantenimiento estimado: {planRecommendation.maintenanceCalories} kcal.
+                  {plannerForm.goal !== 'recomp' && ` Ritmo: ${planRecommendation.weeklyRatePercent.toFixed(2)}%/sem.`}
                 </p>
               </div>
-              <Target className="w-5 h-5 text-emerald-300/70" />
-            </div>
 
-            <div className="grid grid-cols-3 gap-2">
-              <div className="rounded-lg bg-white/[0.04] px-3 py-2">
-                <p className="text-blue-300 text-lg font-black">{planRecommendation.proteinGrams}g</p>
-                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-white/30">Proteína</p>
-              </div>
-              <div className="rounded-lg bg-white/[0.04] px-3 py-2">
-                <p className="text-amber-300 text-lg font-black">{planRecommendation.carbsGrams}g</p>
-                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-white/30">Carbos</p>
-              </div>
-              <div className="rounded-lg bg-white/[0.04] px-3 py-2">
-                <p className="text-rose-300 text-lg font-black">{planRecommendation.fatGrams}g</p>
-                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-white/30">Grasa</p>
-              </div>
+              <button
+                type="button"
+                onClick={() => applyPlanRecommendation().catch(console.error)}
+                className="w-full h-11 rounded-lg active-glass-btn flex items-center justify-center gap-2 text-sm font-black"
+              >
+                <Save className="w-4 h-4" />
+                Usar estos objetivos
+              </button>
             </div>
-
-            <div className="grid gap-2 sm:grid-cols-2">
-              <p className="text-[11px] font-bold text-white/45 leading-relaxed">
-                {planRecommendation.summary}
-              </p>
-              <p className="text-[11px] font-bold text-white/45 leading-relaxed">
-                Mantenimiento estimado: {planRecommendation.maintenanceCalories} kcal.
-                {plannerForm.goal !== 'recomp' && ` Ritmo: ${planRecommendation.weeklyRatePercent.toFixed(2)}%/sem.`}
+          ) : (
+            <div className="rounded-lg bg-white/[0.04] border border-white/10 p-4 text-center">
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-white/35">
+                Ingresa peso actual, peso meta y semanas para calcular kcal y macros.
               </p>
             </div>
-
-            <button
-              type="button"
-              onClick={() => applyPlanRecommendation().catch(console.error)}
-              className="w-full h-11 rounded-lg active-glass-btn flex items-center justify-center gap-2 text-sm font-black"
-            >
-              <Save className="w-4 h-4" />
-              Usar estos objetivos
-            </button>
-          </div>
-        ) : (
-          <div className="rounded-lg bg-white/[0.04] border border-white/10 p-4 text-center">
-            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-white/35">
-              Ingresa peso actual, peso meta y semanas para calcular kcal y macros.
-            </p>
-          </div>
-        )}
-      </section>
+          )}
+        </section>
+      )}
 
       <form onSubmit={submitEntry} className="glass-panel rounded-[var(--radius-xl)] border-white/5 p-4 space-y-3">
         <div className="flex items-center justify-between gap-3">
@@ -744,6 +987,16 @@ export function NutritionView() {
           ))
         )}
       </section>
+
+      <DietCalendar
+        key={selectedDate.slice(0, 7)}
+        goalCalories={nutritionGoal.calories}
+        selectedDate={selectedDate}
+        onSelectDay={setSelectedDate}
+        refreshKey={calendarRefreshKey}
+      />
+        </>
+      )}
     </motion.div>
   );
 }
