@@ -307,15 +307,25 @@ async function seedLocalSnapshotToCloud(userId: string): Promise<void> {
     }
   }
 
-  for (const record of routineRecords) {
-    const routine = await loadRoutine(record.id);
+  const routinesWithRecords = await Promise.all(
+    routineRecords.map(async (record) => {
+      const routine = await loadRoutine(record.id);
+      return { record, routine };
+    })
+  );
+
+  const routineRows = [];
+  for (const { record, routine } of routinesWithRecords) {
     if (!routine) continue;
 
     const sourceMarkdown = record.sourceMarkdown || generateMarkdown(routine);
-    const { error } = await sb.from('routines').upsert(
-      routineToRemote(record, sourceMarkdown, userId) as never,
-      { onConflict: 'id' }
-    );
+    routineRows.push(routineToRemote(record, sourceMarkdown, userId));
+  }
+
+  for (const batch of chunk(routineRows, SYNC_BATCH_SIZE)) {
+    const { error } = await sb.from('routines').upsert(batch as never, {
+      onConflict: 'id',
+    });
     if (error) {
       throw new Error(`[Sync] routine bootstrap failed: ${error.message}`);
     }

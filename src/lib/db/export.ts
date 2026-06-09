@@ -69,12 +69,12 @@ export async function importAllData(file: ExportFile): Promise<void> {
     'readwrite'
   );
 
-  for (const r of routines) await tx.objectStore('routines').put(r);
-  for (const s of sessions) await tx.objectStore('sessions').put(s);
-  for (const e of exercises) await tx.objectStore('exercises').put(e);
-  for (const h of history) await tx.objectStore('history').put(h);
-  for (const b of bodyweight) await tx.objectStore('bodyweight').put(b);
-  if (profile) await tx.objectStore('profile').put(profile);
+  for (const r of routines) tx.objectStore('routines').put(r);
+  for (const s of sessions) tx.objectStore('sessions').put(s);
+  for (const e of exercises) tx.objectStore('exercises').put(e);
+  for (const h of history) tx.objectStore('history').put(h);
+  for (const b of bodyweight) tx.objectStore('bodyweight').put(b);
+  if (profile) tx.objectStore('profile').put(profile);
 
   await tx.done;
 }
